@@ -3,7 +3,7 @@
  * Plugin Name:       External Product Images
  * Plugin URI:        https://blueworx.io/
  * Description:        Custom Elementor widget that replaces the WooCommerce Product Images widget on single product pages with an external, self-contained product gallery (placeholder images now, product meta later).
- * Version:           1.0.2
+ * Version:           1.0.3
  * Author:            BlueWorx
  * Author URI:        https://blueworx.io/
  * Text Domain:       external-product-images
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Core plugin constants.
  */
-define( 'EPI_VERSION', '1.0.2' );
+define( 'EPI_VERSION', '1.0.3' );
 define( 'EPI_PLUGIN_FILE', __FILE__ );
 define( 'EPI_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'EPI_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 900" role="img" aria-label="Chandelier">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="78%">
+      <stop offset="0%" stop-color="#fbf9f5"/>
+      <stop offset="100%" stop-color="#e8e2d7"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffeec2" stop-opacity="0.9"/>
+      <stop offset="60%" stop-color="#ffd884" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#ffd884" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="900" height="900" fill="url(#bg)"/>
+  <circle cx="450" cy="370" r="260" fill="url(#glow)"/>
+  <line x1="450" y1="70" x2="450" y2="230" stroke="#34322e" stroke-width="6"/>
+  <circle cx="450" cy="232" r="14" fill="#3c3a36"/>
+  <line x1="450" y1="246" x2="450" y2="300" stroke="#46443f" stroke-width="8"/>
+  <path d="M250 360 Q450 292 650 360" fill="none" stroke="#46443f" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="450" cy="470" r="16" fill="#9c7634"/>
+  <g fill="#46443f">
+    <rect x="240" y="352" width="20" height="22" rx="4"/>
+    <rect x="340" y="326" width="20" height="22" rx="4"/>
+    <rect x="440" y="317" width="20" height="22" rx="4"/>
+    <rect x="540" y="326" width="20" height="22" rx="4"/>
+    <rect x="640" y="352" width="20" height="22" rx="4"/>
+  </g>
+  <g fill="#fff4d6">
+    <rect x="245" y="318" width="10" height="36"/>
+    <rect x="345" y="292" width="10" height="36"/>
+    <rect x="445" y="283" width="10" height="36"/>
+    <rect x="545" y="292" width="10" height="36"/>
+    <rect x="645" y="318" width="10" height="36"/>
+  </g>
+  <g fill="#f0a93a">
+    <path d="M250 318 q-8 -16 0 -28 q8 12 0 28 z"/>
+    <path d="M350 292 q-8 -16 0 -28 q8 12 0 28 z"/>
+    <path d="M450 283 q-8 -16 0 -28 q8 12 0 28 z"/>
+    <path d="M550 292 q-8 -16 0 -28 q8 12 0 28 z"/>
+    <path d="M650 318 q-8 -16 0 -28 q8 12 0 28 z"/>
+  </g>
+  <text x="450" y="800" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="30" letter-spacing="4" fill="#8d8576">CHANDELIER</text>
+  <text x="450" y="845" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="20" letter-spacing="3" fill="#b3ab9c">SAMPLE IMAGE</text>
+</svg>

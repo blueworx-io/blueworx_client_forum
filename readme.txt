@@ -3,7 +3,7 @@ Contributors: blueworx
 Tags: woocommerce, elementor, product gallery, product images
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.0.2
+Stable tag: 1.0.3
 License: GPLv2 or later
 
 Custom Elementor widget that replaces the WooCommerce Product Images widget on
@@ -43,6 +43,11 @@ The stored value may be a JSON array of URLs OR a comma-separated list — both
 are handled automatically. Placeholders remain as a safety fallback.
 
 == Changelog ==
+
+= 1.0.3 =
+* Replaced the demo gallery images with bundled lighting-product placeholders
+  (self-contained SVGs themed for a wholesale lighting supplier). Removes the
+  external image-service dependency so demo images can never fail to load.
 
 = 1.0.0 =
 * Initial release.

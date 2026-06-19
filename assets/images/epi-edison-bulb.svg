@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 900" role="img" aria-label="Edison filament bulb">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="78%">
+      <stop offset="0%" stop-color="#fbf9f5"/>
+      <stop offset="100%" stop-color="#e8e2d7"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffeec2" stop-opacity="0.95"/>
+      <stop offset="55%" stop-color="#ffd884" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#ffd884" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="900" height="900" fill="url(#bg)"/>
+  <circle cx="450" cy="430" r="250" fill="url(#glow)"/>
+  <line x1="450" y1="70" x2="450" y2="252" stroke="#34322e" stroke-width="6"/>
+  <rect x="412" y="252" width="76" height="40" rx="6" fill="#3c3a36"/>
+  <path d="M418 292 h64 v18 h-64 z M414 312 h72 v16 h-72 z" fill="#b8893f"/>
+  <path d="M430 330 h40 v16 a20 18 0 0 1 -40 0 z" fill="#9c7634"/>
+  <circle cx="450" cy="440" r="150" fill="#fff7e4" stroke="#34322e" stroke-width="6" opacity="0.92"/>
+  <path d="M438 346 V430 M462 346 V430" stroke="#e8a13a" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <polyline points="438,430 444,470 450,430 456,470 462,430" fill="none" stroke="#e8a13a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="450" y="800" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="30" letter-spacing="4" fill="#8d8576">EDISON FILAMENT BULB</text>
+  <text x="450" y="845" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="20" letter-spacing="3" fill="#b3ab9c">SAMPLE IMAGE</text>
+</svg>

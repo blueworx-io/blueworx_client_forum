@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 900" role="img" aria-label="Table lamp">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="78%">
+      <stop offset="0%" stop-color="#fbf9f5"/>
+      <stop offset="100%" stop-color="#e8e2d7"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffeec2" stop-opacity="0.95"/>
+      <stop offset="55%" stop-color="#ffd884" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#ffd884" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="900" height="900" fill="url(#bg)"/>
+  <circle cx="450" cy="400" r="210" fill="url(#glow)"/>
+  <path d="M348 300 L552 300 L598 470 L302 470 Z" fill="#3c3a36"/>
+  <path d="M302 470 L598 470 L592 484 L308 484 Z" fill="#2c2a27"/>
+  <ellipse cx="450" cy="478" rx="142" ry="14" fill="#ffe7ab"/>
+  <rect x="440" y="484" width="20" height="120" fill="#46443f"/>
+  <path d="M372 670 Q372 596 450 596 Q528 596 528 670 Z" fill="#3c3a36"/>
+  <rect x="360" y="662" width="180" height="16" rx="8" fill="#2c2a27"/>
+  <text x="450" y="800" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="30" letter-spacing="4" fill="#8d8576">TABLE LAMP</text>
+  <text x="450" y="845" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="20" letter-spacing="3" fill="#b3ab9c">SAMPLE IMAGE</text>
+</svg>

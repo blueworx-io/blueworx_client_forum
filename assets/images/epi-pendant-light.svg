@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 900" role="img" aria-label="Pendant light">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="78%">
+      <stop offset="0%" stop-color="#fbf9f5"/>
+      <stop offset="100%" stop-color="#e8e2d7"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffeec2" stop-opacity="0.95"/>
+      <stop offset="55%" stop-color="#ffd884" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#ffd884" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="900" height="900" fill="url(#bg)"/>
+  <circle cx="450" cy="500" r="220" fill="url(#glow)"/>
+  <rect x="430" y="70" width="40" height="20" rx="4" fill="#3c3a36"/>
+  <line x1="450" y1="90" x2="450" y2="270" stroke="#34322e" stroke-width="6"/>
+  <path d="M300 460 Q450 250 600 460 Z" fill="#3c3a36"/>
+  <path d="M335 410 Q450 300 565 410" fill="none" stroke="#56534d" stroke-width="4" opacity="0.6"/>
+  <ellipse cx="450" cy="460" rx="150" ry="26" fill="#2c2a27"/>
+  <ellipse cx="450" cy="460" rx="120" ry="18" fill="#ffe7ab"/>
+  <circle cx="450" cy="500" r="34" fill="#fff2cf"/>
+  <text x="450" y="800" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="30" letter-spacing="4" fill="#8d8576">PENDANT LIGHT</text>
+  <text x="450" y="845" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="20" letter-spacing="3" fill="#b3ab9c">SAMPLE IMAGE</text>
+</svg>

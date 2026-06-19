@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 900" role="img" aria-label="Wall sconce">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="78%">
+      <stop offset="0%" stop-color="#fbf9f5"/>
+      <stop offset="100%" stop-color="#e8e2d7"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffeec2" stop-opacity="0.95"/>
+      <stop offset="55%" stop-color="#ffd884" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#ffd884" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="900" height="900" fill="url(#bg)"/>
+  <circle cx="540" cy="340" r="210" fill="url(#glow)"/>
+  <rect x="300" y="360" width="42" height="200" rx="14" fill="#3c3a36"/>
+  <circle cx="321" cy="460" r="9" fill="#9c7634"/>
+  <path d="M342 470 C 430 470 470 460 500 408" fill="none" stroke="#46443f" stroke-width="14" stroke-linecap="round"/>
+  <path d="M452 408 L548 408 L520 330 L480 330 Z" fill="#3c3a36"/>
+  <ellipse cx="500" cy="408" rx="48" ry="9" fill="#2c2a27"/>
+  <ellipse cx="500" cy="404" rx="34" ry="6" fill="#ffe7ab"/>
+  <circle cx="500" cy="356" r="22" fill="#fff2cf"/>
+  <text x="450" y="800" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="30" letter-spacing="4" fill="#8d8576">WALL SCONCE</text>
+  <text x="450" y="845" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="20" letter-spacing="3" fill="#b3ab9c">SAMPLE IMAGE</text>
+</svg>

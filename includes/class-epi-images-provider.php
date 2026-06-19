@@ -144,26 +144,30 @@ class EPI_Images_Provider {
 	 *  DEMO IMAGES — temporary, shown on EVERY product
 	 * ============================================================
 	 *
-	 * A fixed set of 7 real photos (Picsum, free stock service). The same set
-	 * is shown for all products on purpose — this is purely for demoing the
-	 * gallery layout/behaviour while the real product data is prepared.
+	 * A fixed set of lighting-product placeholder images bundled with the
+	 * plugin (assets/images/*.svg). Themed for a wholesale lighting supplier
+	 * and fully self-contained — no external service, so they can never break
+	 * or fail to load. The same set is shown for all products on purpose: this
+	 * is purely for demoing the gallery layout/behaviour while the real product
+	 * data is prepared.
 	 *
-	 * Fixed seeds keep each image stable across page loads (no random swapping
-	 * on refresh). To swap in your own demo images, just replace the URLs in
-	 * the array below. When the real data feed is ready, enable STEP 1 in
-	 * get_images() and these are automatically used only as a fallback.
+	 * To swap in your own demo images, drop files into assets/images/ and
+	 * replace the file names below. When the real data feed is ready, enable
+	 * STEP 1 in get_images() and these are automatically used only as a
+	 * fallback.
 	 *
 	 * @return string[]
 	 */
 	public static function get_placeholder_images() {
+		$base = EPI_PLUGIN_URL . 'assets/images/';
+
 		$images = array(
-			'https://picsum.photos/seed/epi-product-1/900/900',
-			'https://picsum.photos/seed/epi-product-2/900/900',
-			'https://picsum.photos/seed/epi-product-3/900/900',
-			'https://picsum.photos/seed/epi-product-4/900/900',
-			'https://picsum.photos/seed/epi-product-5/900/900',
-			'https://picsum.photos/seed/epi-product-6/900/900',
-			'https://picsum.photos/seed/epi-product-7/900/900',
+			$base . 'epi-edison-bulb.svg',
+			$base . 'epi-pendant-light.svg',
+			$base . 'epi-floor-lamp.svg',
+			$base . 'epi-table-lamp.svg',
+			$base . 'epi-chandelier.svg',
+			$base . 'epi-wall-sconce.svg',
 		);
 
 		// Sanitise everything before returning.
