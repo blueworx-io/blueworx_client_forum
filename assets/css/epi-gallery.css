@@ -1,0 +1,140 @@
+/**
+ * External Product Images — gallery styles.
+ *
+ * All selectors are namespaced with `.epi-` to avoid conflicts with the
+ * theme, WooCommerce, or other plugins.
+ */
+
+.epi-gallery {
+	--epi-gap: 16px;
+	--epi-radius: 12px;
+	--epi-border: #e6e6e6;
+	--epi-active: #111111;
+	--epi-bg: #f7f7f7;
+
+	display: flex;
+	flex-direction: column;
+	gap: var(--epi-gap);
+	width: 100%;
+	max-width: 100%;
+	margin: 0;
+}
+
+/* Main image stage ------------------------------------------------------- */
+.epi-gallery__stage {
+	position: relative;
+	width: 100%;
+	overflow: hidden;
+	border: 1px solid var(--epi-border);
+	border-radius: var(--epi-radius);
+	background-color: var(--epi-bg);
+	aspect-ratio: 1 / 1;
+}
+
+.epi-gallery__main-image {
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+	display: block;
+	transition: opacity 0.25s ease;
+}
+
+.epi-gallery__main-image.is-fading {
+	opacity: 0;
+}
+
+/* Thumbnail strip -------------------------------------------------------- */
+.epi-gallery__thumbs {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: var(--epi-gap);
+}
+
+.epi-gallery__thumb-item {
+	margin: 0;
+	padding: 0;
+}
+
+.epi-gallery__thumb {
+	display: block;
+	width: 100%;
+	padding: 0;
+	cursor: pointer;
+	overflow: hidden;
+	background-color: var(--epi-bg);
+	border: 1px solid var(--epi-border);
+	border-radius: calc(var(--epi-radius) - 4px);
+	aspect-ratio: 1 / 1;
+	transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+	-webkit-appearance: none;
+	appearance: none;
+}
+
+.epi-gallery__thumb:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.epi-gallery__thumb:focus-visible {
+	outline: 2px solid var(--epi-active);
+	outline-offset: 2px;
+}
+
+.epi-gallery__thumb.is-active {
+	border-color: var(--epi-active);
+	box-shadow: 0 0 0 1px var(--epi-active);
+}
+
+.epi-gallery__thumb-image {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+/* Layout variant: thumbnails on the left -------------------------------- */
+.epi-thumbs-left .epi-gallery {
+	flex-direction: row-reverse;
+	align-items: flex-start;
+}
+
+.epi-thumbs-left .epi-gallery__stage {
+	flex: 1 1 auto;
+}
+
+.epi-thumbs-left .epi-gallery__thumbs {
+	flex: 0 0 96px;
+	grid-template-columns: 1fr;
+	width: 96px;
+}
+
+/* Responsive ------------------------------------------------------------- */
+@media (max-width: 767px) {
+	.epi-gallery__thumbs {
+		grid-template-columns: repeat(4, 1fr);
+	}
+
+	/* Force the left-thumbnail variant back to a stacked layout on mobile. */
+	.epi-thumbs-left .epi-gallery {
+		flex-direction: column;
+	}
+
+	.epi-thumbs-left .epi-gallery__thumbs {
+		flex: 1 1 auto;
+		width: 100%;
+		grid-template-columns: repeat(4, 1fr);
+	}
+}
+
+@media (max-width: 479px) {
+	.epi-gallery {
+		--epi-gap: 10px;
+	}
+
+	.epi-gallery__thumbs {
+		grid-template-columns: repeat(3, 1fr);
+	}
+}
