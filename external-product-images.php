@@ -98,6 +98,7 @@ final class EPI_Plugin {
 		// WooCommerce is active; otherwise show a gentle notice.
 		if ( class_exists( 'WooCommerce' ) ) {
 			require_once EPI_PLUGIN_DIR . 'includes/class-epi-images-provider.php';
+			require_once EPI_PLUGIN_DIR . 'includes/class-epi-featured-image.php';
 			require_once EPI_PLUGIN_DIR . 'includes/class-epi-product-change-log.php';
 			require_once EPI_PLUGIN_DIR . 'includes/class-epi-product-meta.php';
 			EPI_Product_Change_Log::maybe_upgrade();

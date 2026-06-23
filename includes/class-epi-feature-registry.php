@@ -98,6 +98,15 @@ final class EPI_Feature_Registry {
 				'dependencies'   => array( 'woocommerce', 'elementor' ),
 				'boot'           => array( __CLASS__, 'boot_gallery' ),
 			),
+			'epim-featured-image'     => array(
+				'title'          => __( 'ePim featured image', 'external-product-images' ),
+				'description'    => __( 'Builds the WooCommerce featured image (shop, category, related, cart, checkout, search) from the product image ID using the external ePim asset URL.', 'external-product-images' ),
+				'group'          => 'product-display',
+				'dangerous'      => false,
+				'danger_message' => '',
+				'dependencies'   => array( 'woocommerce' ),
+				'boot'           => array( 'EPI_Featured_Image', 'init' ),
+			),
 			'hide-internal-attributes' => array(
 				'title'          => __( 'Hide internal attributes', 'external-product-images' ),
 				'description'    => __( 'Hides the internal pa_epim-*, pa_bullet-*, pa_ecd-* and "bullet" attributes from the product page.', 'external-product-images' ),
