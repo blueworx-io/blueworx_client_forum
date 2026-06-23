@@ -3,7 +3,7 @@ Contributors: blueworx
 Tags: woocommerce, elementor, product gallery, product images, site functionality
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.1.1
+Stable tag: 1.2.0
 License: GPLv2 or later
 
 Site functionality plugin for Forum Lighting. A control centre under
@@ -48,6 +48,14 @@ The stored value may be a JSON array of URLs OR a comma-separated list — both
 are handled automatically. Placeholders remain as a safety fallback.
 
 == Changelog ==
+
+= 1.2.0 =
+* Product gallery and the WooCommerce featured image now load product imagery
+  directly from the external ePim asset service, built from the product image
+  IDs (_thumbnail_id and _product_image_gallery) — no media-library imports.
+* Added a "ePim featured image" feature toggle under Settings > BlueWorx Lab.
+* Products with no image IDs (or a missing ePim asset) fall back to the bundled
+  placeholder images.
 
 = 1.1.1 =
 * Fixed the [product_bullets] shortcode so it renders custom (local) "Bullet"
