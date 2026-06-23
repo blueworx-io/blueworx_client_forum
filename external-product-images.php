@@ -1,9 +1,9 @@
 <?php
 /**
- * Plugin Name:       External Product Images
+ * Plugin Name:       BlueWorx Lab | Forum Lighting
  * Plugin URI:        https://blueworx.io/
- * Description:        Custom Elementor widget that replaces the WooCommerce Product Images widget on single product pages with an external, self-contained product gallery (placeholder images now, product meta later).
- * Version:           1.0.3
+ * Description:        Site functionality plugin for Forum Lighting. A control centre under Settings > BlueWorx Lab switches features on or off, including the WooCommerce product gallery, metadata tools, pricing rules and more.
+ * Version:           1.1.0
  * Author:            BlueWorx
  * Author URI:        https://blueworx.io/
  * Text Domain:       external-product-images
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Core plugin constants.
  */
-define( 'EPI_VERSION', '1.0.3' );
+define( 'EPI_VERSION', '1.1.0' );
 define( 'EPI_PLUGIN_FILE', __FILE__ );
 define( 'EPI_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'EPI_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -66,6 +66,16 @@ final class EPI_Plugin {
 	}
 
 	/**
+	 * Create plugin database tables on activation.
+	 *
+	 * @return void
+	 */
+	public static function activate() {
+		require_once EPI_PLUGIN_DIR . 'includes/class-epi-product-change-log.php';
+		EPI_Product_Change_Log::install();
+	}
+
+	/**
 	 * Initialise the plugin once all other plugins are loaded.
 	 *
 	 * Activation-safe: if Elementor or WooCommerce are unavailable we simply
@@ -74,52 +84,39 @@ final class EPI_Plugin {
 	 * @return void
 	 */
 	public function init() {
-		// Bail (gracefully) if WooCommerce is not active.
-		if ( ! class_exists( 'WooCommerce' ) ) {
+		// The feature registry and control page always load so the settings
+		// page works even when a dependency (WooCommerce / Elementor) is missing.
+		require_once EPI_PLUGIN_DIR . 'includes/class-epi-feature-registry.php';
+		require_once EPI_PLUGIN_DIR . 'includes/class-epi-lab-page.php';
+
+		EPI_Lab_Page::init();
+
+		// Most features need WooCommerce. Load the existing product classes (so
+		// their static helpers stay available regardless of which features are
+		// switched on) and keep the change-log table up to date when
+		// WooCommerce is active; otherwise show a gentle notice.
+		if ( class_exists( 'WooCommerce' ) ) {
+			require_once EPI_PLUGIN_DIR . 'includes/class-epi-product-change-log.php';
+			require_once EPI_PLUGIN_DIR . 'includes/class-epi-product-meta.php';
+			EPI_Product_Change_Log::maybe_upgrade();
+		} else {
 			add_action( 'admin_notices', array( $this, 'notice_missing_woocommerce' ) );
-			return;
 		}
 
-		// Bail (gracefully) if Elementor is not active.
-		if ( ! did_action( 'elementor/loaded' ) ) {
-			add_action( 'admin_notices', array( $this, 'notice_missing_elementor' ) );
-			return;
-		}
-
-		// Load the data helper (placeholder now, product meta later).
-		require_once EPI_PLUGIN_DIR . 'includes/class-epi-images-provider.php';
-
-		// Register the widget with Elementor.
-		add_action( 'elementor/widgets/register', array( $this, 'register_widgets' ) );
-
-		// Register (but do NOT enqueue) assets. Enqueueing is handled by the
-		// widget itself via get_style_depends() / get_script_depends() so the
-		// CSS/JS only load on pages where the widget is actually rendered.
-		add_action( 'elementor/frontend/after_register_styles', array( $this, 'register_assets' ) );
-		add_action( 'elementor/frontend/after_register_scripts', array( $this, 'register_assets' ) );
+		// Boot every feature that is switched on and whose dependencies are met.
+		EPI_Feature_Registry::boot();
 	}
 
 	/**
-	 * Register the custom Elementor widget(s).
+	 * Register the gallery frontend CSS/JS handles.
 	 *
-	 * @param \Elementor\Widgets_Manager $widgets_manager Elementor widgets manager.
-	 * @return void
-	 */
-	public function register_widgets( $widgets_manager ) {
-		require_once EPI_PLUGIN_DIR . 'includes/class-epi-widget.php';
-
-		$widgets_manager->register( new \EPI_Widget() );
-	}
-
-	/**
-	 * Register frontend CSS/JS handles.
-	 *
-	 * These are only enqueued on demand by the widget, satisfying the
-	 * "load assets only where needed" requirement.
+	 * These are only enqueued on demand by the Elementor widget, so the CSS/JS
+	 * load only on pages where the gallery is actually rendered. Static so the
+	 * feature registry can hook it without the plugin instance.
 	 *
 	 * @return void
 	 */
-	public function register_assets() {
+	public static function register_gallery_assets() {
 		wp_register_style(
 			'epi-gallery',
 			EPI_PLUGIN_URL . 'assets/css/epi-gallery.css',
@@ -139,25 +136,19 @@ final class EPI_Plugin {
 	/**
 	 * Admin notice: WooCommerce missing.
 	 *
+	 * Most features need WooCommerce; the BlueWorx Lab control page still works
+	 * without it and shows which features are unavailable.
+	 *
 	 * @return void
 	 */
 	public function notice_missing_woocommerce() {
 		echo '<div class="notice notice-warning"><p>';
-		echo esc_html__( 'External Product Images requires WooCommerce to be installed and active.', 'external-product-images' );
-		echo '</p></div>';
-	}
-
-	/**
-	 * Admin notice: Elementor missing.
-	 *
-	 * @return void
-	 */
-	public function notice_missing_elementor() {
-		echo '<div class="notice notice-warning"><p>';
-		echo esc_html__( 'External Product Images requires Elementor to be installed and active.', 'external-product-images' );
+		echo esc_html__( 'BlueWorx Lab | Forum Lighting works best with WooCommerce active. Most features will not run until WooCommerce is installed and active.', 'external-product-images' );
 		echo '</p></div>';
 	}
 }
+
+register_activation_hook( __FILE__, array( 'EPI_Plugin', 'activate' ) );
 
 /**
  * Kick things off.

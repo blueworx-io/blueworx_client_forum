@@ -1,0 +1,369 @@
+/**
+ * Product metadata viewer.
+ */
+
+.epi-meta-viewer {
+	--epi-meta-border: #dcdcde;
+	--epi-meta-ink: #1d2327;
+	--epi-meta-muted: #646970;
+	--epi-meta-surface: #f6f7f7;
+	--epi-meta-accent: #2271b1;
+
+	color: var(--epi-meta-ink);
+}
+
+.epi-meta-toolbar,
+.epi-meta-page__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+}
+
+.epi-meta-toolbar--page {
+	margin-bottom: 14px;
+}
+
+.epi-meta-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	justify-content: flex-end;
+}
+
+.epi-meta-actions .button {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+}
+
+.epi-meta-actions .dashicons {
+	width: 16px;
+	height: 16px;
+	font-size: 16px;
+	line-height: 16px;
+}
+
+.epi-meta-summary {
+	margin: 0;
+	color: var(--epi-meta-muted);
+}
+
+.epi-meta-new-tab {
+	display: inline-flex !important;
+	align-items: center;
+	gap: 5px;
+	flex: 0 0 auto;
+}
+
+.epi-meta-new-tab .dashicons {
+	width: 16px;
+	height: 16px;
+	font-size: 16px;
+	line-height: 16px;
+}
+
+.epi-meta-activity {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 10px;
+	margin: 16px 0;
+}
+
+.epi-meta-activity__item {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	min-height: 58px;
+	padding: 12px 14px;
+	border: 1px solid var(--epi-meta-border);
+	border-radius: 4px;
+	background: var(--epi-meta-surface);
+}
+
+.epi-meta-activity__item > .dashicons {
+	width: 24px;
+	height: 24px;
+	color: var(--epi-meta-accent);
+	font-size: 24px;
+	line-height: 24px;
+}
+
+.epi-meta-activity__item div {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 2px 7px;
+}
+
+.epi-meta-activity__label {
+	flex-basis: 100%;
+	color: var(--epi-meta-muted);
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.epi-meta-activity__item strong {
+	color: var(--epi-meta-ink);
+}
+
+.epi-meta-search {
+	position: relative;
+	display: block;
+	margin: 16px 0 12px;
+}
+
+.epi-meta-search .dashicons {
+	position: absolute;
+	top: 50%;
+	left: 11px;
+	width: 18px;
+	height: 18px;
+	margin-top: -9px;
+	color: var(--epi-meta-muted);
+	pointer-events: none;
+}
+
+.epi-meta-search input[type="search"] {
+	width: 100%;
+	max-width: none;
+	min-height: 40px;
+	padding: 6px 12px 6px 38px;
+	border-color: var(--epi-meta-border);
+	border-radius: 4px;
+	background: #fff;
+}
+
+.epi-meta-search input[type="search"]:focus {
+	border-color: var(--epi-meta-accent);
+	box-shadow: 0 0 0 1px var(--epi-meta-accent);
+}
+
+.epi-meta-table-wrap {
+	overflow: auto;
+	border: 1px solid var(--epi-meta-border);
+	border-radius: 4px;
+	background: #fff;
+}
+
+.epi-meta-table-wrap--box {
+	max-height: 520px;
+}
+
+.epi-meta-table {
+	border: 0;
+	border-spacing: 0;
+	box-shadow: none;
+}
+
+.epi-meta-table thead th {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	padding: 11px 14px;
+	border-bottom: 1px solid var(--epi-meta-border);
+	background: var(--epi-meta-surface);
+}
+
+.epi-meta-table th:first-child {
+	width: 30%;
+	min-width: 220px;
+}
+
+.epi-meta-table tbody th,
+.epi-meta-table tbody td {
+	padding: 12px 14px;
+	vertical-align: top;
+}
+
+.epi-meta-table tbody th {
+	text-align: left;
+}
+
+.epi-meta-table code {
+	color: #8a2424;
+	font-size: 12px;
+	overflow-wrap: anywhere;
+}
+
+.epi-meta-table pre {
+	margin: 0;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	font: 12px/1.55 Consolas, Monaco, monospace;
+	color: var(--epi-meta-ink);
+}
+
+.epi-meta-table a {
+	overflow-wrap: anywhere;
+}
+
+.epi-meta-empty-value {
+	color: var(--epi-meta-muted);
+	font-style: italic;
+}
+
+.epi-meta-no-results,
+.epi-meta-empty {
+	margin: 0;
+	padding: 28px 18px;
+	text-align: center;
+	color: var(--epi-meta-muted);
+	background: #fff;
+}
+
+.epi-meta-page {
+	max-width: 1280px;
+}
+
+.epi-meta-page__header {
+	margin: 22px 0 18px;
+	padding: 22px 24px;
+	border-left: 4px solid var(--epi-meta-accent);
+	background: #fff;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.epi-meta-page__header h1 {
+	margin: 2px 0 6px;
+	padding: 0;
+}
+
+.epi-meta-page__eyebrow {
+	margin: 0;
+	color: var(--epi-meta-muted);
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.epi-meta-viewer--page {
+	padding: 18px;
+	border: 1px solid var(--epi-meta-border);
+	background: #fff;
+}
+
+.epi-meta-viewer--page .epi-meta-search {
+	margin-top: 0;
+}
+
+.epi-change-log--page {
+	margin-top: 24px;
+	padding: 18px;
+	border: 1px solid var(--epi-meta-border, #dcdcde);
+	background: #fff;
+}
+
+.epi-section-heading h2 {
+	margin: 0 0 4px;
+	font-size: 20px;
+}
+
+.epi-section-heading p {
+	margin: 0 0 16px;
+	color: #646970;
+}
+
+.epi-change-table-wrap {
+	overflow: auto;
+	margin-top: 12px;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+}
+
+.epi-change-table {
+	min-width: 920px;
+	border: 0;
+	box-shadow: none;
+}
+
+.epi-change-table th,
+.epi-change-table td {
+	padding: 10px 12px;
+	vertical-align: top;
+}
+
+.epi-change-table th:first-child {
+	width: 155px;
+}
+
+.epi-change-table th:nth-child(2) {
+	width: 145px;
+}
+
+.epi-change-table th:nth-child(3) {
+	width: 180px;
+}
+
+.epi-change-table td strong,
+.epi-change-table td span,
+.epi-change-table td code {
+	display: block;
+}
+
+.epi-change-table pre {
+	max-width: 390px;
+	margin: 0;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	font: 12px/1.5 Consolas, Monaco, monospace;
+}
+
+.epi-change-table details summary {
+	cursor: pointer;
+	color: #2271b1;
+}
+
+.epi-change-table details pre {
+	margin-top: 8px;
+}
+
+.epi-change-action,
+.epi-change-source,
+.epi-change-object {
+	margin-top: 3px;
+	color: #646970;
+	font-size: 11px;
+}
+
+.column-epi_last_updated {
+	width: 155px;
+}
+
+.epi-product-updated {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.epi-product-updated strong {
+	color: #1d2327;
+}
+
+.epi-product-updated span {
+	color: #646970;
+	font-size: 12px;
+}
+
+@media screen and (max-width: 782px) {
+	.epi-meta-toolbar,
+	.epi-meta-page__header {
+		align-items: flex-start;
+		flex-direction: column;
+	}
+
+	.epi-meta-actions {
+		justify-content: flex-start;
+	}
+
+	.epi-meta-table th:first-child {
+		width: 38%;
+		min-width: 150px;
+	}
+
+	.epi-meta-activity {
+		grid-template-columns: 1fr;
+	}
+}
