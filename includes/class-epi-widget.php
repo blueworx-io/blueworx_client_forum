@@ -121,7 +121,7 @@ class EPI_Widget extends Widget_Base {
 			'epi_editor_notice',
 			array(
 				'type'            => Controls_Manager::RAW_HTML,
-				'raw'             => esc_html__( 'Images currently use placeholders. They will automatically switch to the product meta image URLs once that data is available — no widget changes required.', 'external-product-images' ),
+				'raw'             => esc_html__( 'Images are pulled live from ePim using the product image IDs. Products with no image IDs fall back to placeholders.', 'external-product-images' ),
 				'content_classes' => 'elementor-panel-alert elementor-panel-alert-info',
 			)
 		);
@@ -188,6 +188,10 @@ class EPI_Widget extends Widget_Base {
 		// Accessible alt text based on the product title where possible.
 		$product   = $product_id ? get_the_title( $product_id ) : '';
 		$alt_base  = $product ? $product : esc_html__( 'Product image', 'external-product-images' );
+
+		// Fallback to a bundled placeholder if an ePim asset fails to load.
+		$fallback = EPI_Images_Provider::fallback_image_url();
+		$on_error = $fallback ? "this.onerror=null;this.src='" . $fallback . "';" : '';
 		?>
 		<div class="epi-gallery" id="<?php echo esc_attr( $gallery_id ); ?>" data-epi-gallery>
 
@@ -199,6 +203,7 @@ class EPI_Widget extends Widget_Base {
 					data-epi-main
 					loading="eager"
 					decoding="async"
+					onerror="<?php echo esc_attr( $on_error ); ?>"
 				/>
 			</div>
 
@@ -226,6 +231,7 @@ class EPI_Widget extends Widget_Base {
 									?>"
 									loading="lazy"
 									decoding="async"
+									onerror="<?php echo esc_attr( $on_error ); ?>"
 								/>
 							</button>
 						</li>

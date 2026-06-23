@@ -3,9 +3,9 @@
  * Image data provider.
  *
  * This is the SINGLE place responsible for resolving the list of image URLs
- * for a product. Right now it returns placeholder images. When the product
- * meta is ready, the only thing you need to change lives in this file
- * (see the clearly marked section in get_images()).
+ * for a product. It builds external ePim asset URLs from the product's image
+ * IDs (`_thumbnail_id` + `_product_image_gallery`) and falls back to the
+ * bundled placeholder set when a product has no IDs.
  *
  * @package ExternalProductImages
  */
@@ -23,23 +23,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 class EPI_Images_Provider {
 
 	/**
-	 * ============================================================
-	 *  FUTURE PRODUCT META INTEGRATION — CHANGE THIS WHEN READY
-	 * ============================================================
-	 *
-	 * The meta key that will hold the external image URLs.
-	 *
-	 * The stored value may be EITHER:
-	 *   - a JSON array of URLs:        ["https://…/a.jpg","https://…/b.jpg"]
-	 *   - a comma-separated list:      https://…/a.jpg, https://…/b.jpg
-	 *
-	 * Both formats are handled automatically by parse_meta_value().
-	 *
-	 * @var string
-	 */
-	const META_KEY = '_epi_external_image_urls';
-
-	/**
 	 * Get the normalised, sanitised list of image URLs for a product.
 	 *
 	 * Always returns at least one URL (falls back to placeholders) so the
@@ -54,21 +37,37 @@ class EPI_Images_Provider {
 
 		/**
 		 * ------------------------------------------------------------------
-		 *  STEP 1 — READ FROM PRODUCT META  (currently DISABLED)
+		 *  STEP 1 — BUILD URLS FROM ePim IMAGE IDS
 		 * ------------------------------------------------------------------
 		 *
-		 * When the meta is populated, uncomment the block below. It reads the
-		 * raw meta value and normalises it (JSON array OR comma-separated)
-		 * into a clean array of sanitised URLs.
-		 *
-		 * No other change is required anywhere else in the plugin.
+		 * Featured image (`_thumbnail_id`) first, then the gallery IDs
+		 * (`_product_image_gallery`, comma-separated). These are ePim asset
+		 * IDs, not WordPress attachments — we construct external URLs and
+		 * never import anything into the media library.
 		 */
-		/*
 		if ( $product_id ) {
-			$raw  = get_post_meta( $product_id, self::META_KEY, true );
-			$urls = self::parse_meta_value( $raw );
+			$ids = array();
+
+			$thumbnail_id = get_post_meta( $product_id, '_thumbnail_id', true );
+			if ( $thumbnail_id ) {
+				$ids[] = $thumbnail_id;
+			}
+
+			$gallery = get_post_meta( $product_id, '_product_image_gallery', true );
+			if ( ! empty( $gallery ) ) {
+				$ids = array_merge( $ids, explode( ',', (string) $gallery ) );
+			}
+
+			foreach ( $ids as $id ) {
+				$url = self::build_image_url( $id );
+
+				if ( '' !== $url ) {
+					$urls[] = $url;
+				}
+			}
+
+			$urls = array_values( array_unique( $urls ) );
 		}
-		*/
 
 		/**
 		 * ------------------------------------------------------------------
@@ -89,52 +88,6 @@ class EPI_Images_Provider {
 		 * @param int      $product_id Product ID.
 		 */
 		return apply_filters( 'epi_product_images', $urls, $product_id );
-	}
-
-	/**
-	 * Normalise a raw meta value into a clean array of URLs.
-	 *
-	 * Accepts a JSON array string or a comma-separated string. Every URL is
-	 * validated and sanitised, satisfying requirement #20.
-	 *
-	 * @param mixed $raw Raw meta value.
-	 * @return string[] Sanitised URLs.
-	 */
-	public static function parse_meta_value( $raw ) {
-		if ( empty( $raw ) ) {
-			return array();
-		}
-
-		// If it's already an array (e.g. stored as array meta), use it directly.
-		if ( is_array( $raw ) ) {
-			$candidates = $raw;
-		} else {
-			$raw        = trim( (string) $raw );
-			$candidates = array();
-
-			// Try JSON array first.
-			$decoded = json_decode( $raw, true );
-
-			if ( is_array( $decoded ) && JSON_ERROR_NONE === json_last_error() ) {
-				$candidates = $decoded;
-			} else {
-				// Fall back to comma-separated list.
-				$candidates = explode( ',', $raw );
-			}
-		}
-
-		$urls = array();
-
-		foreach ( $candidates as $candidate ) {
-			$url = esc_url_raw( trim( (string) $candidate ) );
-
-			// Keep only well-formed http(s) URLs.
-			if ( $url && preg_match( '#^https?://#i', $url ) ) {
-				$urls[] = $url;
-			}
-		}
-
-		return array_values( array_unique( $urls ) );
 	}
 
 	/**
