@@ -138,6 +138,43 @@ class EPI_Images_Provider {
 	}
 
 	/**
+	 * Build the external ePim asset URL for a single image ID.
+	 *
+	 * @param int|string $id ePim asset ID (stored in product meta).
+	 * @return string Escaped URL, or '' when the ID is empty/invalid.
+	 */
+	public static function build_image_url( $id ) {
+		$id = absint( $id );
+
+		if ( ! $id ) {
+			return '';
+		}
+
+		$url = EPI_EPIM_IMAGE_BASE . $id . '.jpg';
+
+		/**
+		 * Filter the constructed ePim image URL (e.g. to change host or extension).
+		 *
+		 * @param string $url Constructed URL.
+		 * @param int    $id  ePim asset ID.
+		 */
+		$url = apply_filters( 'epi_epim_image_url', $url, $id );
+
+		return esc_url_raw( $url );
+	}
+
+	/**
+	 * First bundled placeholder, used as the <img> onerror fallback.
+	 *
+	 * @return string
+	 */
+	public static function fallback_image_url() {
+		$images = self::get_placeholder_images();
+
+		return ! empty( $images ) ? $images[0] : '';
+	}
+
+	/**
 	 * Demo image set used until product meta is wired up.
 	 *
 	 * ============================================================

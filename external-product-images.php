@@ -26,6 +26,7 @@ define( 'EPI_VERSION', '1.1.1' );
 define( 'EPI_PLUGIN_FILE', __FILE__ );
 define( 'EPI_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'EPI_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+define( 'EPI_EPIM_IMAGE_BASE', 'https://epim.online/webproduct/assetimage/' );
 
 /**
  * Main plugin bootstrap class.
@@ -96,6 +97,7 @@ final class EPI_Plugin {
 		// switched on) and keep the change-log table up to date when
 		// WooCommerce is active; otherwise show a gentle notice.
 		if ( class_exists( 'WooCommerce' ) ) {
+			require_once EPI_PLUGIN_DIR . 'includes/class-epi-images-provider.php';
 			require_once EPI_PLUGIN_DIR . 'includes/class-epi-product-change-log.php';
 			require_once EPI_PLUGIN_DIR . 'includes/class-epi-product-meta.php';
 			EPI_Product_Change_Log::maybe_upgrade();
