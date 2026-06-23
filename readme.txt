@@ -3,7 +3,7 @@ Contributors: blueworx
 Tags: woocommerce, elementor, product gallery, product images, site functionality
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 License: GPLv2 or later
 
 Site functionality plugin for Forum Lighting. A control centre under
@@ -48,6 +48,12 @@ The stored value may be a JSON array of URLs OR a comma-separated list — both
 are handled automatically. Placeholders remain as a safety fallback.
 
 == Changelog ==
+
+= 1.1.1 =
+* Fixed the [product_bullets] shortcode so it renders custom (local) "Bullet"
+  product attributes, not just the legacy global pa_bullet-* taxonomies.
+* Bullets now display in numeric order (Bullet 1, 2, 3...) regardless of the
+  attribute order on the edit screen.
 
 = 1.1.0 =
 * Renamed the plugin to "BlueWorx Lab | Forum Lighting" and turned it into the

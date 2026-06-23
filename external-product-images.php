@@ -3,7 +3,7 @@
  * Plugin Name:       BlueWorx Lab | Forum Lighting
  * Plugin URI:        https://blueworx.io/
  * Description:        Site functionality plugin for Forum Lighting. A control centre under Settings > BlueWorx Lab switches features on or off, including the WooCommerce product gallery, metadata tools, pricing rules and more.
- * Version:           1.1.0
+ * Version:           1.1.1
  * Author:            BlueWorx
  * Author URI:        https://blueworx.io/
  * Text Domain:       external-product-images
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Core plugin constants.
  */
-define( 'EPI_VERSION', '1.1.0' );
+define( 'EPI_VERSION', '1.1.1' );
 define( 'EPI_PLUGIN_FILE', __FILE__ );
 define( 'EPI_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'EPI_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
