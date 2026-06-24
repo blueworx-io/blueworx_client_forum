@@ -19,12 +19,15 @@ add_action('pre_get_posts', function($query) {
 		// Restrict to WooCommerce products
 		$query->set('post_type', ['product']);
 
-		// Preserve sorting and pagination
+		// Preserve sorting and pagination. These are read-only, bookmarkable query vars
+		// (no form submission), so nonce verification does not apply.
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended
 		if (isset($_GET['orderby'])) {
-			$query->set('orderby', sanitize_text_field($_GET['orderby']));
+			$query->set('orderby', sanitize_text_field(wp_unslash($_GET['orderby'])));
 		}
 		if (isset($_GET['order'])) {
-			$query->set('order', sanitize_text_field($_GET['order']));
+			$query->set('order', sanitize_text_field(wp_unslash($_GET['order'])));
 		}
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 	}
 });

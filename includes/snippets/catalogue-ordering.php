@@ -76,9 +76,12 @@ add_action('wp_ajax_save_catalogue_drag_order', function() {
         wp_send_json_error();
     }
 
-    foreach ($_POST['order'] as $position => $post_id) {
+    // Nonce already verified above via check_ajax_referer(); unslash and cast IDs to integers.
+    $order = array_map('absint', (array) wp_unslash($_POST['order']));
+
+    foreach ($order as $position => $post_id) {
         wp_update_post([
-            'ID' => intval($post_id),
+            'ID' => $post_id,
             'menu_order' => intval($position),
         ]);
     }

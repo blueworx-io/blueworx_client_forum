@@ -3,10 +3,10 @@
  * Plugin Name:       BlueWorx Lab | Forum Lighting
  * Plugin URI:        https://blueworx.io/
  * Description:        Site functionality plugin for Forum Lighting. A control centre under Settings > BlueWorx Lab switches features on or off, including the WooCommerce product gallery, metadata tools, pricing rules and more.
- * Version:           1.2.0
+ * Version:           1.2.1
  * Author:            BlueWorx
  * Author URI:        https://blueworx.io/
- * Text Domain:       external-product-images
+ * Text Domain:       blueworx_client_forum
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * License:           GPL-2.0-or-later
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Core plugin constants.
  */
-define( 'EPI_VERSION', '1.2.0' );
+define( 'EPI_VERSION', '1.2.1' );
 define( 'EPI_PLUGIN_FILE', __FILE__ );
 define( 'EPI_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'EPI_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -146,7 +146,7 @@ final class EPI_Plugin {
 	 */
 	public function notice_missing_woocommerce() {
 		echo '<div class="notice notice-warning"><p>';
-		echo esc_html__( 'BlueWorx Lab | Forum Lighting works best with WooCommerce active. Most features will not run until WooCommerce is installed and active.', 'external-product-images' );
+		echo esc_html__( 'BlueWorx Lab | Forum Lighting works best with WooCommerce active. Most features will not run until WooCommerce is installed and active.', 'blueworx_client_forum' );
 		echo '</p></div>';
 	}
 }

@@ -44,8 +44,8 @@ final class EPI_Lab_Page {
 	 */
 	public static function register_page() {
 		add_options_page(
-			__( 'BlueWorx Lab', 'external-product-images' ),
-			__( 'BlueWorx Lab', 'external-product-images' ),
+			__( 'BlueWorx Lab', 'blueworx_client_forum' ),
+			__( 'BlueWorx Lab', 'blueworx_client_forum' ),
 			'manage_options',
 			self::SLUG,
 			array( __CLASS__, 'render_page' )
@@ -78,12 +78,14 @@ final class EPI_Lab_Page {
 		}
 
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You are not allowed to manage these settings.', 'external-product-images' ) );
+			wp_die( esc_html__( 'You are not allowed to manage these settings.', 'blueworx_client_forum' ) );
 		}
 
 		check_admin_referer( 'epi_lab_save', 'epi_lab_nonce' );
 
-		$enabled_ids = isset( $_POST['epi_features'] ) ? (array) wp_unslash( $_POST['epi_features'] ) : array();
+		$enabled_ids = isset( $_POST['epi_features'] )
+			? array_map( 'sanitize_text_field', (array) wp_unslash( $_POST['epi_features'] ) )
+			: array();
 		EPI_Feature_Registry::save( $enabled_ids );
 
 		wp_safe_redirect(
@@ -117,14 +119,14 @@ final class EPI_Lab_Page {
 		}
 		?>
 		<div class="wrap epi-lab">
-			<h1><?php esc_html_e( 'BlueWorx Lab | Forum Lighting', 'external-product-images' ); ?></h1>
+			<h1><?php esc_html_e( 'BlueWorx Lab | Forum Lighting', 'blueworx_client_forum' ); ?></h1>
 			<p class="epi-lab__intro">
-				<?php esc_html_e( 'Switch each site feature on or off. Everything is on by default. Turning a feature off stops it running until you switch it back on.', 'external-product-images' ); ?>
+				<?php esc_html_e( 'Switch each site feature on or off. Everything is on by default. Turning a feature off stops it running until you switch it back on.', 'blueworx_client_forum' ); ?>
 			</p>
 
 			<?php if ( isset( $_GET['updated'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
 				<div class="notice notice-success is-dismissible">
-					<p><?php esc_html_e( 'Feature settings saved.', 'external-product-images' ); ?></p>
+					<p><?php esc_html_e( 'Feature settings saved.', 'blueworx_client_forum' ); ?></p>
 				</div>
 			<?php endif; ?>
 
@@ -150,7 +152,7 @@ final class EPI_Lab_Page {
 					</section>
 				<?php endforeach; ?>
 
-				<?php submit_button( __( 'Save changes', 'external-product-images' ) ); ?>
+				<?php submit_button( __( 'Save changes', 'blueworx_client_forum' ) ); ?>
 			</form>
 		</div>
 		<?php
@@ -210,7 +212,7 @@ final class EPI_Lab_Page {
 			<p class="epi-lab__card-desc"><?php echo esc_html( $definition['description'] ); ?></p>
 
 			<?php if ( ! empty( $definition['dangerous'] ) ) : ?>
-				<p class="epi-lab__card-flag"><?php esc_html_e( 'Sensitive - affects the live store.', 'external-product-images' ); ?></p>
+				<p class="epi-lab__card-flag"><?php esc_html_e( 'Sensitive - affects the live store.', 'blueworx_client_forum' ); ?></p>
 			<?php endif; ?>
 
 			<?php if ( $blocked ) : ?>
@@ -218,7 +220,7 @@ final class EPI_Lab_Page {
 					<?php
 					printf(
 						/* translators: %s: comma-separated plugin names. */
-						esc_html__( 'Requires %s (not active).', 'external-product-images' ),
+						esc_html__( 'Requires %s (not active).', 'blueworx_client_forum' ),
 						esc_html( implode( ', ', $missing ) )
 					);
 					?>

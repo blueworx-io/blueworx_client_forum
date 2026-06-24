@@ -2,13 +2,12 @@
 Contributors: blueworx
 Tags: woocommerce, elementor, product gallery, product images, site functionality
 Requires at least: 6.0
+Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.2.0
+Stable tag: 1.2.1
 License: GPLv2 or later
 
-Site functionality plugin for Forum Lighting. A control centre under
-Settings > BlueWorx Lab switches each feature on or off, including the
-WooCommerce product gallery, metadata tools, pricing rules and more.
+Site functionality plugin for Forum Lighting: one control centre to switch the WooCommerce gallery, metadata, pricing and more on or off.
 
 == Description ==
 
@@ -48,6 +47,15 @@ The stored value may be a JSON array of URLs OR a comma-separated list — both
 are handled automatically. Placeholders remain as a safety fallback.
 
 == Changelog ==
+
+= 1.2.1 =
+* Aligned the plugin text domain with the plugin slug so all translatable
+  strings resolve correctly.
+* Hardened admin input handling (unslashing and sanitising query and form
+  data) and documented the intentional direct database queries used by the
+  change log and the image-purge tool.
+* Switched the N/A attribute filter to wp_strip_all_tags() and added the
+  missing translators comment.
 
 = 1.2.0 =
 * Product gallery and the WooCommerce featured image now load product imagery

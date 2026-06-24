@@ -38,7 +38,7 @@ class EPI_Widget extends Widget_Base {
 	 * @return string
 	 */
 	public function get_title() {
-		return esc_html__( 'External Product Images', 'external-product-images' );
+		return esc_html__( 'External Product Images', 'blueworx_client_forum' );
 	}
 
 	/**
@@ -98,7 +98,7 @@ class EPI_Widget extends Widget_Base {
 		$this->start_controls_section(
 			'epi_layout_section',
 			array(
-				'label' => esc_html__( 'Gallery Layout', 'external-product-images' ),
+				'label' => esc_html__( 'Gallery Layout', 'blueworx_client_forum' ),
 				'tab'   => Controls_Manager::TAB_CONTENT,
 			)
 		);
@@ -106,12 +106,12 @@ class EPI_Widget extends Widget_Base {
 		$this->add_control(
 			'epi_thumb_position',
 			array(
-				'label'   => esc_html__( 'Thumbnail Position', 'external-product-images' ),
+				'label'   => esc_html__( 'Thumbnail Position', 'blueworx_client_forum' ),
 				'type'    => Controls_Manager::SELECT,
 				'default' => 'bottom',
 				'options' => array(
-					'bottom' => esc_html__( 'Below main image', 'external-product-images' ),
-					'left'   => esc_html__( 'Left of main image', 'external-product-images' ),
+					'bottom' => esc_html__( 'Below main image', 'blueworx_client_forum' ),
+					'left'   => esc_html__( 'Left of main image', 'blueworx_client_forum' ),
 				),
 				'prefix_class' => 'epi-thumbs-',
 			)
@@ -121,7 +121,7 @@ class EPI_Widget extends Widget_Base {
 			'epi_editor_notice',
 			array(
 				'type'            => Controls_Manager::RAW_HTML,
-				'raw'             => esc_html__( 'Images are pulled live from ePim using the product image IDs. Products with no image IDs fall back to placeholders.', 'external-product-images' ),
+				'raw'             => esc_html__( 'Images are pulled live from ePim using the product image IDs. Products with no image IDs fall back to placeholders.', 'blueworx_client_forum' ),
 				'content_classes' => 'elementor-panel-alert elementor-panel-alert-info',
 			)
 		);
@@ -187,7 +187,7 @@ class EPI_Widget extends Widget_Base {
 
 		// Accessible alt text based on the product title where possible.
 		$product   = $product_id ? get_the_title( $product_id ) : '';
-		$alt_base  = $product ? $product : esc_html__( 'Product image', 'external-product-images' );
+		$alt_base  = $product ? $product : esc_html__( 'Product image', 'blueworx_client_forum' );
 
 		// Fallback to a bundled placeholder if an ePim asset fails to load.
 		$fallback = EPI_Images_Provider::fallback_image_url();
@@ -208,7 +208,7 @@ class EPI_Widget extends Widget_Base {
 			</div>
 
 			<?php if ( count( $images ) > 1 ) : ?>
-				<ul class="epi-gallery__thumbs" role="list" aria-label="<?php esc_attr_e( 'Product image thumbnails', 'external-product-images' ); ?>">
+				<ul class="epi-gallery__thumbs" role="list" aria-label="<?php esc_attr_e( 'Product image thumbnails', 'blueworx_client_forum' ); ?>">
 					<?php foreach ( $images as $index => $image_url ) : ?>
 						<li class="epi-gallery__thumb-item">
 							<button
@@ -218,7 +218,7 @@ class EPI_Widget extends Widget_Base {
 								data-epi-full="<?php echo esc_url( $image_url ); ?>"
 								aria-label="<?php
 									/* translators: %d: image number. */
-									echo esc_attr( sprintf( __( 'View image %d', 'external-product-images' ), $index + 1 ) );
+									echo esc_attr( sprintf( __( 'View image %d', 'blueworx_client_forum' ), $index + 1 ) );
 								?>"
 								<?php echo 0 === $index ? 'aria-current="true"' : ''; ?>
 							>
@@ -227,7 +227,7 @@ class EPI_Widget extends Widget_Base {
 									src="<?php echo esc_url( $image_url ); ?>"
 									alt="<?php
 										/* translators: 1: product name, 2: image number. */
-										echo esc_attr( sprintf( __( '%1$s — thumbnail %2$d', 'external-product-images' ), $alt_base, $index + 1 ) );
+										echo esc_attr( sprintf( __( '%1$s — thumbnail %2$d', 'blueworx_client_forum' ), $alt_base, $index + 1 ) );
 									?>"
 									loading="lazy"
 									decoding="async"

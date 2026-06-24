@@ -18,6 +18,14 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+/*
+ * This is a one-time, admin-only maintenance tool (Tools > Purge Product Images, manage_options).
+ * It intentionally runs direct, uncached, schema-level queries against core tables in batches, and
+ * builds IN() lists from integer IDs already passed through absint(). Caching and prepared-statement
+ * placeholders add no security value in this context, so the relevant sniffs are disabled for this file.
+ */
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery, Squiz.PHP.DiscouragedFunctions.Discouraged
+
 final class One_Time_WC_Product_Image_Purge {
     private const PAGE_SLUG = 'one-time-wc-product-image-purge';
     private const NONCE_ACTION = 'one_time_wc_product_image_purge';

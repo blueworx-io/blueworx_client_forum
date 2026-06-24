@@ -39,7 +39,7 @@ final class EPI_Product_Meta {
 	public static function add_meta_box() {
 		add_meta_box(
 			'epi-product-meta',
-			esc_html__( 'Product Meta Data', 'external-product-images' ),
+			esc_html__( 'Product Meta Data', 'blueworx_client_forum' ),
 			array( __CLASS__, 'render_meta_box' ),
 			'product',
 			'normal',
@@ -55,8 +55,8 @@ final class EPI_Product_Meta {
 	public static function register_full_page() {
 		add_submenu_page(
 			null,
-			esc_html__( 'Product Meta Data', 'external-product-images' ),
-			esc_html__( 'Product Meta Data', 'external-product-images' ),
+			esc_html__( 'Product Meta Data', 'blueworx_client_forum' ),
+			esc_html__( 'Product Meta Data', 'blueworx_client_forum' ),
 			'edit_products',
 			'epi-product-meta',
 			array( __CLASS__, 'render_full_page' )
@@ -108,14 +108,14 @@ final class EPI_Product_Meta {
 
 		foreach ( $columns as $key => $label ) {
 			if ( 'date' === $key ) {
-				$updated_columns['epi_last_updated'] = esc_html__( 'Last updated', 'external-product-images' );
+				$updated_columns['epi_last_updated'] = esc_html__( 'Last updated', 'blueworx_client_forum' );
 			}
 
 			$updated_columns[ $key ] = $label;
 		}
 
 		if ( ! isset( $updated_columns['epi_last_updated'] ) ) {
-			$updated_columns['epi_last_updated'] = esc_html__( 'Last updated', 'external-product-images' );
+			$updated_columns['epi_last_updated'] = esc_html__( 'Last updated', 'blueworx_client_forum' );
 		}
 
 		return $updated_columns;
@@ -149,7 +149,7 @@ final class EPI_Product_Meta {
 				<?php
 				printf(
 					/* translators: %s: user display name. */
-					esc_html__( 'by %s', 'external-product-images' ),
+					esc_html__( 'by %s', 'blueworx_client_forum' ),
 					esc_html( $editor )
 				);
 				?>
@@ -191,7 +191,7 @@ final class EPI_Product_Meta {
 						<?php
 						printf(
 							/* translators: %d: number of metadata fields. */
-							esc_html( _n( '%d metadata field', '%d metadata fields', $meta_count, 'external-product-images' ) ),
+							esc_html( _n( '%d metadata field', '%d metadata fields', $meta_count, 'blueworx_client_forum' ) ),
 							absint( $meta_count )
 						);
 						?>
@@ -210,7 +210,7 @@ final class EPI_Product_Meta {
 			</div>
 
 			<p class="epi-meta-no-results" data-epi-meta-no-results hidden>
-				<?php esc_html_e( 'No matching metadata found.', 'external-product-images' ); ?>
+				<?php esc_html_e( 'No matching metadata found.', 'blueworx_client_forum' ); ?>
 			</p>
 		</div>
 		<?php
@@ -222,6 +222,7 @@ final class EPI_Product_Meta {
 	 * @return void
 	 */
 	public static function render_full_page() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only product lookup for an admin view; sanitised with absint() and capability-checked below.
 		$product_id = isset( $_GET['product_id'] ) ? absint( wp_unslash( $_GET['product_id'] ) ) : 0;
 		$product    = $product_id ? get_post( $product_id ) : null;
 
@@ -230,7 +231,7 @@ final class EPI_Product_Meta {
 			|| 'product' !== $product->post_type
 			|| ! current_user_can( 'edit_post', $product_id )
 		) {
-			wp_die( esc_html__( 'You cannot view metadata for this product.', 'external-product-images' ) );
+			wp_die( esc_html__( 'You cannot view metadata for this product.', 'blueworx_client_forum' ) );
 		}
 
 		$meta_count = count( self::get_product_meta( $product_id ) );
@@ -239,13 +240,13 @@ final class EPI_Product_Meta {
 		<div class="wrap epi-meta-page">
 			<div class="epi-meta-page__header">
 				<div>
-					<p class="epi-meta-page__eyebrow"><?php esc_html_e( 'WooCommerce product', 'external-product-images' ); ?></p>
+					<p class="epi-meta-page__eyebrow"><?php esc_html_e( 'WooCommerce product', 'blueworx_client_forum' ); ?></p>
 					<h1><?php echo esc_html( get_the_title( $product_id ) ); ?></h1>
 					<p class="epi-meta-summary">
 						<?php
 						printf(
 							/* translators: %d: number of metadata fields. */
-							esc_html( _n( '%d metadata field', '%d metadata fields', $meta_count, 'external-product-images' ) ),
+							esc_html( _n( '%d metadata field', '%d metadata fields', $meta_count, 'blueworx_client_forum' ) ),
 							absint( $meta_count )
 						);
 						?>
@@ -254,7 +255,7 @@ final class EPI_Product_Meta {
 
 				<?php if ( $edit_url ) : ?>
 					<a class="button button-secondary" href="<?php echo esc_url( $edit_url ); ?>">
-						<?php esc_html_e( 'Back to product', 'external-product-images' ); ?>
+						<?php esc_html_e( 'Back to product', 'blueworx_client_forum' ); ?>
 					</a>
 				<?php endif; ?>
 			</div>
@@ -263,7 +264,7 @@ final class EPI_Product_Meta {
 				<?php self::render_activity( $product ); ?>
 
 				<div class="epi-meta-toolbar epi-meta-toolbar--page">
-					<p class="epi-meta-summary"><?php esc_html_e( 'Only product and WooCommerce metadata is included.', 'external-product-images' ); ?></p>
+					<p class="epi-meta-summary"><?php esc_html_e( 'Only product and WooCommerce metadata is included.', 'blueworx_client_forum' ); ?></p>
 					<?php self::render_export_controls( $product_id ); ?>
 				</div>
 
@@ -274,7 +275,7 @@ final class EPI_Product_Meta {
 				</div>
 
 				<p class="epi-meta-no-results" data-epi-meta-no-results hidden>
-					<?php esc_html_e( 'No matching metadata found.', 'external-product-images' ); ?>
+					<?php esc_html_e( 'No matching metadata found.', 'blueworx_client_forum' ); ?>
 				</p>
 			</div>
 
@@ -292,10 +293,10 @@ final class EPI_Product_Meta {
 		?>
 		<label class="epi-meta-search">
 			<span class="dashicons dashicons-search" aria-hidden="true"></span>
-			<span class="screen-reader-text"><?php esc_html_e( 'Search product metadata', 'external-product-images' ); ?></span>
+			<span class="screen-reader-text"><?php esc_html_e( 'Search product metadata', 'blueworx_client_forum' ); ?></span>
 			<input
 				type="search"
-				placeholder="<?php esc_attr_e( 'Search meta keys or values...', 'external-product-images' ); ?>"
+				placeholder="<?php esc_attr_e( 'Search meta keys or values...', 'blueworx_client_forum' ); ?>"
 				data-epi-meta-search
 				autocomplete="off"
 			/>
@@ -321,11 +322,11 @@ final class EPI_Product_Meta {
 		<div class="epi-meta-actions">
 			<button type="button" class="button button-secondary" data-epi-copy-meta>
 				<span class="dashicons dashicons-clipboard" aria-hidden="true"></span>
-				<span data-epi-copy-label><?php esc_html_e( 'Copy metadata', 'external-product-images' ); ?></span>
+				<span data-epi-copy-label><?php esc_html_e( 'Copy metadata', 'blueworx_client_forum' ); ?></span>
 			</button>
 			<button type="button" class="button button-secondary" data-epi-download-meta data-epi-filename="<?php echo esc_attr( $filename ); ?>">
 				<span class="dashicons dashicons-download" aria-hidden="true"></span>
-				<?php esc_html_e( 'Download JSON', 'external-product-images' ); ?>
+				<?php esc_html_e( 'Download JSON', 'blueworx_client_forum' ); ?>
 			</button>
 			<?php if ( $full_page_url ) : ?>
 				<a
@@ -335,7 +336,7 @@ final class EPI_Product_Meta {
 					rel="noopener noreferrer"
 				>
 					<span class="dashicons dashicons-external" aria-hidden="true"></span>
-					<?php esc_html_e( 'Open in new tab', 'external-product-images' ); ?>
+					<?php esc_html_e( 'Open in new tab', 'blueworx_client_forum' ); ?>
 				</a>
 			<?php endif; ?>
 		</div>
@@ -351,11 +352,11 @@ final class EPI_Product_Meta {
 	 */
 	private static function render_activity( $post ) {
 		?>
-		<div class="epi-meta-activity" aria-label="<?php esc_attr_e( 'Product update information', 'external-product-images' ); ?>">
+		<div class="epi-meta-activity" aria-label="<?php esc_attr_e( 'Product update information', 'blueworx_client_forum' ); ?>">
 			<div class="epi-meta-activity__item">
 				<span class="dashicons dashicons-calendar-alt" aria-hidden="true"></span>
 				<div>
-					<span class="epi-meta-activity__label"><?php esc_html_e( 'Last updated', 'external-product-images' ); ?></span>
+					<span class="epi-meta-activity__label"><?php esc_html_e( 'Last updated', 'blueworx_client_forum' ); ?></span>
 					<strong><?php echo esc_html( self::get_modified_date( $post ) ); ?></strong>
 					<span><?php echo esc_html( self::get_modified_time( $post ) ); ?></span>
 				</div>
@@ -364,7 +365,7 @@ final class EPI_Product_Meta {
 			<div class="epi-meta-activity__item">
 				<span class="dashicons dashicons-admin-users" aria-hidden="true"></span>
 				<div>
-					<span class="epi-meta-activity__label"><?php esc_html_e( 'Last edited by', 'external-product-images' ); ?></span>
+					<span class="epi-meta-activity__label"><?php esc_html_e( 'Last edited by', 'blueworx_client_forum' ); ?></span>
 					<strong><?php echo esc_html( self::get_last_editor( $post ) ); ?></strong>
 				</div>
 			</div>
@@ -385,7 +386,7 @@ final class EPI_Product_Meta {
 		if ( empty( $all_meta ) ) {
 			?>
 			<div class="epi-meta-empty">
-				<?php esc_html_e( 'This product has no metadata.', 'external-product-images' ); ?>
+				<?php esc_html_e( 'This product has no metadata.', 'blueworx_client_forum' ); ?>
 			</div>
 			<?php
 			return;
@@ -394,8 +395,8 @@ final class EPI_Product_Meta {
 		<table class="widefat striped epi-meta-table">
 			<thead>
 				<tr>
-					<th scope="col"><?php esc_html_e( 'Meta key', 'external-product-images' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Meta value', 'external-product-images' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Meta key', 'blueworx_client_forum' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Meta value', 'blueworx_client_forum' ); ?></th>
 				</tr>
 			</thead>
 			<tbody>
@@ -509,7 +510,7 @@ final class EPI_Product_Meta {
 
 		if ( '' === $display_value ) {
 			?>
-			<span class="epi-meta-empty-value"><?php esc_html_e( 'Empty', 'external-product-images' ); ?></span>
+			<span class="epi-meta-empty-value"><?php esc_html_e( 'Empty', 'blueworx_client_forum' ); ?></span>
 			<?php
 			return;
 		}
@@ -605,7 +606,7 @@ final class EPI_Product_Meta {
 			return $editor->display_name;
 		}
 
-		return esc_html__( 'Unknown', 'external-product-images' );
+		return esc_html__( 'Unknown', 'blueworx_client_forum' );
 	}
 
 	/**

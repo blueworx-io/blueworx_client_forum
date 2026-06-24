@@ -18,9 +18,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 add_shortcode('product_category_filter', function () {
 	$shop_url = get_permalink(wc_get_page_id('shop'));
 
-	// Current selections
+	// Current selections. These filter params are read-only, bookmarkable query vars
+	// (no form submission), so nonce verification does not apply.
+	// phpcs:disable WordPress.Security.NonceVerification.Recommended
 	$get_array = function ($key) {
-		return !empty($_GET[$key]) ? array_filter(array_map('sanitize_title', explode(',', sanitize_text_field($_GET[$key])))) : [];
+		return !empty($_GET[$key]) ? array_filter(array_map('sanitize_title', explode(',', sanitize_text_field(wp_unslash($_GET[$key]))))) : [];
 	};
 
 	$selected = [
@@ -33,6 +35,7 @@ add_shortcode('product_category_filter', function () {
 
 	$minPrice = isset($_GET['min_price']) ? (int) $_GET['min_price'] : '';
 	$maxPrice = isset($_GET['max_price']) ? (int) $_GET['max_price'] : '';
+	// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 	// Terms (only parent categories)
 	$taxonomies = [
