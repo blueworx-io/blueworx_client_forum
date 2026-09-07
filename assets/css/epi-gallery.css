@@ -85,7 +85,7 @@
 
 .epi-gallery__thumb.is-active {
 	border-color: var(--epi-active);
-	box-shadow: 0 0 0 1px var(--epi-active);
+	box-shadow: 0 0 0 2px var(--epi-active);
 }
 
 .epi-gallery__thumb-image {

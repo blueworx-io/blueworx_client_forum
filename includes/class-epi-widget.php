@@ -38,7 +38,7 @@ class EPI_Widget extends Widget_Base {
 	 * @return string
 	 */
 	public function get_title() {
-		return esc_html__( 'External Product Images', 'blueworx_client_forum' );
+		return esc_html__( 'Forum: Product Image Gallery', 'blueworx_client_forum' );
 	}
 
 	/**

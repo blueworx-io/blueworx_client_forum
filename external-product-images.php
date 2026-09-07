@@ -3,7 +3,7 @@
  * Plugin Name:       BlueWorx Lab | Forum Lighting
  * Plugin URI:        https://blueworx.io/
  * Description:        Site functionality plugin for Forum Lighting. A control centre under Settings > BlueWorx Lab switches features on or off, including the WooCommerce product gallery, metadata tools, pricing rules and more.
- * Version:           1.2.1
+ * Version:           1.6.0
  * Author:            BlueWorx
  * Author URI:        https://blueworx.io/
  * Text Domain:       blueworx_client_forum
@@ -22,11 +22,49 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Core plugin constants.
  */
-define( 'EPI_VERSION', '1.2.1' );
+define( 'EPI_VERSION', '1.6.0' );
 define( 'EPI_PLUGIN_FILE', __FILE__ );
 define( 'EPI_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'EPI_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'EPI_EPIM_IMAGE_BASE', 'https://epim.online/webproduct/assetimage/' );
+
+/*
+ * Self-updating from GitHub Releases. The site checks this repo's releases and
+ * installs the zip attached to one, exactly like a wordpress.org update, so
+ * nobody uploads a zip to update the plugin.
+ *
+ * This block must stay at file scope — the "use" import below cannot live
+ * inside a function, closure or conditional.
+ */
+require_once plugin_dir_path( __FILE__ ) . 'plugin-update-checker/plugin-update-checker.php';
+
+use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
+
+$blueworx_update_checker = PucFactory::buildUpdateChecker(
+	'https://github.com/blueworx-io/blueworx_client_forum/',
+	__FILE__,
+	// Must equal the plugin's folder name on the site, and the release
+	// workflow's `plugin_slug` input. If the three disagree, WordPress installs
+	// the update as a second copy and deactivates the original.
+	'blueworx_client_forum'
+);
+
+/*
+ * The repo is private, so the site needs a read-only token to see releases at
+ * all. It lives in wp-config.php, never in the plugin and never in the repo:
+ *
+ *     define( 'BLUEWORX_PLUGIN_UPDATE_TOKEN', 'github_pat_...' );
+ */
+if ( defined( 'BLUEWORX_PLUGIN_UPDATE_TOKEN' ) && BLUEWORX_PLUGIN_UPDATE_TOKEN ) {
+	$blueworx_update_checker->setAuthentication( BLUEWORX_PLUGIN_UPDATE_TOKEN );
+}
+
+/*
+ * Install the zip attached to the Release, not GitHub's auto-generated source
+ * tarball — the tarball extracts to a differently named folder, which
+ * WordPress treats as a different plugin.
+ */
+$blueworx_update_checker->getVcsApi()->enableReleaseAssets();
 
 /**
  * Main plugin bootstrap class.

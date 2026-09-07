@@ -1,0 +1,17 @@
+{
+  "name": "blueworx-client-forum",
+  "version": "1.6.0",
+  "private": true,
+  "description": "BlueWorx Lab | Forum Lighting — site functionality plugin for Forum Lighting.",
+  "scripts": {
+    "lint": "echo \"PHP is linted by PHPCS — run 'composer lint' (config: phpcs.xml.dist). Enforced by the PHPCS step in CI, which installs Composer itself. No JS lint configured.\"",
+    "build": "echo \"No build step — the plugin ships as plain PHP, JS and CSS\" && exit 0",
+    "build:zip": "bash bin/build-zip.sh",
+    "test": "playwright test --reporter=list,json",
+    "wp:up": "node ../bluegroup_core_foundation/scripts/wp-test-env.mjs up --plugin .",
+    "wp:down": "node ../bluegroup_core_foundation/scripts/wp-test-env.mjs down"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  }
+}

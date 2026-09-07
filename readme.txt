@@ -4,14 +4,14 @@ Tags: woocommerce, elementor, product gallery, product images, site functionalit
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.2.1
+Stable tag: 1.6.0
 License: GPLv2 or later
 
 Site functionality plugin for Forum Lighting: one control centre to switch the WooCommerce gallery, metadata, pricing and more on or off.
 
 == Description ==
 
-Provides a new Elementor widget, "External Product Images", that renders a
+Provides a new Elementor widget, "Forum: Product Image Gallery", that renders a
 modern product gallery (main image + clickable thumbnails) without relying on
 the native WooCommerce gallery output.
 
@@ -33,7 +33,7 @@ the native WooCommerce gallery output.
    or any Elementor-built single product page).
 4. Delete the existing "Product Images" (woocommerce-product-images.default)
    widget.
-5. Drag in the "External Product Images" widget from the WooCommerce / General
+5. Drag in the "Forum: Product Image Gallery" widget from the WooCommerce / General
    category. Save.
 
 == Switching from placeholders to product meta ==
@@ -47,6 +47,55 @@ The stored value may be a JSON array of URLs OR a comma-separated list — both
 are handled automatically. Placeholders remain as a safety fallback.
 
 == Changelog ==
+
+= 1.6.0 =
+* Settings > BlueWorx Lab has been rebuilt on the shared BlueWorx admin design.
+  Feature groups are now sections you switch between rather than one long list,
+  and the Save button stays in view. Everything still saves in one go, whichever
+  section you are looking at.
+* The plugin now updates itself on the site from a published release, so nobody
+  uploads a zip any more.
+* Uninstalling the plugin now removes the settings and the change-log table it
+  created, and leaves everything else alone.
+* Every change to the plugin is now checked automatically before it can go out.
+
+= 1.5.5 =
+* "ECD special prices" no longer shows in the product attribute list on the
+  website. The existing rule missed it because of how WooCommerce names the
+  rows.
+
+= 1.5.4 =
+* Gallery widget is now called "Forum: Product Image Gallery" in the Elementor
+  panel. Existing pages using it are unaffected.
+
+= 1.5.3 =
+* Product gallery: the featured image stays in the thumbnail row and is
+  marked more clearly as the one currently showing.
+
+= 1.5.1 =
+* Search result SKUs now read "SKU: 12345678" in the same red as the shop
+  listing cards.
+
+= 1.5.0 =
+* Search results now show the product SKU instead of the short description.
+  Products without a SKU show nothing in its place.
+* Added a "Show SKU in search results" toggle under Settings > BlueWorx Lab.
+
+= 1.4.0 =
+* Product breadcrumbs now show the main category path again. Products also
+  assigned to "Featured Products" were showing that path instead, because
+  WooCommerce picks the category nested deepest rather than the one the
+  connector sends first.
+* Added a "Main category breadcrumbs" toggle under Settings > BlueWorx Lab.
+
+= 1.3.0 =
+* Added a "Log product pricing (debug)" feature. On single product pages it
+  prints the current user role, the original vs live calculated price, and
+  every role-based pricing tier to the browser console. Reminder: visible to
+  every visitor while switched on, so turn it off after debugging.
+* Added a "Debug logging" panel at the top of Settings > BlueWorx Lab that
+  groups the console-logging switches (user role, product pricing) in one
+  place for quick on/off toggling while troubleshooting.
 
 = 1.2.1 =
 * Aligned the plugin text domain with the plugin slug so all translatable

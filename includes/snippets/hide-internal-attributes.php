@@ -2,9 +2,10 @@
 /**
  * Frontend: Hide Specific Product Attributes
  *
- * Hide the following - Grams Weight, Product Pack Data, Waste Pack Data & Bullets
+ * Hide the following - Grams Weight, Product Pack Data, Waste Pack Data,
+ * Bullets & ECD special prices.
  *
- * Moved verbatim from the Code Snippets plugin.
+ * Originally from the Code Snippets plugin.
  *
  * @package ExternalProductImages
  */
@@ -24,19 +25,24 @@ add_filter('woocommerce_display_product_attributes', function ($product_attribut
     $hide_id_pattern = '/^pa_epim-(' . implode('|', $hide_ids) . ')$/';
 
     return array_filter($product_attributes, function ($attr, $key) use ($hide_id_pattern) {
+        // WooCommerce keys these rows "attribute_pa_foo"; some templates pass
+        // the bare taxonomy. Compare against the bare name either way.
+        $key   = strtolower((string) $key);
+        $key   = preg_replace('/^attribute_/', '', $key);
+        $label = strtolower(trim((string) ($attr['label'] ?? '')));
+
         if (preg_match($hide_id_pattern, $key)) {
             return false;
         }
 
-        if (str_starts_with($key, 'pa_bullet-')) {
+        if (str_starts_with($key, 'pa_bullet') || str_starts_with($label, 'bullet')) {
             return false;
         }
 
-        if (str_starts_with($key, 'pa_ecd-')) {
-            return false;
-        }
-
-        if (str_starts_with(strtolower($attr['label'] ?? ''), 'bullet')) {
+        // ECD pricing is internal. Covers pa_ecd-..., pa_ecd_... and custom
+        // (non-taxonomy) attributes named "ECD ...".
+        if (str_starts_with($key, 'pa_ecd') || str_starts_with($key, 'ecd')
+            || str_starts_with($label, 'ecd ')) {
             return false;
         }
 

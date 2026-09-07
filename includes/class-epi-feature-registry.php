@@ -125,6 +125,15 @@ final class EPI_Feature_Registry {
 				'dependencies'   => array( 'woocommerce' ),
 				'boot'           => self::snippet( 'hide-na-attributes.php' ),
 			),
+			'breadcrumb-main-category' => array(
+				'title'          => __( 'Main category breadcrumbs', 'blueworx_client_forum' ),
+				'description'    => __( 'Keeps the product breadcrumb on the main category path instead of the "Featured Products" path.', 'blueworx_client_forum' ),
+				'group'          => 'product-display',
+				'dangerous'      => false,
+				'danger_message' => '',
+				'dependencies'   => array( 'woocommerce' ),
+				'boot'           => self::snippet( 'breadcrumb-main-category.php' ),
+			),
 			'product-bullets'         => array(
 				'title'          => __( 'Product bullets shortcode', 'blueworx_client_forum' ),
 				'description'    => __( '[product_bullets] -renders the bullet attributes as a list.', 'blueworx_client_forum' ),
@@ -189,6 +198,15 @@ final class EPI_Feature_Registry {
 				'danger_message' => '',
 				'dependencies'   => array(),
 				'boot'           => self::snippet( 'restrict-search.php' ),
+			),
+			'search-result-sku'       => array(
+				'title'          => __( 'Show SKU in search results', 'blueworx_client_forum' ),
+				'description'    => __( 'Search result cards show the product SKU in place of the short description.', 'blueworx_client_forum' ),
+				'group'          => 'shop',
+				'dangerous'      => false,
+				'danger_message' => '',
+				'dependencies'   => array( 'woocommerce' ),
+				'boot'           => self::snippet( 'search-result-sku.php' ),
 			),
 
 			// --- Account ------------------------------------------------.
@@ -262,6 +280,15 @@ final class EPI_Feature_Registry {
 				'danger_message' => '',
 				'dependencies'   => array(),
 				'boot'           => self::snippet( 'debug-log-user-role.php' ),
+			),
+			'debug-log-pricing'       => array(
+				'title'          => __( 'Log product pricing (debug)', 'blueworx_client_forum' ),
+				'description'    => __( 'On single product pages, prints the user role, the original vs live calculated price, and every role-based pricing tier to the browser console. Note: visible to every visitor when on.', 'blueworx_client_forum' ),
+				'group'          => 'debug',
+				'dangerous'      => false,
+				'danger_message' => '',
+				'dependencies'   => array( 'woocommerce' ),
+				'boot'           => self::snippet( 'debug-log-pricing.php' ),
 			),
 		);
 	}

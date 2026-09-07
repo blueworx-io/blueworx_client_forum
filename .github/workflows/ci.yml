@@ -1,0 +1,19 @@
+name: CI
+on: pull_request
+jobs:
+  guardrails:
+    uses: blueworx-io/bluegroup_core_foundation/.github/workflows/ci-wordpress.yml@v1
+    with:
+      # The folder this plugin installs into on a live site. It is not the name
+      # of the main PHP file: that stayed external-product-images.php, because
+      # renaming it changes the plugin basename WordPress stores and would
+      # deactivate the plugin on the shop's next update.
+      plugin_slug: blueworx_client_forum
+      # Tests run against a disposable real WordPress the run provisions itself
+      # (PHP + SQLite, no Docker, no hosting).
+      use_local_wordpress: true
+      # Pin the check scripts to the same major as the workflow above. This input
+      # defaults to `main`, so without it the v1 workflow would run against
+      # whatever is on the foundation's main branch today.
+      foundation_ref: v1
+    secrets: inherit

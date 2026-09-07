@@ -1,0 +1,92 @@
+<?xml version="1.0"?>
+<ruleset name="BlueWorxClientForum">
+	<description>
+		WordPress Coding Standards for the Forum Lighting plugin. The full WordPress
+		standard, with the sniffs below tuned to what this plugin actually is: a
+		single-client site plugin with its own prefix, talking to WooCommerce,
+		Elementor and the external ePim asset service.
+	</description>
+
+	<arg name="extensions" value="php"/>
+	<arg name="colors"/>
+	<arg value="sp"/>
+	<arg name="parallel" value="8"/>
+
+	<!-- What gets linted: the plugin's own runtime code, nothing else. -->
+	<file>external-product-images.php</file>
+	<file>uninstall.php</file>
+	<file>includes</file>
+
+	<exclude-pattern>*/vendor/*</exclude-pattern>
+	<exclude-pattern>*/node_modules/*</exclude-pattern>
+	<exclude-pattern>*/.wp-test/*</exclude-pattern>
+	<exclude-pattern>*/tests/*</exclude-pattern>
+
+	<rule ref="WordPress">
+		<!--
+			Yoda conditions. Excluded deliberately, and the one WPCS rule this project
+			does not follow. The sniff has no auto-fixer, so adopting it means
+			reversing conditions by hand across working, shipped code that runs a live
+			store — no behaviour change, real chance of a new bug. The accident it
+			guards against (`if ( $x = 1 )`) is caught by every modern editor and by
+			PHP itself.
+		-->
+		<exclude name="WordPress.PHP.YodaConditions"/>
+
+		<!--
+			Docblock completeness. The plugin documents what a reader cannot infer —
+			class purpose, the pricing and attribute rules, why the change log queries
+			the database directly — but does not carry a full @param/@return block on
+			every small private helper. The sniffs that catch a *wrong* or malformed
+			docblock stay on below.
+		-->
+		<exclude name="Squiz.Commenting.FunctionComment.Missing"/>
+		<exclude name="Squiz.Commenting.FunctionComment.MissingParamTag"/>
+		<exclude name="Squiz.Commenting.FunctionComment.MissingParamComment"/>
+		<exclude name="Squiz.Commenting.ClassComment.Missing"/>
+		<exclude name="Squiz.Commenting.FileComment.Missing"/>
+		<exclude name="Squiz.Commenting.FileComment.MissingPackageTag"/>
+		<exclude name="Generic.Commenting.DocComment.MissingShort"/>
+
+		<!-- Sentence-case and full-stop rules on comment text. Style only. -->
+		<exclude name="Generic.Commenting.DocComment.ShortNotCapital"/>
+		<exclude name="Generic.Commenting.DocComment.LongNotCapital"/>
+		<exclude name="Squiz.Commenting.InlineComment.InvalidEndChar"/>
+	</rule>
+
+	<!-- The plugin's own prefixes, for the global-namespace sniff. -->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="EPI_"/>
+				<element value="epi_"/>
+				<element value="BlueWorx"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!--
+		The bootstrap class lives in the main plugin file, which WordPress
+		requires to be named after the plugin folder rather than after the class.
+		The sniff still applies everywhere else.
+	-->
+	<rule ref="WordPress.Files.FileName.InvalidClassFileName">
+		<exclude-pattern>*/external-product-images.php</exclude-pattern>
+	</rule>
+
+	<!-- The single text domain this plugin ships. -->
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="blueworx_client_forum"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!-- Minimum supported WordPress version, for the deprecation sniffs. -->
+	<config name="minimum_wp_version" value="6.0"/>
+
+	<!-- Minimum supported PHP version, matching the readme's Requires PHP. -->
+	<config name="testVersion" value="7.4-"/>
+	<rule ref="PHPCompatibilityWP"/>
+</ruleset>

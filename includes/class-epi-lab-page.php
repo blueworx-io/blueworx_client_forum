@@ -6,6 +6,11 @@
  * epi_feature_flags option. Switching a feature off triggers a browser
  * confirmation (sterner wording for dangerous features) via assets/js/epi-lab.js.
  *
+ * The screen is built from the shared blueworx-admin-design system: the page
+ * header, the section nav, the panels, the switches and the sticky save bar all
+ * come from there. The only styling this plugin keeps of its own is the
+ * full-bleed chrome override in assets/css/epi-lab.css.
+ *
  * @package ExternalProductImages
  */
 
@@ -25,6 +30,16 @@ final class EPI_Lab_Page {
 	 * Admin page slug.
 	 */
 	const SLUG = 'bwlab';
+
+	/**
+	 * Handle for the shared design system stylesheet.
+	 */
+	const DESIGN_HANDLE = 'blueworx-admin-design';
+
+	/**
+	 * Handle for the shared Lucide icon set.
+	 */
+	const ICONS_HANDLE = 'blueworx-admin-icons';
 
 	/**
 	 * Register the admin hooks.
@@ -63,8 +78,41 @@ final class EPI_Lab_Page {
 			return;
 		}
 
-		wp_enqueue_style( 'epi-lab', EPI_PLUGIN_URL . 'assets/css/epi-lab.css', array(), EPI_VERSION );
+		// The design system, copied verbatim from the foundation. Never edited
+		// here: CI compares this file against the foundation on every pull
+		// request.
+		wp_enqueue_style( self::DESIGN_HANDLE, EPI_PLUGIN_URL . 'assets/blueworx-admin-design.css', array(), EPI_VERSION );
+
+		// The only styling this plugin owns: the chrome overrides that let the
+		// screen run full width inside wp-admin.
+		wp_enqueue_style( 'epi-lab', EPI_PLUGIN_URL . 'assets/css/epi-lab.css', array( self::DESIGN_HANDLE ), EPI_VERSION );
+
+		// A module, because the icon file is one: it upgrades every
+		// [data-lucide] element in place and watches for new ones. Without it
+		// every icon on the screen draws as an empty box.
+		if ( function_exists( 'wp_enqueue_script_module' ) ) {
+			wp_enqueue_script_module( self::ICONS_HANDLE, EPI_PLUGIN_URL . 'assets/blueworx-admin-icons.js', array(), EPI_VERSION );
+		} else {
+			// WordPress below 6.5 has no module API. A plain script tag still
+			// runs it, once the type is corrected on the way out.
+			wp_enqueue_script( self::ICONS_HANDLE, EPI_PLUGIN_URL . 'assets/blueworx-admin-icons.js', array(), EPI_VERSION, true );
+			add_filter( 'script_loader_tag', array( __CLASS__, 'icons_as_module' ), 10, 2 );
+		}
+
 		wp_enqueue_script( 'epi-lab', EPI_PLUGIN_URL . 'assets/js/epi-lab.js', array(), EPI_VERSION, true );
+	}
+
+	/**
+	 * Mark the icon script as a module on WordPress versions without the module API.
+	 *
+	 * @param mixed $tag    The script tag WordPress built.
+	 * @param mixed $handle The handle it is for.
+	 * @return string
+	 */
+	public static function icons_as_module( $tag, $handle = '' ) {
+		return self::ICONS_HANDLE === $handle
+			? str_replace( '<script ', '<script type="module" ', (string) $tag )
+			: (string) $tag;
 	}
 
 	/**
@@ -117,55 +165,137 @@ final class EPI_Lab_Page {
 		foreach ( $definitions as $id => $definition ) {
 			$by_group[ $definition['group'] ][ $id ] = $definition;
 		}
+
+		// Only groups that actually have features. An empty section in the nav
+		// is a promise the screen cannot keep.
+		$sections = array();
+		foreach ( $groups as $group_key => $group_label ) {
+			if ( ! empty( $by_group[ $group_key ] ) ) {
+				$sections[ $group_key ] = $group_label;
+			}
+		}
+
+		if ( empty( $sections ) ) {
+			return;
+		}
+
+		$section_keys  = array_keys( $sections );
+		$first_section = $section_keys[0];
+		$saved         = isset( $_GET['updated'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		?>
-		<div class="wrap epi-lab">
-			<h1><?php esc_html_e( 'BlueWorx Lab | Forum Lighting', 'blueworx_client_forum' ); ?></h1>
-			<p class="epi-lab__intro">
-				<?php esc_html_e( 'Switch each site feature on or off. Everything is on by default. Turning a feature off stops it running until you switch it back on.', 'blueworx_client_forum' ); ?>
-			</p>
+		<div class="wrap bw-wrap">
+			<div class="bw-admin bw-page">
+				<header class="bw-pagehead">
+					<div class="bw-pagehead__titles">
+						<p class="bw-pagehead__eyebrow"><?php esc_html_e( 'BlueWorx Lab', 'blueworx_client_forum' ); ?></p>
+						<h1 class="bw-pagehead__h1"><?php esc_html_e( 'Forum Lighting', 'blueworx_client_forum' ); ?></h1>
+						<p class="bw-pagehead__lede">
+							<?php esc_html_e( 'Switch each site feature on or off. Everything is on by default. Turning a feature off stops it running until you switch it back on.', 'blueworx_client_forum' ); ?>
+						</p>
+					</div>
+				</header>
 
-			<?php if ( isset( $_GET['updated'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
-				<div class="notice notice-success is-dismissible">
-					<p><?php esc_html_e( 'Feature settings saved.', 'blueworx_client_forum' ); ?></p>
+				<form id="epi-lab-form" class="bw-page__body" method="post" action="">
+					<?php wp_nonce_field( 'epi_lab_save', 'epi_lab_nonce' ); ?>
+					<input type="hidden" name="epi_lab_save" value="1" />
+
+					<nav class="bw-secnav" aria-label="<?php esc_attr_e( 'Sections', 'blueworx_client_forum' ); ?>">
+						<?php foreach ( $sections as $group_key => $group_label ) : ?>
+							<button
+								type="button"
+								class="bw-secnav__item<?php echo $group_key === $first_section ? ' is-active' : ''; ?>"
+								data-epi-section-link="<?php echo esc_attr( $group_key ); ?>"
+								<?php echo $group_key === $first_section ? ' aria-current="true"' : ''; ?>
+							>
+								<span><?php echo esc_html( $group_label ); ?></span>
+								<span class="bw-secnav__meta"><?php echo esc_html( (string) count( $by_group[ $group_key ] ) ); ?></span>
+							</button>
+						<?php endforeach; ?>
+					</nav>
+
+					<div class="bw-panels">
+						<?php if ( $saved ) : ?>
+							<div class="bw-notice bw-notice--success" role="status">
+								<i class="bw-icon bw-icon--18 bw-notice__icon" data-lucide="circle-check" aria-hidden="true"></i>
+								<div class="bw-notice__body">
+									<p class="bw-notice__text"><?php esc_html_e( 'Feature settings saved.', 'blueworx_client_forum' ); ?></p>
+								</div>
+							</div>
+						<?php endif; ?>
+
+						<?php
+						foreach ( $sections as $group_key => $group_label ) {
+							self::render_section( $group_key, $group_label, $by_group[ $group_key ], $group_key === $first_section );
+						}
+						?>
+					</div>
+				</form>
+
+				<div class="bw-savebar">
+					<p class="bw-savebar__hint">
+						<i class="bw-icon bw-icon--18" data-lucide="info" aria-hidden="true"></i>
+						<?php esc_html_e( 'Changes apply to the live site as soon as you save.', 'blueworx_client_forum' ); ?>
+					</p>
+					<button type="submit" form="epi-lab-form" class="bw-btn bw-btn--primary">
+						<?php esc_html_e( 'Save changes', 'blueworx_client_forum' ); ?>
+					</button>
 				</div>
-			<?php endif; ?>
-
-			<form method="post" action="">
-				<?php wp_nonce_field( 'epi_lab_save', 'epi_lab_nonce' ); ?>
-				<input type="hidden" name="epi_lab_save" value="1" />
-
-				<?php
-				foreach ( $groups as $group_key => $group_label ) :
-					if ( empty( $by_group[ $group_key ] ) ) {
-						continue;
-					}
-					?>
-					<section class="epi-lab__group">
-						<h2 class="epi-lab__group-title"><?php echo esc_html( $group_label ); ?></h2>
-						<div class="epi-lab__cards">
-							<?php
-							foreach ( $by_group[ $group_key ] as $id => $definition ) {
-								self::render_card( $id, $definition );
-							}
-							?>
-						</div>
-					</section>
-				<?php endforeach; ?>
-
-				<?php submit_button( __( 'Save changes', 'blueworx_client_forum' ) ); ?>
-			</form>
+			</div>
 		</div>
 		<?php
 	}
 
 	/**
-	 * Render a single feature card with its switch.
+	 * Render one group of features as a panel.
+	 *
+	 * Every panel is in the page at once — hidden panels still post their
+	 * switches, so one Save covers the whole screen however the nav is left.
+	 *
+	 * @param string $group_key   Group id.
+	 * @param string $group_label Group heading.
+	 * @param array  $definitions Feature definitions in this group.
+	 * @param bool   $is_first    Whether this is the section shown on load.
+	 * @return void
+	 */
+	private static function render_section( $group_key, $group_label, $definitions, $is_first ) {
+		?>
+		<section
+			class="bw-card"
+			data-epi-section="<?php echo esc_attr( $group_key ); ?>"
+			<?php echo $is_first ? '' : ' hidden'; ?>
+		>
+			<div class="bw-card__head">
+				<div class="bw-card__titles">
+					<h2 class="bw-card__title"><?php echo esc_html( $group_label ); ?></h2>
+				</div>
+			</div>
+			<div class="bw-card__body">
+				<?php if ( 'debug' === $group_key ) : ?>
+					<p class="bw-card__note">
+						<?php esc_html_e( 'These print to every visitor\'s browser console while switched on, so turn them off once you are done.', 'blueworx_client_forum' ); ?>
+					</p>
+				<?php endif; ?>
+
+				<div class="bw-fields bw-fields--single">
+					<?php
+					foreach ( $definitions as $id => $definition ) {
+						self::render_feature( $id, $definition );
+					}
+					?>
+				</div>
+			</div>
+		</section>
+		<?php
+	}
+
+	/**
+	 * Render a single feature switch.
 	 *
 	 * @param string $id         Feature id.
 	 * @param array  $definition Feature definition.
 	 * @return void
 	 */
-	private static function render_card( $id, $definition ) {
+	private static function render_feature( $id, $definition ) {
 		$enabled = EPI_Feature_Registry::is_enabled( $id );
 		$missing = EPI_Feature_Registry::missing_dependencies( $definition['dependencies'] );
 		$blocked = ! empty( $missing );
@@ -174,49 +304,40 @@ final class EPI_Lab_Page {
 		if ( ! empty( $definition['dangerous'] ) && ! empty( $definition['danger_message'] ) ) {
 			$danger_message = $definition['danger_message'];
 		}
-
-		$classes = 'epi-lab__card';
-		if ( ! empty( $definition['dangerous'] ) ) {
-			$classes .= ' epi-lab__card--danger';
-		}
-		if ( $blocked ) {
-			$classes .= ' epi-lab__card--blocked';
-		}
 		?>
-		<div class="<?php echo esc_attr( $classes ); ?>">
-			<div class="epi-lab__card-head">
-				<h3 class="epi-lab__card-title"><?php echo esc_html( $definition['title'] ); ?></h3>
+		<div>
+			<label class="bw-switch bw-switch--bare">
+				<input
+					type="checkbox"
+					role="switch"
+					name="epi_features[]"
+					value="<?php echo esc_attr( $id ); ?>"
+					data-epi-toggle
+					data-feature-title="<?php echo esc_attr( $definition['title'] ); ?>"
+					<?php if ( '' !== $danger_message ) : ?>
+						data-danger-message="<?php echo esc_attr( $danger_message ); ?>"
+					<?php endif; ?>
+					<?php checked( $enabled ); ?>
+					<?php disabled( $blocked ); ?>
+				/>
+				<span class="bw-switch__track"><span class="bw-switch__thumb"></span></span>
+				<span class="bw-switch__label">
+					<?php echo esc_html( $definition['title'] ); ?>
+					<?php if ( ! empty( $definition['dangerous'] ) ) : ?>
+						<span class="bw-badge bw-badge--warning"><?php esc_html_e( 'Sensitive', 'blueworx_client_forum' ); ?></span>
+					<?php endif; ?>
+					<small><?php echo esc_html( $definition['description'] ); ?></small>
+				</span>
+			</label>
 
-				<label class="epi-lab__switch">
-					<input
-						type="checkbox"
-						name="epi_features[]"
-						value="<?php echo esc_attr( $id ); ?>"
-						data-epi-toggle
-						data-feature-title="<?php echo esc_attr( $definition['title'] ); ?>"
-						<?php if ( '' !== $danger_message ) : ?>
-							data-danger-message="<?php echo esc_attr( $danger_message ); ?>"
-						<?php endif; ?>
-						<?php checked( $enabled ); ?>
-						<?php disabled( $blocked ); ?>
-					/>
-					<span class="epi-lab__slider" aria-hidden="true"></span>
-					<span class="screen-reader-text"><?php echo esc_html( $definition['title'] ); ?></span>
-				</label>
-
-				<?php if ( $blocked && $enabled ) : ?>
-					<input type="hidden" name="epi_features[]" value="<?php echo esc_attr( $id ); ?>" />
-				<?php endif; ?>
-			</div>
-
-			<p class="epi-lab__card-desc"><?php echo esc_html( $definition['description'] ); ?></p>
-
-			<?php if ( ! empty( $definition['dangerous'] ) ) : ?>
-				<p class="epi-lab__card-flag"><?php esc_html_e( 'Sensitive - affects the live store.', 'blueworx_client_forum' ); ?></p>
+			<?php if ( $blocked && $enabled ) : ?>
+				<?php // A blocked switch is disabled, so it posts nothing. This keeps the feature on rather than silently switching it off on the next save. ?>
+				<input type="hidden" name="epi_features[]" value="<?php echo esc_attr( $id ); ?>" />
 			<?php endif; ?>
 
 			<?php if ( $blocked ) : ?>
-				<p class="epi-lab__card-blocked">
+				<p class="bw-fieldnote">
+					<i class="bw-icon bw-icon--14" data-lucide="triangle-alert" aria-hidden="true"></i>
 					<?php
 					printf(
 						/* translators: %s: comma-separated plugin names. */
