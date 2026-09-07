@@ -204,10 +204,13 @@ final class EPI_Product_Meta {
 				<?php self::render_table( $post->ID ); ?>
 			</div>
 
-			<p class="bw-fieldnote" data-epi-meta-no-results hidden>
-				<i class="bw-icon bw-icon--14" data-lucide="search" aria-hidden="true"></i>
-				<?php esc_html_e( 'No matching metadata found.', 'blueworx_client_forum' ); ?>
-			</p>
+			<?php // The hidden attribute goes on a bare wrapper: bw-fieldnote sets display:flex, which would win over [hidden] and leave the line on screen. ?>
+			<div data-epi-meta-no-results hidden>
+				<p class="bw-fieldnote">
+					<i class="bw-icon bw-icon--14" data-lucide="search" aria-hidden="true"></i>
+					<?php esc_html_e( 'No matching metadata found.', 'blueworx_client_forum' ); ?>
+				</p>
+			</div>
 
 			<p class="bw-table__legend">
 				<?php
@@ -290,9 +293,12 @@ final class EPI_Product_Meta {
 								<?php self::render_table( $product_id ); ?>
 							</div>
 
-							<p class="bw-table__legend" data-epi-meta-no-results hidden>
-								<?php esc_html_e( 'No matching metadata found.', 'blueworx_client_forum' ); ?>
-							</p>
+							<?php // The hidden attribute goes on a bare wrapper: bw-table__legend sets display:flex, which would win over [hidden] and leave the line on screen. ?>
+							<div data-epi-meta-no-results hidden>
+								<p class="bw-table__legend">
+									<?php esc_html_e( 'No matching metadata found.', 'blueworx_client_forum' ); ?>
+								</p>
+							</div>
 
 							<div class="bw-card__foot">
 								<?php self::render_activity( $product ); ?>
