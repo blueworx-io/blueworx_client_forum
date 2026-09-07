@@ -78,28 +78,77 @@ final class EPI_Lab_Page {
 			return;
 		}
 
-		// The design system, copied verbatim from the foundation. Never edited
-		// here: CI compares this file against the foundation on every pull
-		// request.
-		wp_enqueue_style( self::DESIGN_HANDLE, EPI_PLUGIN_URL . 'assets/blueworx-admin-design.css', array(), EPI_VERSION );
+		self::enqueue_design_system();
 
 		// The only styling this plugin owns: the chrome overrides that let the
-		// screen run full width inside wp-admin.
+		// screen run full width inside wp-admin. Right for a screen that is
+		// entirely ours, and wrong for one we are only a guest on, which is why
+		// it is here and not in enqueue_design_system().
 		wp_enqueue_style( 'epi-lab', EPI_PLUGIN_URL . 'assets/css/epi-lab.css', array( self::DESIGN_HANDLE ), EPI_VERSION );
 
+		wp_enqueue_script( 'epi-lab', EPI_PLUGIN_URL . 'assets/js/epi-lab.js', array(), EPI_VERSION, true );
+	}
+
+	/**
+	 * The shared design system stylesheet and icons, and nothing else.
+	 *
+	 * Also used by the "WooCommerce is not active" notice, which appears on
+	 * somebody else's screen: a notice with the styles but not the icons draws
+	 * an empty box where the icon should be.
+	 *
+	 * @return void
+	 */
+	public static function enqueue_design_system() {
+		// Copied verbatim from the foundation. Never edited here: CI compares
+		// this file against the foundation on every pull request.
+		wp_enqueue_style( self::DESIGN_HANDLE, EPI_PLUGIN_URL . 'assets/blueworx-admin-design.css', array(), EPI_VERSION );
+
 		// A module, because the icon file is one: it upgrades every
-		// [data-lucide] element in place and watches for new ones. Without it
-		// every icon on the screen draws as an empty box.
+		// [data-lucide] element in place and watches for new ones.
 		if ( function_exists( 'wp_enqueue_script_module' ) ) {
 			wp_enqueue_script_module( self::ICONS_HANDLE, EPI_PLUGIN_URL . 'assets/blueworx-admin-icons.js', array(), EPI_VERSION );
-		} else {
-			// WordPress below 6.5 has no module API. A plain script tag still
-			// runs it, once the type is corrected on the way out.
-			wp_enqueue_script( self::ICONS_HANDLE, EPI_PLUGIN_URL . 'assets/blueworx-admin-icons.js', array(), EPI_VERSION, true );
-			add_filter( 'script_loader_tag', array( __CLASS__, 'icons_as_module' ), 10, 2 );
+			return;
 		}
 
-		wp_enqueue_script( 'epi-lab', EPI_PLUGIN_URL . 'assets/js/epi-lab.js', array(), EPI_VERSION, true );
+		// WordPress below 6.5 has no module API. A plain script tag still runs
+		// it, once the type is corrected on the way out.
+		wp_enqueue_script( self::ICONS_HANDLE, EPI_PLUGIN_URL . 'assets/blueworx-admin-icons.js', array(), EPI_VERSION, true );
+		add_filter( 'script_loader_tag', array( __CLASS__, 'icons_as_module' ), 10, 2 );
+	}
+
+	/**
+	 * Say, on every admin screen, that WooCommerce is not active.
+	 *
+	 * Most features need it. The Lab page still works without it and shows
+	 * which features are unavailable, so this is a warning rather than a
+	 * failure.
+	 *
+	 * @return void
+	 */
+	public static function warn_woocommerce_missing() {
+		add_action( 'admin_notices', array( __CLASS__, 'render_woocommerce_notice' ) );
+		// The notice is a guest on somebody else's screen, so it has to bring
+		// the design system with it. Enqueued here rather than while the notice
+		// renders, which is too late for the page head.
+		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_design_system' ) );
+	}
+
+	/**
+	 * Render the "WooCommerce is not active" notice.
+	 *
+	 * @return void
+	 */
+	public static function render_woocommerce_notice() {
+		?>
+		<div class="bw-admin bw-notice bw-notice--warning" role="status">
+			<i class="bw-icon bw-icon--18 bw-notice__icon" data-lucide="triangle-alert" aria-hidden="true"></i>
+			<div class="bw-notice__body">
+				<p class="bw-notice__text">
+					<?php esc_html_e( 'BlueWorx Lab | Forum Lighting works best with WooCommerce active. Most features will not run until WooCommerce is installed and active.', 'blueworx_client_forum' ); ?>
+				</p>
+			</div>
+		</div>
+		<?php
 	}
 
 	/**

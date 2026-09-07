@@ -141,7 +141,11 @@ final class EPI_Plugin {
 			require_once EPI_PLUGIN_DIR . 'includes/class-epi-product-meta.php';
 			EPI_Product_Change_Log::maybe_upgrade();
 		} else {
-			add_action( 'admin_notices', array( $this, 'notice_missing_woocommerce' ) );
+			// The notice and the design system it needs are both registered by
+			// the Lab page. Keeping every admin hook in that one file is what
+			// lets the tooling tell this plugin's admin assets apart from its
+			// shop-front ones.
+			EPI_Lab_Page::warn_woocommerce_missing();
 		}
 
 		// Boot every feature that is switched on and whose dependencies are met.
@@ -172,20 +176,6 @@ final class EPI_Plugin {
 			EPI_VERSION,
 			true
 		);
-	}
-
-	/**
-	 * Admin notice: WooCommerce missing.
-	 *
-	 * Most features need WooCommerce; the BlueWorx Lab control page still works
-	 * without it and shows which features are unavailable.
-	 *
-	 * @return void
-	 */
-	public function notice_missing_woocommerce() {
-		echo '<div class="notice notice-warning"><p>';
-		echo esc_html__( 'BlueWorx Lab | Forum Lighting works best with WooCommerce active. Most features will not run until WooCommerce is installed and active.', 'blueworx_client_forum' );
-		echo '</p></div>';
 	}
 }
 
