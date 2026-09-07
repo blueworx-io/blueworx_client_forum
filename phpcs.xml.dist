@@ -52,6 +52,37 @@
 		<exclude name="Generic.Commenting.DocComment.ShortNotCapital"/>
 		<exclude name="Generic.Commenting.DocComment.LongNotCapital"/>
 		<exclude name="Squiz.Commenting.InlineComment.InvalidEndChar"/>
+
+		<!--
+			Unused callback parameters. Almost every function here is a
+			WooCommerce filter callback, and a filter callback has to accept the
+			arguments the filter passes whether it reads them or not. Dropping
+			one changes the signature WordPress calls, so the sniff is asking
+			for a bug.
+		-->
+		<exclude name="Generic.CodeAnalysis.UnusedFunctionParameter"/>
+
+		<!--
+			Parameter names that happen to be reserved words ($protected in the
+			image purge tool). PHP allows it, the name is the clearest one for
+			what it holds, and renaming it changes nothing a reader or the
+			runtime cares about.
+		-->
+		<exclude name="Universal.NamingConventions.NoReservedKeywordParameterNames"/>
+	</rule>
+
+	<!--
+		WooCommerce's own capabilities. The sniff only knows about WordPress
+		core's, so without this every capability check in the product screens
+		reads as a typo.
+	-->
+	<rule ref="WordPress.WP.Capabilities">
+		<properties>
+			<property name="custom_capabilities" type="array">
+				<element value="edit_products"/>
+				<element value="manage_woocommerce"/>
+			</property>
+		</properties>
 	</rule>
 
 	<!-- The plugin's own prefixes, for the global-namespace sniff. -->

@@ -106,10 +106,10 @@ class EPI_Widget extends Widget_Base {
 		$this->add_control(
 			'epi_thumb_position',
 			array(
-				'label'   => esc_html__( 'Thumbnail Position', 'blueworx_client_forum' ),
-				'type'    => Controls_Manager::SELECT,
-				'default' => 'bottom',
-				'options' => array(
+				'label'        => esc_html__( 'Thumbnail Position', 'blueworx_client_forum' ),
+				'type'         => Controls_Manager::SELECT,
+				'default'      => 'bottom',
+				'options'      => array(
 					'bottom' => esc_html__( 'Below main image', 'blueworx_client_forum' ),
 					'left'   => esc_html__( 'Left of main image', 'blueworx_client_forum' ),
 				),
@@ -186,8 +186,8 @@ class EPI_Widget extends Widget_Base {
 		$gallery_id = 'epi-gallery-' . esc_attr( $this->get_id() );
 
 		// Accessible alt text based on the product title where possible.
-		$product   = $product_id ? get_the_title( $product_id ) : '';
-		$alt_base  = $product ? $product : esc_html__( 'Product image', 'blueworx_client_forum' );
+		$product  = $product_id ? get_the_title( $product_id ) : '';
+		$alt_base = $product ? $product : esc_html__( 'Product image', 'blueworx_client_forum' );
 
 		// Fallback to a bundled placeholder if an ePim asset fails to load.
 		$fallback = EPI_Images_Provider::fallback_image_url();
@@ -216,19 +216,23 @@ class EPI_Widget extends Widget_Base {
 								class="epi-gallery__thumb<?php echo 0 === $index ? ' is-active' : ''; ?>"
 								data-epi-thumb
 								data-epi-full="<?php echo esc_url( $image_url ); ?>"
-								aria-label="<?php
+								aria-label="
+								<?php
 									/* translators: %d: image number. */
 									echo esc_attr( sprintf( __( 'View image %d', 'blueworx_client_forum' ), $index + 1 ) );
-								?>"
+								?>
+								"
 								<?php echo 0 === $index ? 'aria-current="true"' : ''; ?>
 							>
 								<img
 									class="epi-gallery__thumb-image"
 									src="<?php echo esc_url( $image_url ); ?>"
-									alt="<?php
+									alt="
+									<?php
 										/* translators: 1: product name, 2: image number. */
 										echo esc_attr( sprintf( __( '%1$s — thumbnail %2$d', 'blueworx_client_forum' ), $alt_base, $index + 1 ) );
-									?>"
+									?>
+									"
 									loading="lazy"
 									decoding="async"
 									onerror="<?php echo esc_attr( $on_error ); ?>"

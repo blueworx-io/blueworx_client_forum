@@ -69,7 +69,7 @@ final class EPI_Feature_Registry {
 
 		return array(
 			// --- Pricing -------------------------------------------------.
-			'role-based-pricing'      => array(
+			'role-based-pricing'          => array(
 				'title'          => __( 'Role-based pricing', 'blueworx_client_forum' ),
 				'description'    => __( 'Adjusts product prices by user role (customer 1-4, admins/shop managers), including the EUR switch for customer_3 and the [dynamic_product_price] shortcode.', 'blueworx_client_forum' ),
 				'group'          => 'pricing',
@@ -78,7 +78,7 @@ final class EPI_Feature_Registry {
 				'dependencies'   => array( 'woocommerce' ),
 				'boot'           => self::snippet( 'role-based-pricing.php' ),
 			),
-			'hide-prices-from-guests' => array(
+			'hide-prices-from-guests'     => array(
 				'title'          => __( 'Hide prices from guests', 'blueworx_client_forum' ),
 				'description'    => __( 'Logged-out visitors see no price; logged-in users see the ex-VAT price only.', 'blueworx_client_forum' ),
 				'group'          => 'pricing',
@@ -89,7 +89,7 @@ final class EPI_Feature_Registry {
 			),
 
 			// --- Product display ----------------------------------------.
-			'gallery'                 => array(
+			'gallery'                     => array(
 				'title'          => __( 'External image gallery', 'blueworx_client_forum' ),
 				'description'    => __( 'The Elementor product gallery widget (main image plus clickable thumbnails).', 'blueworx_client_forum' ),
 				'group'          => 'product-display',
@@ -98,7 +98,7 @@ final class EPI_Feature_Registry {
 				'dependencies'   => array( 'woocommerce', 'elementor' ),
 				'boot'           => array( __CLASS__, 'boot_gallery' ),
 			),
-			'epim-featured-image'     => array(
+			'epim-featured-image'         => array(
 				'title'          => __( 'ePim featured image', 'blueworx_client_forum' ),
 				'description'    => __( 'Builds the WooCommerce featured image (shop, category, related, cart, checkout, search) from the product image ID using the external ePim asset URL.', 'blueworx_client_forum' ),
 				'group'          => 'product-display',
@@ -107,7 +107,7 @@ final class EPI_Feature_Registry {
 				'dependencies'   => array( 'woocommerce' ),
 				'boot'           => array( 'EPI_Featured_Image', 'init' ),
 			),
-			'hide-internal-attributes' => array(
+			'hide-internal-attributes'    => array(
 				'title'          => __( 'Hide internal attributes', 'blueworx_client_forum' ),
 				'description'    => __( 'Hides the internal pa_epim-*, pa_bullet-*, pa_ecd-* and "bullet" attributes from the product page.', 'blueworx_client_forum' ),
 				'group'          => 'product-display',
@@ -116,7 +116,7 @@ final class EPI_Feature_Registry {
 				'dependencies'   => array( 'woocommerce' ),
 				'boot'           => self::snippet( 'hide-internal-attributes.php' ),
 			),
-			'hide-na-attributes'      => array(
+			'hide-na-attributes'          => array(
 				'title'          => __( 'Hide empty / N/A attributes', 'blueworx_client_forum' ),
 				'description'    => __( 'Removes attributes that have no value or are set to "N/A".', 'blueworx_client_forum' ),
 				'group'          => 'product-display',
@@ -125,7 +125,7 @@ final class EPI_Feature_Registry {
 				'dependencies'   => array( 'woocommerce' ),
 				'boot'           => self::snippet( 'hide-na-attributes.php' ),
 			),
-			'breadcrumb-main-category' => array(
+			'breadcrumb-main-category'    => array(
 				'title'          => __( 'Main category breadcrumbs', 'blueworx_client_forum' ),
 				'description'    => __( 'Keeps the product breadcrumb on the main category path instead of the "Featured Products" path.', 'blueworx_client_forum' ),
 				'group'          => 'product-display',
@@ -134,7 +134,7 @@ final class EPI_Feature_Registry {
 				'dependencies'   => array( 'woocommerce' ),
 				'boot'           => self::snippet( 'breadcrumb-main-category.php' ),
 			),
-			'product-bullets'         => array(
+			'product-bullets'             => array(
 				'title'          => __( 'Product bullets shortcode', 'blueworx_client_forum' ),
 				'description'    => __( '[product_bullets] -renders the bullet attributes as a list.', 'blueworx_client_forum' ),
 				'group'          => 'product-display',
@@ -152,7 +152,7 @@ final class EPI_Feature_Registry {
 				'dependencies'   => array( 'woocommerce' ),
 				'boot'           => self::snippet( 'fitting-instructions-button.php' ),
 			),
-			'datasheet-button'        => array(
+			'datasheet-button'            => array(
 				'title'          => __( 'Datasheet (spec sheet) button', 'blueworx_client_forum' ),
 				'description'    => __( '[datasheet_button_alt] -builds the spec-sheet link from the SKU.', 'blueworx_client_forum' ),
 				'group'          => 'product-display',
@@ -161,7 +161,7 @@ final class EPI_Feature_Registry {
 				'dependencies'   => array( 'woocommerce' ),
 				'boot'           => self::snippet( 'datasheet-button.php' ),
 			),
-			'product-video-button'    => array(
+			'product-video-button'        => array(
 				'title'          => __( 'Product video button', 'blueworx_client_forum' ),
 				'description'    => __( '[product_video_button] -shows a Video button from the product video attribute, and hides that attribute from the list.', 'blueworx_client_forum' ),
 				'group'          => 'product-display',
@@ -170,7 +170,7 @@ final class EPI_Feature_Registry {
 				'dependencies'   => array( 'woocommerce' ),
 				'boot'           => self::snippet( 'product-video-button.php' ),
 			),
-			'product-category-filter' => array(
+			'product-category-filter'     => array(
 				'title'          => __( 'Product filter widget', 'blueworx_client_forum' ),
 				'description'    => __( '[product_category_filter] -the categories + lamp type / fitting class / IP rating / colour filter.', 'blueworx_client_forum' ),
 				'group'          => 'product-display',
@@ -181,7 +181,7 @@ final class EPI_Feature_Registry {
 			),
 
 			// --- Shop behaviour -----------------------------------------.
-			'hide-cart-for-guests'    => array(
+			'hide-cart-for-guests'        => array(
 				'title'          => __( 'Hide cart & purchasing for guests', 'blueworx_client_forum' ),
 				'description'    => __( 'Makes products non-purchasable and removes Add-to-cart buttons for logged-out visitors.', 'blueworx_client_forum' ),
 				'group'          => 'shop',
@@ -190,7 +190,7 @@ final class EPI_Feature_Registry {
 				'dependencies'   => array( 'woocommerce' ),
 				'boot'           => self::snippet( 'hide-cart-for-guests.php' ),
 			),
-			'restrict-search'         => array(
+			'restrict-search'             => array(
 				'title'          => __( 'Restrict search to products', 'blueworx_client_forum' ),
 				'description'    => __( 'Site search returns only WooCommerce products.', 'blueworx_client_forum' ),
 				'group'          => 'shop',
@@ -199,7 +199,7 @@ final class EPI_Feature_Registry {
 				'dependencies'   => array(),
 				'boot'           => self::snippet( 'restrict-search.php' ),
 			),
-			'search-result-sku'       => array(
+			'search-result-sku'           => array(
 				'title'          => __( 'Show SKU in search results', 'blueworx_client_forum' ),
 				'description'    => __( 'Search result cards show the product SKU in place of the short description.', 'blueworx_client_forum' ),
 				'group'          => 'shop',
@@ -210,7 +210,7 @@ final class EPI_Feature_Registry {
 			),
 
 			// --- Account ------------------------------------------------.
-			'acf-account-details'     => array(
+			'acf-account-details'         => array(
 				'title'          => __( 'Account details (ACF)', 'blueworx_client_forum' ),
 				'description'    => __( '[show_user_acf_fields] -shows the logged-in user account number, rep, manager and contact details.', 'blueworx_client_forum' ),
 				'group'          => 'account',
@@ -221,7 +221,7 @@ final class EPI_Feature_Registry {
 			),
 
 			// --- Admin & email ------------------------------------------.
-			'email-footer'            => array(
+			'email-footer'                => array(
 				'title'          => __( 'Clean WooCommerce email footer', 'blueworx_client_forum' ),
 				'description'    => __( 'Removes the "Process your orders on the go. Get the app." text from WooCommerce order emails.', 'blueworx_client_forum' ),
 				'group'          => 'admin-email',
@@ -230,7 +230,7 @@ final class EPI_Feature_Registry {
 				'dependencies'   => array( 'woocommerce' ),
 				'boot'           => self::snippet( 'email-footer.php' ),
 			),
-			'catalogue-ordering'      => array(
+			'catalogue-ordering'          => array(
 				'title'          => __( 'Catalogue drag-ordering', 'blueworx_client_forum' ),
 				'description'    => __( 'Drag-and-drop manual ordering for the "catalogue" post type in the admin list.', 'blueworx_client_forum' ),
 				'group'          => 'admin-email',
@@ -241,7 +241,7 @@ final class EPI_Feature_Registry {
 			),
 
 			// --- Admin product tools (existing plugin features) ---------.
-			'meta-viewer'             => array(
+			'meta-viewer'                 => array(
 				'title'          => __( 'Product metadata viewer', 'blueworx_client_forum' ),
 				'description'    => __( 'The searchable product metadata viewer plus the "Last updated" product list column.', 'blueworx_client_forum' ),
 				'group'          => 'admin-product',
@@ -250,7 +250,7 @@ final class EPI_Feature_Registry {
 				'dependencies'   => array( 'woocommerce' ),
 				'boot'           => array( 'EPI_Product_Meta', 'init' ),
 			),
-			'change-log'              => array(
+			'change-log'                  => array(
 				'title'          => __( 'Product change log', 'blueworx_client_forum' ),
 				'description'    => __( 'Records and displays an audit trail of product changes (users, imports, APIs).', 'blueworx_client_forum' ),
 				'group'          => 'admin-product',
@@ -261,18 +261,18 @@ final class EPI_Feature_Registry {
 			),
 
 			// --- Tools --------------------------------------------------.
-			'image-purge'             => array(
+			'image-purge'                 => array(
 				'title'          => __( 'Product image purge tool', 'blueworx_client_forum' ),
 				'description'    => __( 'Adds Tools > Purge Product Images: scan, then batch-delete product-only media (with confirmations). Turning this off only hides the tool - it deletes nothing.', 'blueworx_client_forum' ),
 				'group'          => 'tools',
 				'dangerous'      => true,
 				'danger_message' => __( 'This hides the permanent image-deletion tool from the Tools menu. Turning it off will not delete anything. Are you sure?', 'blueworx_client_forum' ),
 				'dependencies'   => array( 'woocommerce' ),
-				'boot'           => self::snippet( 'image-purge.php' ),
+				'boot'           => self::snippet( 'class-epi-one-time-wc-product-image-purge.php' ),
 			),
 
 			// --- Debug --------------------------------------------------.
-			'debug-log-user-role'     => array(
+			'debug-log-user-role'         => array(
 				'title'          => __( 'Log user role (debug)', 'blueworx_client_forum' ),
 				'description'    => __( 'Prints the current user role to the browser console. Note: visible to every visitor when on.', 'blueworx_client_forum' ),
 				'group'          => 'debug',
@@ -281,7 +281,7 @@ final class EPI_Feature_Registry {
 				'dependencies'   => array(),
 				'boot'           => self::snippet( 'debug-log-user-role.php' ),
 			),
-			'debug-log-pricing'       => array(
+			'debug-log-pricing'           => array(
 				'title'          => __( 'Log product pricing (debug)', 'blueworx_client_forum' ),
 				'description'    => __( 'On single product pages, prints the user role, the original vs live calculated price, and every role-based pricing tier to the browser console. Note: visible to every visitor when on.', 'blueworx_client_forum' ),
 				'group'          => 'debug',

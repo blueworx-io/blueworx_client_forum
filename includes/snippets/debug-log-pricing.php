@@ -7,7 +7,7 @@
  * price for that user, and the full breakdown of every role-based pricing
  * tier for the product.
  *
- * The per-tier formulas mirror custom_role_based_price() in
+ * The per-tier formulas mirror epi_role_based_price() in
  * includes/snippets/role-based-pricing.php. If those percentages change,
  * update them here too so the debug table stays truthful.
  *
@@ -55,11 +55,11 @@ function blueworx_console_log_product_pricing() {
 	$base_currency = get_option( 'woocommerce_currency', 'GBP' );
 
 	// Every pricing tier for this product. Keep in sync with
-	// custom_role_based_price() in role-based-pricing.php.
+	// epi_role_based_price() in role-based-pricing.php.
 	$tiers = array();
 	if ( null !== $regular && $regular > 0 ) {
-		$attribute_price = function_exists( 'custom_get_attribute_price' )
-			? custom_get_attribute_price( $product, 'ECD-special-prices' )
+		$attribute_price = function_exists( 'epi_get_attribute_price' )
+			? epi_get_attribute_price( $product, 'ECD-special-prices' )
 			: null;
 
 		$tiers = array(

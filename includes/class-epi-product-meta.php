@@ -444,7 +444,7 @@ final class EPI_Product_Meta {
 	 * @return bool
 	 */
 	public static function is_product_meta_key( $meta_key, $product_id = 0 ) {
-		$excluded_keys = array(
+		$excluded_keys     = array(
 			'_edit_lock',
 			'_edit_last',
 			'_wp_old_slug',
@@ -460,7 +460,7 @@ final class EPI_Product_Meta {
 			'rank_math_',
 			'_oembed_',
 		);
-		$included = ! in_array( $meta_key, $excluded_keys, true );
+		$included          = ! in_array( $meta_key, $excluded_keys, true );
 
 		foreach ( $excluded_prefixes as $prefix ) {
 			if ( 0 === strpos( $meta_key, $prefix ) ) {

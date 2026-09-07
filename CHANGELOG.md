@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Uninstalling the plugin now removes the settings and the change-log table it created. It leaves everything else alone.
 
 ### Changed
+- The functions the imported Code Snippets scripts declare are now prefixed, so they cannot collide with anything else on the site. If any of the matching entries are still switched on in the Code Snippets plugin, switch them off: with the names no longer clashing, both copies would run.
 - Settings > BlueWorx Lab is rebuilt on the shared BlueWorx admin design system: a proper page header, one section per feature group instead of one long list, and a save bar that stays in view. Every feature still saves in one go, whichever section you are looking at.
 
 ## [1.5.5]

@@ -58,6 +58,10 @@ are handled automatically. Placeholders remain as a safety fallback.
 * Uninstalling the plugin now removes the settings and the change-log table it
   created, and leaves everything else alone.
 * Every change to the plugin is now checked automatically before it can go out.
+* IMPORTANT: the imported Code Snippets scripts now use their own function
+  names. If any of the matching entries are still switched on in the Code
+  Snippets plugin, switch them off - with the names no longer clashing, both
+  copies would run.
 
 = 1.5.5 =
 * "ECD special prices" no longer shows in the product attribute list on the

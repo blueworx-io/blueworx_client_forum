@@ -16,19 +16,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-add_filter('woocommerce_get_price_html', 'show_ex_vat_price_logged_in_only', 100, 2);
+add_filter( 'woocommerce_get_price_html', 'epi_show_ex_vat_price_logged_in_only', 100, 2 );
 
-function show_ex_vat_price_logged_in_only($price, $product) {
+function epi_show_ex_vat_price_logged_in_only( $price, $product ) {
 
-    // Guests see nothing
-    if ( ! is_user_logged_in() ) {
-        return '';
-    }
+	// Guests see nothing
+	if ( ! is_user_logged_in() ) {
+		return '';
+	}
 
-    // Logged-in users see EX VAT price only
-    $price_ex_vat = wc_get_price_excluding_tax($product);
+	// Logged-in users see EX VAT price only
+	$price_ex_vat = wc_get_price_excluding_tax( $product );
 
-    return '<span class="price"><span class="woocommerce-Price-amount amount">£'
-        . wc_format_decimal($price_ex_vat, 2)
-        . ' ex. VAT</span></span>';
+	return '<span class="price"><span class="woocommerce-Price-amount amount">£'
+		. wc_format_decimal( $price_ex_vat, 2 )
+		. ' ex. VAT</span></span>';
 }
