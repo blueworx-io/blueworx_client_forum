@@ -12,13 +12,6 @@ jobs:
       # Tests run against a disposable real WordPress the run provisions itself
       # (PHP + SQLite, no Docker, no hosting).
       use_local_wordpress: true
-      # Reports without failing while the plugin catches up. The Lab screen is
-      # on the design system; the product metadata viewer, the product change
-      # log and the image purge tool are still on their own hand-written
-      # markup. They are only in scope of this check at all because a
-      # whitespace-only formatting pass touched them. Tracked in issue #3 —
-      # take this off once all three are converted.
-      admin_ui_adherence: warn
       # Pin the check scripts to the same major as the workflow above. This input
       # defaults to `main`, so without it the v1 workflow would run against
       # whatever is on the foundation's main branch today.

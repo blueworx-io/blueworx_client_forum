@@ -45,6 +45,25 @@ final class EPI_One_Time_WC_Product_Image_Purge {
 			self::PAGE_SLUG,
 			array( $this, 'render_page' )
 		);
+
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+	}
+
+	/**
+	 * Load the shared design system on this screen only.
+	 */
+	public function enqueue_assets( string $hook_suffix ): void {
+		if ( 'tools_page_' . self::PAGE_SLUG !== $hook_suffix ) {
+			return;
+		}
+
+		EPI_Lab_Page::enqueue_design_system();
+		wp_enqueue_style(
+			'epi-image-purge',
+			EPI_PLUGIN_URL . 'assets/css/epi-image-purge.css',
+			array( EPI_Lab_Page::DESIGN_HANDLE ),
+			EPI_VERSION
+		);
 	}
 
 	public function render_page(): void {
@@ -71,37 +90,93 @@ final class EPI_One_Time_WC_Product_Image_Purge {
 
 		$plan = get_option( self::PLAN_OPTION );
 
-		echo '<div class="wrap">';
-		echo '<h1>One-Time WooCommerce Product Image Purge</h1>';
-		echo '<p>Use this once, after taking a backup. For large sites, keep this page open while deletion runs.</p>';
+		$saved_count = is_array( $plan ) && ! empty( $plan['remaining_ids'] ) ? count( $plan['remaining_ids'] ) : 0;
+		?>
+		<div class="wrap bw-wrap">
+			<div class="bw-admin bw-page">
+				<header class="bw-pagehead">
+					<div class="bw-pagehead__titles">
+						<p class="bw-pagehead__eyebrow">Maintenance</p>
+						<h1 class="bw-pagehead__h1">Purge product images</h1>
+						<p class="bw-pagehead__lede">Deletes image files that only the shop's products use, and leaves alone any image used anywhere else. Take a backup first. On a large shop, keep this page open while the deletion runs.</p>
+					</div>
+				</header>
 
-		if ( $result ) {
-			$this->render_result( $result );
-		} elseif ( is_array( $plan ) && ! empty( $plan['remaining_ids'] ) ) {
-			echo '<div class="notice notice-warning"><p>A saved scan is ready. Product-only images left to delete: <strong>' . esc_html( (string) count( $plan['remaining_ids'] ) ) . '</strong>.</p></div>';
-		}
+				<div class="bw-page__body bw-page__body--single">
+					<div class="bw-panels">
+						<?php
+						if ( $result ) {
+							$this->render_result( $result );
+						} elseif ( $saved_count > 0 ) {
+							?>
+							<div class="bw-notice bw-notice--warning" role="status">
+								<i class="bw-icon bw-icon--18 bw-notice__icon" data-lucide="triangle-alert" aria-hidden="true"></i>
+								<div class="bw-notice__body">
+									<p class="bw-notice__title">A saved scan is waiting</p>
+									<p class="bw-notice__text">
+										<?php echo esc_html( number_format_i18n( $saved_count ) ); ?> product-only images are still to be deleted.
+									</p>
+								</div>
+							</div>
+							<?php
+						}
+						?>
 
-		echo '<form method="post" style="margin-top:20px;">';
-		wp_nonce_field( self::NONCE_ACTION );
-		echo '<input type="hidden" name="wc_product_image_purge_mode" value="dry_run">';
-		submit_button( 'Run dry scan', 'secondary' );
-		echo '</form>';
+						<section class="bw-card">
+							<div class="bw-card__head">
+								<div class="bw-card__titles">
+									<h2 class="bw-card__title">Scan</h2>
+								</div>
+							</div>
+							<div class="bw-card__body">
+								<p class="bw-card__note">Counts what would be deleted and saves the result. Nothing is removed.</p>
+								<form method="post">
+									<?php wp_nonce_field( self::NONCE_ACTION ); ?>
+									<input type="hidden" name="wc_product_image_purge_mode" value="dry_run">
+									<button type="submit" class="bw-btn">
+										<i class="bw-icon" data-lucide="search" aria-hidden="true"></i>
+										Run dry scan
+									</button>
+								</form>
+							</div>
+						</section>
 
-		echo '<form method="post" style="margin-top:12px;" onsubmit="return confirm(\'This permanently deletes product-only image files. Continue?\');">';
-		wp_nonce_field( self::NONCE_ACTION );
-		echo '<input type="hidden" name="wc_product_image_purge_mode" value="delete">';
-		submit_button( 'Delete product-only images', 'delete' );
-		echo '</form>';
+						<section class="bw-card">
+							<div class="bw-card__head">
+								<div class="bw-card__titles">
+									<h2 class="bw-card__title">Delete</h2>
+								</div>
+							</div>
+							<div class="bw-card__body">
+								<p class="bw-card__note">Permanently removes the image files the scan found. This cannot be undone.</p>
+								<form method="post" onsubmit="return confirm('This permanently deletes product-only image files. Continue?');">
+									<?php wp_nonce_field( self::NONCE_ACTION ); ?>
+									<input type="hidden" name="wc_product_image_purge_mode" value="delete">
+									<button type="submit" class="bw-btn bw-btn--danger">
+										<i class="bw-icon" data-lucide="trash-2" aria-hidden="true"></i>
+										Delete product-only images
+									</button>
+								</form>
+							</div>
+						</section>
 
-		if ( is_array( $plan ) ) {
-			echo '<form method="post" style="margin-top:12px;">';
-			wp_nonce_field( self::NONCE_ACTION );
-			echo '<input type="hidden" name="wc_product_image_purge_mode" value="clear">';
-			submit_button( 'Clear saved scan', 'secondary' );
-			echo '</form>';
-		}
-
-		echo '</div>';
+						<?php if ( is_array( $plan ) ) : ?>
+							<section class="bw-card bw-card--sunken">
+								<div class="bw-card__body">
+									<p class="bw-card__note">Throw away the saved scan and start again.</p>
+									<form method="post">
+										<?php wp_nonce_field( self::NONCE_ACTION ); ?>
+										<input type="hidden" name="wc_product_image_purge_mode" value="clear">
+										<button type="submit" class="bw-btn bw-btn--ghost">Clear saved scan</button>
+									</form>
+								</div>
+							</section>
+						<?php endif; ?>
+					</div>
+				</div>
+			</div>
+		</div>
+		<?php
 	}
 
 	private function scan(): array {
@@ -639,16 +714,19 @@ final class EPI_One_Time_WC_Product_Image_Purge {
 
 	private function render_result( array $result ): void {
 		if ( $result['mode'] === 'clear' ) {
-			echo '<div class="notice notice-success"><p>Saved scan cleared.</p></div>';
+			$this->render_notice( 'success', 'circle-check', 'Saved scan cleared.' );
 			return;
 		}
 
 		if ( $result['mode'] === 'dry_run' ) {
-			echo '<div class="notice notice-info"><p>';
-			echo '<strong>Product-linked images found:</strong> ' . esc_html( (string) count( $result['candidate_ids'] ) ) . '<br>';
-			echo '<strong>Protected because used elsewhere:</strong> ' . esc_html( (string) count( $result['protected'] ) ) . '<br>';
-			echo '<strong>Product-only images ready to delete:</strong> ' . esc_html( (string) count( $result['to_delete'] ) );
-			echo '</p></div>';
+			$this->render_stats(
+				'What the scan found',
+				array(
+					array( 'Product-linked images', count( $result['candidate_ids'] ), 'Every image any product points at.' ),
+					array( 'Protected', count( $result['protected'] ), 'Used somewhere else too, so left alone.' ),
+					array( 'Ready to delete', count( $result['to_delete'] ), 'Used by products and nothing else.' ),
+				)
+			);
 
 			$this->render_id_preview( 'Protected images', array_keys( $result['protected'] ) );
 			$this->render_id_preview( 'Product-only images', $result['to_delete'] );
@@ -656,24 +734,67 @@ final class EPI_One_Time_WC_Product_Image_Purge {
 		}
 
 		if ( $result['mode'] === 'delete' ) {
-			echo '<div class="notice notice-info"><p>';
-			echo '<strong>Deleted this batch:</strong> ' . esc_html( (string) $result['batch_deleted'] ) . '<br>';
-			echo '<strong>Failed this batch:</strong> ' . esc_html( (string) $result['batch_failed'] ) . '<br>';
-			echo '<strong>Total deleted:</strong> ' . esc_html( (string) $result['total_deleted'] ) . ' of ' . esc_html( (string) $result['total_to_delete'] ) . '<br>';
-			echo '<strong>Remaining:</strong> ' . esc_html( (string) $result['remaining_count'] );
-			echo '</p></div>';
+			$this->render_stats(
+				'This batch',
+				array(
+					array( 'Deleted', $result['batch_deleted'], 'Removed in this batch.' ),
+					array( 'Failed', $result['batch_failed'], 'Left in place; check the media library.' ),
+					array( 'Deleted so far', $result['total_deleted'], 'Of ' . number_format_i18n( (int) $result['total_to_delete'] ) . ' planned.' ),
+					array( 'Remaining', $result['remaining_count'], 'Still to go.' ),
+				)
+			);
 
 			if ( $result['remaining_count'] > 0 ) {
-				echo '<p>Continuing automatically. Keep this tab open.</p>';
+				$this->render_notice( 'info', 'info', 'Carrying on with the next batch. Keep this tab open.' );
 				echo '<form id="wc-product-image-purge-continue" method="post">';
 				wp_nonce_field( self::NONCE_ACTION );
 				echo '<input type="hidden" name="wc_product_image_purge_mode" value="delete">';
 				echo '</form>';
 				echo '<script>setTimeout(function(){document.getElementById("wc-product-image-purge-continue").submit();}, 900);</script>';
 			} else {
-				echo '<div class="notice notice-success"><p>Finished. You can now deactivate and delete this plugin.</p></div>';
+				$this->render_notice( 'success', 'circle-check', 'Finished. Nothing is left to delete.' );
 			}
 		}
+	}
+
+	/**
+	 * One design system notice.
+	 */
+	private function render_notice( string $tone, string $icon, string $text ): void {
+		?>
+		<div class="bw-notice bw-notice--<?php echo esc_attr( $tone ); ?>" role="status">
+			<i class="bw-icon bw-icon--18 bw-notice__icon" data-lucide="<?php echo esc_attr( $icon ); ?>" aria-hidden="true"></i>
+			<div class="bw-notice__body">
+				<p class="bw-notice__text"><?php echo esc_html( $text ); ?></p>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * A row of figures. Each entry is [ label, value, footnote ].
+	 */
+	private function render_stats( string $title, array $cells ): void {
+		?>
+		<section class="bw-card">
+			<div class="bw-card__head">
+				<div class="bw-card__titles">
+					<h2 class="bw-card__title"><?php echo esc_html( $title ); ?></h2>
+				</div>
+			</div>
+			<div class="bw-card__body">
+				<div class="bw-stats">
+					<?php foreach ( $cells as $cell ) : ?>
+						<div class="bw-stat">
+							<span class="bw-stat__label"><?php echo esc_html( $cell[0] ); ?></span>
+							<p class="bw-stat__value"><?php echo esc_html( number_format_i18n( (int) $cell[1] ) ); ?></p>
+							<p class="bw-stat__foot"><?php echo esc_html( $cell[2] ); ?></p>
+						</div>
+					<?php endforeach; ?>
+				</div>
+			</div>
+		</section>
+		<?php
 	}
 
 	private function render_id_preview( string $title, array $ids ): void {
@@ -683,14 +804,29 @@ final class EPI_One_Time_WC_Product_Image_Purge {
 
 		$limit = 300;
 		$shown = array_slice( $ids, 0, $limit );
-
-		echo '<details style="margin-top:15px;"><summary>' . esc_html( $title ) . ' - showing ' . esc_html( (string) count( $shown ) ) . ' of ' . esc_html( (string) count( $ids ) ) . '</summary><ol>';
-
-		foreach ( $shown as $attachment_id ) {
-			echo '<li>#' . esc_html( (string) absint( $attachment_id ) ) . ' - ' . esc_html( '' !== get_the_title( $attachment_id ) ? get_the_title( $attachment_id ) : '(no title)' ) . '</li>';
-		}
-
-		echo '</ol></details>';
+		?>
+		<section class="bw-card">
+			<div class="bw-card__head">
+				<div class="bw-card__titles">
+					<h2 class="bw-card__title"><?php echo esc_html( $title ); ?></h2>
+					<p class="bw-card__eyebrow">
+						Showing <?php echo esc_html( number_format_i18n( count( $shown ) ) ); ?>
+						of <?php echo esc_html( number_format_i18n( count( $ids ) ) ); ?>
+					</p>
+				</div>
+			</div>
+			<div class="bw-card__body">
+				<div class="bw-scrolllist">
+					<?php foreach ( $shown as $attachment_id ) : ?>
+						<span>
+							<code>#<?php echo esc_html( (string) absint( $attachment_id ) ); ?></code>
+							<?php echo esc_html( '' !== get_the_title( $attachment_id ) ? get_the_title( $attachment_id ) : '(no title)' ); ?>
+						</span>
+					<?php endforeach; ?>
+				</div>
+			</div>
+		</section>
+		<?php
 	}
 }
 

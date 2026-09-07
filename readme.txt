@@ -4,7 +4,7 @@ Tags: woocommerce, elementor, product gallery, product images, site functionalit
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.6.0
+Stable tag: 1.7.0
 License: GPLv2 or later
 
 Site functionality plugin for Forum Lighting: one control centre to switch the WooCommerce gallery, metadata, pricing and more on or off.
@@ -47,6 +47,16 @@ The stored value may be a JSON array of URLs OR a comma-separated list — both
 are handled automatically. Placeholders remain as a safety fallback.
 
 == Changelog ==
+
+= 1.7.0 =
+* The last three admin screens now match the rest of the plugin: the product
+  metadata section on the product edit page, the product change log, and
+  Tools > Purge Product Images. Same buttons, same tables, same notices as
+  Settings > BlueWorx Lab.
+* The metadata page and the purge tool now run the full width of the screen.
+* The purge tool reads its figures as plain counts rather than a wall of bold
+  text, and the long image lists scroll in place instead of pushing the page
+  down.
 
 = 1.6.0 =
 * Settings > BlueWorx Lab has been rebuilt on the shared BlueWorx admin design.
