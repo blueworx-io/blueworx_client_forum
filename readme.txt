@@ -4,7 +4,7 @@ Tags: woocommerce, elementor, product gallery, product images, site functionalit
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.7.0
+Stable tag: 1.7.1
 License: GPLv2 or later
 
 Site functionality plugin for Forum Lighting: one control centre to switch the WooCommerce gallery, metadata, pricing and more on or off.
@@ -47,6 +47,14 @@ The stored value may be a JSON array of URLs OR a comma-separated list — both
 are handled automatically. Placeholders remain as a safety fallback.
 
 == Changelog ==
+
+= 1.7.1 =
+* The Save changes bar now sits along the bottom of the window on every admin
+  screen, instead of coming to rest halfway up a short page.
+* Every on/off toggle now sits on the right of the setting it switches, lined
+  up down the right edge of the panel.
+* A toggle you cannot use, because the plugin it needs is not active, now shows
+  as unavailable rather than lighting up when you click it.
 
 = 1.7.0 =
 * The last three admin screens now match the rest of the plugin: the product

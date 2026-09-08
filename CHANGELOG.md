@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.1]
+
+### Fixed
+- The Save changes bar now sits along the bottom of the window on every admin screen, instead of coming to rest halfway up a short page.
+- Every on/off toggle now sits on the right of the setting it switches, lined up down the right edge of the panel.
+- A toggle you cannot use — because the plugin it needs is not active — now shows as unavailable rather than lighting up when you click it.
+
 ## [1.7.0]
 
 ### Changed
