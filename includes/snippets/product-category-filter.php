@@ -15,98 +15,115 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // === Product Filter: Categories + Lamp Type + Fitting Class + IP Rating + Colour ===
-add_shortcode('product_category_filter', function () {
-	$shop_url = get_permalink(wc_get_page_id('shop'));
+add_shortcode(
+	'product_category_filter',
+	function () {
+		$shop_url = get_permalink( wc_get_page_id( 'shop' ) );
 
-	// Current selections. These filter params are read-only, bookmarkable query vars
-	// (no form submission), so nonce verification does not apply.
+		// Current selections. These filter params are read-only, bookmarkable query vars
+		// (no form submission), so nonce verification does not apply.
 	// phpcs:disable WordPress.Security.NonceVerification.Recommended
-	$get_array = function ($key) {
-		return !empty($_GET[$key]) ? array_filter(array_map('sanitize_title', explode(',', sanitize_text_field(wp_unslash($_GET[$key]))))) : [];
-	};
+		$get_array = function ( $key ) {
+			return ! empty( $_GET[ $key ] ) ? array_filter( array_map( 'sanitize_title', explode( ',', sanitize_text_field( wp_unslash( $_GET[ $key ] ) ) ) ) ) : array();
+		};
 
-	$selected = [
-		'categories'            => $get_array('categories'),
-		'filter_bulb-type'      => $get_array('filter_bulb-type'),
-		'filter_fittings-class' => $get_array('filter_fittings-class'),
-		'filter_ip-rating'      => $get_array('filter_ip-rating'),
-		'filter_colour'         => $get_array('filter_colour'),
-	];
+		$selected = array(
+			'categories'            => $get_array( 'categories' ),
+			'filter_bulb-type'      => $get_array( 'filter_bulb-type' ),
+			'filter_fittings-class' => $get_array( 'filter_fittings-class' ),
+			'filter_ip-rating'      => $get_array( 'filter_ip-rating' ),
+			'filter_colour'         => $get_array( 'filter_colour' ),
+		);
 
-	$minPrice = isset($_GET['min_price']) ? (int) $_GET['min_price'] : '';
-	$maxPrice = isset($_GET['max_price']) ? (int) $_GET['max_price'] : '';
+		$min_price = isset( $_GET['min_price'] ) ? (int) $_GET['min_price'] : '';
+		$max_price = isset( $_GET['max_price'] ) ? (int) $_GET['max_price'] : '';
 	// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
-	// Terms (only parent categories)
-	$taxonomies = [
-		[
-			'name'     => 'categories',
-			'label'    => 'Categories',
-			'taxonomy' => 'product_cat',
-			'args'     => ['parent' => 0],
-		],
-		[
-			'name'     => 'filter_bulb-type',
-			'label'    => 'Lamp Type', // Renamed from Bulb Type
-			'taxonomy' => 'pa_bulb-type',
-		],
-		[
-			'name'     => 'filter_fittings-class',
-			'label'    => 'Fitting Class',
-			'taxonomy' => 'pa_fittings-class',
-		],
-		[
-			'name'     => 'filter_ip-rating',
-			'label'    => 'IP Rating',
-			'taxonomy' => 'pa_ip-rating',
-		],
-		[
-			'name'     => 'filter_colour',
-			'label'    => 'Colour',
-			'taxonomy' => 'pa_colour',
-		],
-	];
+		// Terms (only parent categories)
+		$taxonomies = array(
+			array(
+				'name'     => 'categories',
+				'label'    => 'Categories',
+				'taxonomy' => 'product_cat',
+				'args'     => array( 'parent' => 0 ),
+			),
+			array(
+				'name'     => 'filter_bulb-type',
+				'label'    => 'Lamp Type', // Renamed from Bulb Type
+				'taxonomy' => 'pa_bulb-type',
+			),
+			array(
+				'name'     => 'filter_fittings-class',
+				'label'    => 'Fitting Class',
+				'taxonomy' => 'pa_fittings-class',
+			),
+			array(
+				'name'     => 'filter_ip-rating',
+				'label'    => 'IP Rating',
+				'taxonomy' => 'pa_ip-rating',
+			),
+			array(
+				'name'     => 'filter_colour',
+				'label'    => 'Colour',
+				'taxonomy' => 'pa_colour',
+			),
+		);
 
-	ob_start(); ?>
-	<div id="product-filter" data-shop-url="<?php echo esc_url($shop_url); ?>">
+		ob_start(); ?>
+	<div id="product-filter" data-shop-url="<?php echo esc_url( $shop_url ); ?>">
 
-	<?php foreach ($taxonomies as $tax):
-		$terms = get_terms(array_merge(['taxonomy' => $tax['taxonomy'], 'hide_empty' => true], $tax['args'] ?? []));
-		if (empty($terms) || is_wp_error($terms)) continue;
-		$name = $tax['name'];
-		$label = $tax['label'];
-		$selected_terms = $selected[$name] ?? [];
-		?>
+		<?php
+		foreach ( $taxonomies as $tax ) :
+			$terms = get_terms(
+				array_merge(
+					array(
+						'taxonomy'   => $tax['taxonomy'],
+						'hide_empty' => true,
+					),
+					$tax['args'] ?? array()
+				)
+			);
+			if ( empty( $terms ) || is_wp_error( $terms ) ) {
+				continue;
+			}
+			$name           = $tax['name'];
+			$label          = $tax['label'];
+			$selected_terms = $selected[ $name ] ?? array();
+			?>
 		<div class="filter-section">
-			<button class="filter-toggle" type="button"><?php echo esc_html($label); ?></button>
+			<button class="filter-toggle" type="button"><?php echo esc_html( $label ); ?></button>
 			<div class="filter-content">
 				<ul>
-					<?php foreach ($terms as $term): ?>
+					<?php foreach ( $terms as $term ) : ?>
 						<li>
 							<label>
-								<input type="checkbox" name="<?php echo esc_attr($name); ?>[]" value="<?php echo esc_attr($term->slug); ?>"
-								<?php checked(in_array($term->slug, $selected_terms, true)); ?> >
-								<?php echo esc_html($term->name); ?>
+								<input type="checkbox" name="<?php echo esc_attr( $name ); ?>[]" value="<?php echo esc_attr( $term->slug ); ?>"
+								<?php checked( in_array( $term->slug, $selected_terms, true ) ); ?> >
+								<?php echo esc_html( $term->name ); ?>
 							</label>
 						</li>
 					<?php endforeach; ?>
 				</ul>
 			</div>
 		</div>
-	<?php endforeach; ?>
+		<?php endforeach; ?>
 
-	<?php /* ?>
-	<!-- Price -->
-	<div class="filter-section">
+		<?php
+		/*
+		?>
+		<!-- Price -->
+		<div class="filter-section">
 		<button class="filter-toggle" type="button">Price Range</button>
 		<div class="filter-content">
 			<div class="price-inputs">
-				<label>Min: <input type="number" name="min_price" value="<?php echo esc_attr($minPrice); ?>" min="0" step="1"></label>
-				<label>Max: <input type="number" name="max_price" value="<?php echo esc_attr($maxPrice); ?>" min="0" step="1"></label>
+				<label>Min: <input type="number" name="min_price" value="<?php echo esc_attr($min_price); ?>" min="0" step="1"></label>
+				<label>Max: <input type="number" name="max_price" value="<?php echo esc_attr($max_price); ?>" min="0" step="1"></label>
 			</div>
 		</div>
-	</div>
-	<?php */ ?>
+		</div>
+		<?php
+		*/
+		?>
 
 	<div class="filter-actions" style="display:flex; gap:.5rem; flex-direction: column; padding-top: 15px;">
 		<div id="primary-custom-button" class="elementor-button-wrapper">
@@ -256,6 +273,7 @@ add_shortcode('product_category_filter', function () {
 	.price-inputs input { width: 100%; }
 	</style>
 
-	<?php
-	return ob_get_clean();
-});
+		<?php
+		return ob_get_clean();
+	}
+);

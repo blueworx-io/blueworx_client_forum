@@ -14,16 +14,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-function console_log_user_type() {
-    $current_user = wp_get_current_user();
+function epi_console_log_user_type() {
+	$current_user = wp_get_current_user();
 
-    if ( is_user_logged_in() ) {
-        $roles = $current_user->roles;
-        $role  = ! empty( $roles ) ? implode( ', ', $roles ) : 'No role assigned';
-    } else {
-        $role = 'guest';
-    }
+	if ( is_user_logged_in() ) {
+		$roles = $current_user->roles;
+		$role  = ! empty( $roles ) ? implode( ', ', $roles ) : 'No role assigned';
+	} else {
+		$role = 'guest';
+	}
 
-    echo "<script>console.log('WordPress User Type: " . esc_js( $role ) . "');</script>";
+	echo "<script>console.log('WordPress User Type: " . esc_js( $role ) . "');</script>";
 }
-add_action( 'wp_footer', 'console_log_user_type' );
+add_action( 'wp_footer', 'epi_console_log_user_type' );

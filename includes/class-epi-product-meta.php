@@ -79,10 +79,15 @@ final class EPI_Product_Meta {
 			return;
 		}
 
+		// The viewer is a guest on WordPress's own product screens, so it brings
+		// the design system with it. On its own full-page view it is the whole
+		// screen, and the stylesheet below takes off the wp-admin chrome.
+		EPI_Lab_Page::enqueue_design_system();
+
 		wp_enqueue_style(
 			'epi-product-meta',
 			EPI_PLUGIN_URL . 'assets/css/epi-product-meta.css',
-			array(),
+			array( EPI_Lab_Page::DESIGN_HANDLE ),
 			EPI_VERSION
 		);
 
@@ -142,10 +147,10 @@ final class EPI_Product_Meta {
 
 		$editor = self::get_last_editor( $post );
 		?>
-		<div class="epi-product-updated">
-			<strong><?php echo esc_html( self::get_modified_date( $post ) ); ?></strong>
-			<span><?php echo esc_html( self::get_modified_time( $post ) ); ?></span>
-			<span>
+		<div class="bw-admin">
+			<span class="bw-table__primary"><?php echo esc_html( self::get_modified_date( $post ) ); ?></span>
+			<span class="bw-table__sub"><?php echo esc_html( self::get_modified_time( $post ) ); ?></span>
+			<span class="bw-table__sub">
 				<?php
 				printf(
 					/* translators: %s: user display name. */
@@ -184,33 +189,37 @@ final class EPI_Product_Meta {
 		$full_page_url = self::get_full_page_url( $post->ID );
 		$meta_count    = count( self::get_product_meta( $post->ID ) );
 		?>
-		<div class="epi-meta-viewer" data-epi-meta-viewer>
-			<div class="epi-meta-toolbar">
-				<div>
-					<p class="epi-meta-summary">
-						<?php
-						printf(
-							/* translators: %d: number of metadata fields. */
-							esc_html( _n( '%d metadata field', '%d metadata fields', $meta_count, 'blueworx_client_forum' ) ),
-							absint( $meta_count )
-						);
-						?>
-					</p>
-				</div>
-
-				<?php self::render_export_controls( $post->ID, $full_page_url ); ?>
-			</div>
-
+		<div class="bw-admin" data-epi-meta-viewer>
 			<?php self::render_activity( $post ); ?>
 
-			<?php self::render_search(); ?>
+			<div class="bw-toolbar bw-toolbar--card">
+				<?php self::render_search(); ?>
+				<span class="bw-toolbar__spacer"></span>
+				<span class="bw-toolbar__group">
+					<?php self::render_export_controls( $post->ID, $full_page_url ); ?>
+				</span>
+			</div>
 
-			<div class="epi-meta-table-wrap epi-meta-table-wrap--box">
+			<div class="bw-tablescroll">
 				<?php self::render_table( $post->ID ); ?>
 			</div>
 
-			<p class="epi-meta-no-results" data-epi-meta-no-results hidden>
-				<?php esc_html_e( 'No matching metadata found.', 'blueworx_client_forum' ); ?>
+			<?php // The hidden attribute goes on a bare wrapper: bw-fieldnote sets display:flex, which would win over [hidden] and leave the line on screen. ?>
+			<div data-epi-meta-no-results hidden>
+				<p class="bw-fieldnote">
+					<i class="bw-icon bw-icon--14" data-lucide="search" aria-hidden="true"></i>
+					<?php esc_html_e( 'No matching metadata found.', 'blueworx_client_forum' ); ?>
+				</p>
+			</div>
+
+			<p class="bw-table__legend">
+				<?php
+				printf(
+					/* translators: %d: number of metadata fields. */
+					esc_html( _n( '%d metadata field', '%d metadata fields', $meta_count, 'blueworx_client_forum' ) ),
+					absint( $meta_count )
+				);
+				?>
 			</p>
 		</div>
 		<?php
@@ -237,49 +246,69 @@ final class EPI_Product_Meta {
 		$meta_count = count( self::get_product_meta( $product_id ) );
 		$edit_url   = get_edit_post_link( $product_id, 'raw' );
 		?>
-		<div class="wrap epi-meta-page">
-			<div class="epi-meta-page__header">
-				<div>
-					<p class="epi-meta-page__eyebrow"><?php esc_html_e( 'WooCommerce product', 'blueworx_client_forum' ); ?></p>
-					<h1><?php echo esc_html( get_the_title( $product_id ) ); ?></h1>
-					<p class="epi-meta-summary">
-						<?php
-						printf(
-							/* translators: %d: number of metadata fields. */
-							esc_html( _n( '%d metadata field', '%d metadata fields', $meta_count, 'blueworx_client_forum' ) ),
-							absint( $meta_count )
-						);
-						?>
-					</p>
-				</div>
+		<div class="wrap bw-wrap">
+			<div class="bw-admin bw-page">
+				<header class="bw-pagehead">
+					<div class="bw-pagehead__titles">
+						<p class="bw-pagehead__eyebrow"><?php esc_html_e( 'WooCommerce product', 'blueworx_client_forum' ); ?></p>
+						<h1 class="bw-pagehead__h1"><?php echo esc_html( get_the_title( $product_id ) ); ?></h1>
+						<p class="bw-pagehead__lede">
+							<?php
+							printf(
+								/* translators: %d: number of metadata fields. */
+								esc_html( _n( '%d metadata field. Only product and WooCommerce metadata is included.', '%d metadata fields. Only product and WooCommerce metadata is included.', $meta_count, 'blueworx_client_forum' ) ),
+								absint( $meta_count )
+							);
+							?>
+						</p>
+					</div>
 
-				<?php if ( $edit_url ) : ?>
-					<a class="button button-secondary" href="<?php echo esc_url( $edit_url ); ?>">
-						<?php esc_html_e( 'Back to product', 'blueworx_client_forum' ); ?>
-					</a>
-				<?php endif; ?>
+					<?php if ( $edit_url ) : ?>
+						<div class="bw-pagehead__actions">
+							<a class="bw-btn" href="<?php echo esc_url( $edit_url ); ?>">
+								<i class="bw-icon" data-lucide="arrow-left" aria-hidden="true"></i>
+								<?php esc_html_e( 'Back to product', 'blueworx_client_forum' ); ?>
+							</a>
+						</div>
+					<?php endif; ?>
+				</header>
+
+				<div class="bw-page__body">
+					<div class="bw-panels">
+						<section class="bw-card bw-card--flush" data-epi-meta-viewer>
+							<div class="bw-card__head">
+								<div class="bw-card__titles">
+									<h2 class="bw-card__title"><?php esc_html_e( 'Metadata', 'blueworx_client_forum' ); ?></h2>
+								</div>
+								<div class="bw-card__actions">
+									<?php self::render_export_controls( $product_id ); ?>
+								</div>
+							</div>
+
+							<div class="bw-toolbar">
+								<?php self::render_search(); ?>
+							</div>
+
+							<div class="bw-tablescroll">
+								<?php self::render_table( $product_id ); ?>
+							</div>
+
+							<?php // The hidden attribute goes on a bare wrapper: bw-table__legend sets display:flex, which would win over [hidden] and leave the line on screen. ?>
+							<div data-epi-meta-no-results hidden>
+								<p class="bw-table__legend">
+									<?php esc_html_e( 'No matching metadata found.', 'blueworx_client_forum' ); ?>
+								</p>
+							</div>
+
+							<div class="bw-card__foot">
+								<?php self::render_activity( $product ); ?>
+							</div>
+						</section>
+
+						<?php EPI_Product_Change_Log::render_full_log( $product_id ); ?>
+					</div>
+				</div>
 			</div>
-
-			<div class="epi-meta-viewer epi-meta-viewer--page" data-epi-meta-viewer>
-				<?php self::render_activity( $product ); ?>
-
-				<div class="epi-meta-toolbar epi-meta-toolbar--page">
-					<p class="epi-meta-summary"><?php esc_html_e( 'Only product and WooCommerce metadata is included.', 'blueworx_client_forum' ); ?></p>
-					<?php self::render_export_controls( $product_id ); ?>
-				</div>
-
-				<?php self::render_search(); ?>
-
-				<div class="epi-meta-table-wrap">
-					<?php self::render_table( $product_id ); ?>
-				</div>
-
-				<p class="epi-meta-no-results" data-epi-meta-no-results hidden>
-					<?php esc_html_e( 'No matching metadata found.', 'blueworx_client_forum' ); ?>
-				</p>
-			</div>
-
-			<?php EPI_Product_Change_Log::render_full_log( $product_id ); ?>
 		</div>
 		<?php
 	}
@@ -291,16 +320,17 @@ final class EPI_Product_Meta {
 	 */
 	private static function render_search() {
 		?>
-		<label class="epi-meta-search">
-			<span class="dashicons dashicons-search" aria-hidden="true"></span>
-			<span class="screen-reader-text"><?php esc_html_e( 'Search product metadata', 'blueworx_client_forum' ); ?></span>
+		<span class="bw-inputwrap bw-toolbar__search">
+			<i class="bw-icon bw-inputwrap__icon" data-lucide="search" aria-hidden="true"></i>
 			<input
+				class="bw-input"
 				type="search"
-				placeholder="<?php esc_attr_e( 'Search meta keys or values...', 'blueworx_client_forum' ); ?>"
+				aria-label="<?php esc_attr_e( 'Search product metadata', 'blueworx_client_forum' ); ?>"
+				placeholder="<?php esc_attr_e( 'Search meta keys or values', 'blueworx_client_forum' ); ?>"
 				data-epi-meta-search
 				autocomplete="off"
 			/>
-		</label>
+		</span>
 		<?php
 	}
 
@@ -319,27 +349,25 @@ final class EPI_Product_Meta {
 		);
 		$filename    = sanitize_file_name( 'product-meta-' . absint( $product_id ) . '.json' );
 		?>
-		<div class="epi-meta-actions">
-			<button type="button" class="button button-secondary" data-epi-copy-meta>
-				<span class="dashicons dashicons-clipboard" aria-hidden="true"></span>
-				<span data-epi-copy-label><?php esc_html_e( 'Copy metadata', 'blueworx_client_forum' ); ?></span>
-			</button>
-			<button type="button" class="button button-secondary" data-epi-download-meta data-epi-filename="<?php echo esc_attr( $filename ); ?>">
-				<span class="dashicons dashicons-download" aria-hidden="true"></span>
-				<?php esc_html_e( 'Download JSON', 'blueworx_client_forum' ); ?>
-			</button>
-			<?php if ( $full_page_url ) : ?>
-				<a
-					class="button button-secondary epi-meta-new-tab"
-					href="<?php echo esc_url( $full_page_url ); ?>"
-					target="_blank"
-					rel="noopener noreferrer"
-				>
-					<span class="dashicons dashicons-external" aria-hidden="true"></span>
-					<?php esc_html_e( 'Open in new tab', 'blueworx_client_forum' ); ?>
-				</a>
-			<?php endif; ?>
-		</div>
+		<button type="button" class="bw-btn bw-btn--sm" data-epi-copy-meta>
+			<i class="bw-icon bw-icon--14" data-lucide="copy" aria-hidden="true"></i>
+			<span data-epi-copy-label><?php esc_html_e( 'Copy metadata', 'blueworx_client_forum' ); ?></span>
+		</button>
+		<button type="button" class="bw-btn bw-btn--sm" data-epi-download-meta data-epi-filename="<?php echo esc_attr( $filename ); ?>">
+			<i class="bw-icon bw-icon--14" data-lucide="download" aria-hidden="true"></i>
+			<?php esc_html_e( 'Download JSON', 'blueworx_client_forum' ); ?>
+		</button>
+		<?php if ( $full_page_url ) : ?>
+			<a
+				class="bw-btn bw-btn--sm"
+				href="<?php echo esc_url( $full_page_url ); ?>"
+				target="_blank"
+				rel="noopener noreferrer"
+			>
+				<i class="bw-icon bw-icon--14" data-lucide="external-link" aria-hidden="true"></i>
+				<?php esc_html_e( 'Open in new tab', 'blueworx_client_forum' ); ?>
+			</a>
+		<?php endif; ?>
 		<script type="application/json" data-epi-meta-json><?php echo false !== $json ? $json : '{}'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></script>
 		<?php
 	}
@@ -352,24 +380,22 @@ final class EPI_Product_Meta {
 	 */
 	private static function render_activity( $post ) {
 		?>
-		<div class="epi-meta-activity" aria-label="<?php esc_attr_e( 'Product update information', 'blueworx_client_forum' ); ?>">
-			<div class="epi-meta-activity__item">
-				<span class="dashicons dashicons-calendar-alt" aria-hidden="true"></span>
-				<div>
-					<span class="epi-meta-activity__label"><?php esc_html_e( 'Last updated', 'blueworx_client_forum' ); ?></span>
-					<strong><?php echo esc_html( self::get_modified_date( $post ) ); ?></strong>
-					<span><?php echo esc_html( self::get_modified_time( $post ) ); ?></span>
-				</div>
-			</div>
+		<dl class="bw-dl" aria-label="<?php esc_attr_e( 'Product update information', 'blueworx_client_forum' ); ?>">
+			<dt><?php esc_html_e( 'Last updated', 'blueworx_client_forum' ); ?></dt>
+			<dd>
+				<?php
+				printf(
+					/* translators: 1: date, 2: time of day. */
+					esc_html__( '%1$s at %2$s', 'blueworx_client_forum' ),
+					esc_html( self::get_modified_date( $post ) ),
+					esc_html( self::get_modified_time( $post ) )
+				);
+				?>
+			</dd>
 
-			<div class="epi-meta-activity__item">
-				<span class="dashicons dashicons-admin-users" aria-hidden="true"></span>
-				<div>
-					<span class="epi-meta-activity__label"><?php esc_html_e( 'Last edited by', 'blueworx_client_forum' ); ?></span>
-					<strong><?php echo esc_html( self::get_last_editor( $post ) ); ?></strong>
-				</div>
-			</div>
-		</div>
+			<dt><?php esc_html_e( 'Last edited by', 'blueworx_client_forum' ); ?></dt>
+			<dd><?php echo esc_html( self::get_last_editor( $post ) ); ?></dd>
+		</dl>
 		<?php
 	}
 
@@ -385,14 +411,16 @@ final class EPI_Product_Meta {
 
 		if ( empty( $all_meta ) ) {
 			?>
-			<div class="epi-meta-empty">
-				<?php esc_html_e( 'This product has no metadata.', 'blueworx_client_forum' ); ?>
+			<div class="bw-empty">
+				<i class="bw-icon bw-icon--28 bw-empty__icon" data-lucide="archive" aria-hidden="true"></i>
+				<h3 class="bw-empty__title"><?php esc_html_e( 'No metadata', 'blueworx_client_forum' ); ?></h3>
+				<p class="bw-empty__text"><?php esc_html_e( 'This product has nothing stored against it yet.', 'blueworx_client_forum' ); ?></p>
 			</div>
 			<?php
 			return;
 		}
 		?>
-		<table class="widefat striped epi-meta-table">
+		<table class="bw-table">
 			<thead>
 				<tr>
 					<th scope="col"><?php esc_html_e( 'Meta key', 'blueworx_client_forum' ); ?></th>
@@ -402,9 +430,9 @@ final class EPI_Product_Meta {
 			<tbody>
 				<?php foreach ( $all_meta as $meta_key => $meta_values ) : ?>
 					<tr data-epi-meta-row>
-						<th scope="row">
+						<td>
 							<code><?php echo esc_html( $meta_key ); ?></code>
-						</th>
+						</td>
 						<td><?php self::render_value( $meta_values ); ?></td>
 					</tr>
 				<?php endforeach; ?>
@@ -444,7 +472,7 @@ final class EPI_Product_Meta {
 	 * @return bool
 	 */
 	public static function is_product_meta_key( $meta_key, $product_id = 0 ) {
-		$excluded_keys = array(
+		$excluded_keys     = array(
 			'_edit_lock',
 			'_edit_last',
 			'_wp_old_slug',
@@ -460,7 +488,7 @@ final class EPI_Product_Meta {
 			'rank_math_',
 			'_oembed_',
 		);
-		$included = ! in_array( $meta_key, $excluded_keys, true );
+		$included          = ! in_array( $meta_key, $excluded_keys, true );
 
 		foreach ( $excluded_prefixes as $prefix ) {
 			if ( 0 === strpos( $meta_key, $prefix ) ) {
@@ -510,7 +538,7 @@ final class EPI_Product_Meta {
 
 		if ( '' === $display_value ) {
 			?>
-			<span class="epi-meta-empty-value"><?php esc_html_e( 'Empty', 'blueworx_client_forum' ); ?></span>
+			<span class="bw-badge bw-badge--neutral"><?php esc_html_e( 'Empty', 'blueworx_client_forum' ); ?></span>
 			<?php
 			return;
 		}

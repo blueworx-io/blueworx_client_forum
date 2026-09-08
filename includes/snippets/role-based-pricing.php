@@ -24,9 +24,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Admins & shop managers â price_customer_4 attribute price (fallback: price_customer_1 * 0.40)
  * All others â no discount
  */
-add_filter('woocommerce_product_get_price', 'custom_role_based_price', 10, 2);
-add_filter('woocommerce_product_variation_get_price', 'custom_role_based_price', 10, 2);
-function custom_role_based_price( $price, $product ) {
+add_filter( 'woocommerce_product_get_price', 'epi_role_based_price', 10, 2 );
+add_filter( 'woocommerce_product_variation_get_price', 'epi_role_based_price', 10, 2 );
+function epi_role_based_price( $price, $product ) {
 	if ( ! $product instanceof WC_Product ) {
 		return $price;
 	}
@@ -37,7 +37,7 @@ function custom_role_based_price( $price, $product ) {
 	if ( ! $user || ! $user->ID ) {
 		return $price;
 	}
-	$roles = (array) $user->roles;
+	$roles      = (array) $user->roles;
 	$data       = $product->get_data();
 	$base_price = isset( $data['regular_price'] ) && $data['regular_price'] !== ''
 		? (float) $data['regular_price']
@@ -47,7 +47,7 @@ function custom_role_based_price( $price, $product ) {
 	}
 	// Admins + shop managers â price_customer_4 attribute price, fallback to price_customer_1
 	if ( in_array( 'administrator', $roles, true ) || in_array( 'shop_manager', $roles, true ) ) {
-		$attribute_price = custom_get_attribute_price( $product, 'ECD-special-prices' );
+		$attribute_price = epi_get_attribute_price( $product, 'ECD-special-prices' );
 		if ( $attribute_price !== null ) {
 			return $attribute_price;
 		}
@@ -63,7 +63,7 @@ function custom_role_based_price( $price, $product ) {
 		return $base_price * 0.40 * 1.17;
 	}
 	if ( in_array( 'price_customer_4', $roles, true ) ) {
-		$attribute_price = custom_get_attribute_price( $product, 'ECD-special-prices' );
+		$attribute_price = epi_get_attribute_price( $product, 'ECD-special-prices' );
 		if ( $attribute_price !== null ) {
 			return $attribute_price;
 		}
@@ -83,7 +83,7 @@ function custom_role_based_price( $price, $product ) {
  * @param string     $attribute_slug  Base slug without 'pa_' prefix.
  * @return float|null
  */
-function custom_get_attribute_price( $product, $attribute_slug ) {
+function epi_get_attribute_price( $product, $attribute_slug ) {
 	$attributes = $product->get_attributes();
 	$key        = 'pa_' . sanitize_title( $attribute_slug );
 	if ( ! isset( $attributes[ $key ] ) ) {
@@ -107,25 +107,31 @@ function custom_get_attribute_price( $product, $attribute_slug ) {
 /**
  * Force EUR currency for price_customer_3 only
  */
-add_filter( 'woocommerce_currency', function ( $currency ) {
-	$user = wp_get_current_user();
-	if ( ! $user || ! $user->ID ) {
+add_filter(
+	'woocommerce_currency',
+	function ( $currency ) {
+		$user = wp_get_current_user();
+		if ( ! $user || ! $user->ID ) {
+			return $currency;
+		}
+		$roles = (array) $user->roles;
+		if ( in_array( 'price_customer_3', $roles, true ) ) {
+			return 'EUR';
+		}
 		return $currency;
 	}
-	$roles = (array) $user->roles;
-	if ( in_array( 'price_customer_3', $roles, true ) ) {
-		return 'EUR';
-	}
-	return $currency;
-} );
+);
 /**
  * Shortcode for Elementor / manual placement
  */
-add_shortcode( 'dynamic_product_price', function () {
-	global $product;
-	if ( ! $product instanceof WC_Product ) {
-		return '';
+add_shortcode(
+	'dynamic_product_price',
+	function () {
+		global $product;
+		if ( ! $product instanceof WC_Product ) {
+			return '';
+		}
+		$price_html = wc_price( $product->get_price() );
+		return '<p class="price">' . $price_html . ' <span class="ex-vat-label">ex. VAT | Net Trade Including Discount</span></p>';
 	}
-	$price_html = wc_price( $product->get_price() );
-	return '<p class="price">' . $price_html . ' <span class="ex-vat-label">ex. VAT | Net Trade Including Discount</span></p>';
-} );
+);

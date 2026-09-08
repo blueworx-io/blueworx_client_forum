@@ -1,0 +1,10 @@
+node_modules/
+vendor/
+.wp-test/
+test-results/
+playwright-report/
+.playwright-mcp/
+dist/
+*.zip
+.phpunit.result.cache
+.DS_Store

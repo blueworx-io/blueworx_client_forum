@@ -3,7 +3,7 @@
  * Plugin Name:       BlueWorx Lab | Forum Lighting
  * Plugin URI:        https://blueworx.io/
  * Description:        Site functionality plugin for Forum Lighting. A control centre under Settings > BlueWorx Lab switches features on or off, including the WooCommerce product gallery, metadata tools, pricing rules and more.
- * Version:           1.2.1
+ * Version:           1.7.0
  * Author:            BlueWorx
  * Author URI:        https://blueworx.io/
  * Text Domain:       blueworx_client_forum
@@ -22,11 +22,49 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Core plugin constants.
  */
-define( 'EPI_VERSION', '1.2.1' );
+define( 'EPI_VERSION', '1.7.0' );
 define( 'EPI_PLUGIN_FILE', __FILE__ );
 define( 'EPI_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'EPI_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'EPI_EPIM_IMAGE_BASE', 'https://epim.online/webproduct/assetimage/' );
+
+/*
+ * Self-updating from GitHub Releases. The site checks this repo's releases and
+ * installs the zip attached to one, exactly like a wordpress.org update, so
+ * nobody uploads a zip to update the plugin.
+ *
+ * This block must stay at file scope — the "use" import below cannot live
+ * inside a function, closure or conditional.
+ */
+require_once plugin_dir_path( __FILE__ ) . 'plugin-update-checker/plugin-update-checker.php';
+
+use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
+
+$blueworx_update_checker = PucFactory::buildUpdateChecker(
+	'https://github.com/blueworx-io/blueworx_client_forum/',
+	__FILE__,
+	// Must equal the plugin's folder name on the site, and the release
+	// workflow's `plugin_slug` input. If the three disagree, WordPress installs
+	// the update as a second copy and deactivates the original.
+	'blueworx_client_forum'
+);
+
+/*
+ * The repo is private, so the site needs a read-only token to see releases at
+ * all. It lives in wp-config.php, never in the plugin and never in the repo:
+ *
+ *     define( 'BLUEWORX_PLUGIN_UPDATE_TOKEN', 'github_pat_...' );
+ */
+if ( defined( 'BLUEWORX_PLUGIN_UPDATE_TOKEN' ) && BLUEWORX_PLUGIN_UPDATE_TOKEN ) {
+	$blueworx_update_checker->setAuthentication( BLUEWORX_PLUGIN_UPDATE_TOKEN );
+}
+
+/*
+ * Install the zip attached to the Release, not GitHub's auto-generated source
+ * tarball — the tarball extracts to a differently named folder, which
+ * WordPress treats as a different plugin.
+ */
+$blueworx_update_checker->getVcsApi()->enableReleaseAssets();
 
 /**
  * Main plugin bootstrap class.
@@ -103,7 +141,11 @@ final class EPI_Plugin {
 			require_once EPI_PLUGIN_DIR . 'includes/class-epi-product-meta.php';
 			EPI_Product_Change_Log::maybe_upgrade();
 		} else {
-			add_action( 'admin_notices', array( $this, 'notice_missing_woocommerce' ) );
+			// The notice and the design system it needs are both registered by
+			// the Lab page. Keeping every admin hook in that one file is what
+			// lets the tooling tell this plugin's admin assets apart from its
+			// shop-front ones.
+			EPI_Lab_Page::warn_woocommerce_missing();
 		}
 
 		// Boot every feature that is switched on and whose dependencies are met.
@@ -134,20 +176,6 @@ final class EPI_Plugin {
 			EPI_VERSION,
 			true
 		);
-	}
-
-	/**
-	 * Admin notice: WooCommerce missing.
-	 *
-	 * Most features need WooCommerce; the BlueWorx Lab control page still works
-	 * without it and shows which features are unavailable.
-	 *
-	 * @return void
-	 */
-	public function notice_missing_woocommerce() {
-		echo '<div class="notice notice-warning"><p>';
-		echo esc_html__( 'BlueWorx Lab | Forum Lighting works best with WooCommerce active. Most features will not run until WooCommerce is installed and active.', 'blueworx_client_forum' );
-		echo '</p></div>';
 	}
 }
 

@@ -1,0 +1,24 @@
+/**
+ * Purge product images — chrome overrides only.
+ *
+ * Everything the screen looks like comes from assets/blueworx-admin-design.css,
+ * the shared design system copied verbatim from the foundation. The only
+ * styling this plugin keeps of its own is what makes the screen run full width
+ * inside wp-admin, which is the documented exception.
+ */
+
+.wrap.bw-wrap {
+	margin: 0;
+}
+
+body.tools_page_one-time-wc-product-image-purge #wpcontent {
+	padding-left: 0;
+}
+
+body.tools_page_one-time-wc-product-image-purge #wpbody-content {
+	padding-bottom: 0;
+}
+
+body.tools_page_one-time-wc-product-image-purge #wpfooter {
+	display: none;
+}

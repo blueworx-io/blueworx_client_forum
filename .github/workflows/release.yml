@@ -1,0 +1,14 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+jobs:
+  release:
+    uses: blueworx-io/bluegroup_core_foundation/.github/workflows/release-wordpress.yml@v1
+    with:
+      plugin_slug: blueworx_client_forum
+      foundation_ref: v1
+    # Required: a reusable workflow cannot widen the permissions its caller
+    # gives it, so without this the publish step fails with a 403.
+    permissions:
+      contents: write

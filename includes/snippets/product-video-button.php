@@ -16,36 +16,42 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // === Dynamic Product Video Instructions Button Shortcode ===
-add_shortcode('product_video_button', function() {
-    if (!is_product()) return '';
+add_shortcode(
+	'product_video_button',
+	function () {
+		if ( ! is_product() ) {
+			return '';
+		}
 
-    global $product;
-    if (!$product instanceof WC_Product) return '';
+		global $product;
+		if ( ! $product instanceof WC_Product ) {
+			return '';
+		}
 
-    $video_url = '';
+		$video_url = '';
 
-    foreach ($product->get_attributes() as $key => $attr) {
-        if ($key === 'pa_video' || strtolower($attr->get_name()) === 'video') {
-            $values = $attr->get_options();
+		foreach ( $product->get_attributes() as $key => $attr ) {
+			if ( $key === 'pa_video' || strtolower( $attr->get_name() ) === 'video' ) {
+				$values = $attr->get_options();
 
-            foreach ($values as $val_id) {
-                $term = get_term($val_id);
+				foreach ( $values as $val_id ) {
+					$term = get_term( $val_id );
 
-                if ($term && !is_wp_error($term)) {
-                    $video_url = trim($term->name);
-                    break;
-                }
-            }
-        }
-    }
+					if ( $term && ! is_wp_error( $term ) ) {
+						$video_url = trim( $term->name );
+						break;
+					}
+				}
+			}
+		}
 
-    if (empty($video_url) || !filter_var($video_url, FILTER_VALIDATE_URL)) {
-        return '';
-    }
+		if ( empty( $video_url ) || ! filter_var( $video_url, FILTER_VALIDATE_URL ) ) {
+			return '';
+		}
 
-    return '
+		return '
     <div id="primary-custom-button" class="elementor-button-wrapper">
-        <a href="' . esc_url($video_url) . '" class="elementor-button elementor-size-sm elementor-animation-flip" target="_blank" rel="noopener">
+        <a href="' . esc_url( $video_url ) . '" class="elementor-button elementor-size-sm elementor-animation-flip" target="_blank" rel="noopener">
             <span class="elementor-button-content-wrapper">
                 <span class="ui-btn-anim-wrapp">
                     <span class="elementor-button-text">VIDEO</span>
@@ -54,18 +60,24 @@ add_shortcode('product_video_button', function() {
             </span>
         </a>
     </div>';
-});
+	}
+);
 
 // Hide Video from WooCommerce attributes list
-add_filter('woocommerce_display_product_attributes', function($attributes, $product) {
-    foreach ($attributes as $key => $attribute) {
-        if (
-            $key === 'pa_video' ||
-            strtolower($attribute['label']) === 'video'
-        ) {
-            unset($attributes[$key]);
-        }
-    }
+add_filter(
+	'woocommerce_display_product_attributes',
+	function ( $attributes, $product ) {
+		foreach ( $attributes as $key => $attribute ) {
+			if (
+			$key === 'pa_video' ||
+			strtolower( $attribute['label'] ) === 'video'
+			) {
+				unset( $attributes[ $key ] );
+			}
+		}
 
-    return $attributes;
-}, 10, 2);
+		return $attributes;
+	},
+	10,
+	2
+);

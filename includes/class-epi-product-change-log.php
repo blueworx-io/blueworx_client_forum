@@ -132,16 +132,22 @@ final class EPI_Product_Change_Log {
 		}
 
 		?>
-		<div class="epi-change-log">
-			<p class="description">
+		<div class="bw-admin">
+			<p class="bw-card__note">
 				<?php esc_html_e( 'Records changes made by users, imports, scheduled tasks, and API requests from version 1.0.6 onward.', 'blueworx_client_forum' ); ?>
 			</p>
-			<?php self::render_table( $post->ID, 1, 10, false ); ?>
-			<p>
-				<a class="button button-secondary" href="<?php echo esc_url( EPI_Product_Meta::get_full_page_url( $post->ID ) . '#epi-change-log' ); ?>" target="_blank" rel="noopener noreferrer">
+
+			<div class="bw-tablescroll">
+				<?php self::render_table( $post->ID, 1, 10, false ); ?>
+			</div>
+
+			<div class="bw-tablefoot">
+				<span class="bw-toolbar__spacer"></span>
+				<a class="bw-btn bw-btn--sm" href="<?php echo esc_url( EPI_Product_Meta::get_full_page_url( $post->ID ) . '#epi-change-log' ); ?>" target="_blank" rel="noopener noreferrer">
+					<i class="bw-icon bw-icon--14" data-lucide="external-link" aria-hidden="true"></i>
 					<?php esc_html_e( 'View full change log', 'blueworx_client_forum' ); ?>
 				</a>
-			</p>
+			</div>
 		</div>
 		<?php
 	}
@@ -156,11 +162,11 @@ final class EPI_Product_Change_Log {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only pagination value; no state change, sanitised with absint().
 		$page = isset( $_GET['history_page'] ) ? max( 1, absint( wp_unslash( $_GET['history_page'] ) ) ) : 1;
 		?>
-		<section class="epi-change-log epi-change-log--page" id="epi-change-log">
-			<div class="epi-section-heading">
-				<div>
-					<h2><?php esc_html_e( 'Product Change Log', 'blueworx_client_forum' ); ?></h2>
-					<p><?php esc_html_e( 'A complete history recorded from version 1.0.6 onward.', 'blueworx_client_forum' ); ?></p>
+		<section class="bw-card bw-card--flush" id="epi-change-log">
+			<div class="bw-card__head">
+				<div class="bw-card__titles">
+					<p class="bw-card__eyebrow"><?php esc_html_e( 'History', 'blueworx_client_forum' ); ?></p>
+					<h2 class="bw-card__title"><?php esc_html_e( 'Product change log', 'blueworx_client_forum' ); ?></h2>
 				</div>
 			</div>
 			<?php self::render_table( $product_id, $page, 50, true ); ?>
@@ -392,14 +398,18 @@ final class EPI_Product_Change_Log {
 
 		if ( empty( $changes ) ) {
 			?>
-			<div class="epi-meta-empty"><?php esc_html_e( 'No changes have been recorded yet.', 'blueworx_client_forum' ); ?></div>
+			<div class="bw-empty">
+				<i class="bw-icon bw-icon--28 bw-empty__icon" data-lucide="archive" aria-hidden="true"></i>
+				<h3 class="bw-empty__title"><?php esc_html_e( 'Nothing recorded yet', 'blueworx_client_forum' ); ?></h3>
+				<p class="bw-empty__text"><?php esc_html_e( 'Changes to this product will appear here as they are made.', 'blueworx_client_forum' ); ?></p>
+			</div>
 			<?php
 			return;
 		}
 
 		?>
-		<div class="epi-change-table-wrap">
-			<table class="widefat striped epi-change-table">
+		<div class="bw-tablescroll">
+			<table class="bw-table">
 				<thead>
 					<tr>
 						<th scope="col"><?php esc_html_e( 'Date', 'blueworx_client_forum' ); ?></th>
@@ -413,16 +423,16 @@ final class EPI_Product_Change_Log {
 					<?php foreach ( $changes as $change ) : ?>
 						<tr>
 							<td>
-								<strong><?php echo esc_html( self::format_date( $change->changed_at ) ); ?></strong>
-								<span class="epi-change-action"><?php echo esc_html( ucfirst( $change->action ) ); ?></span>
+								<span class="bw-table__primary"><?php echo esc_html( self::format_date( $change->changed_at ) ); ?></span>
+								<span class="bw-table__sub"><?php echo esc_html( ucfirst( $change->action ) ); ?></span>
 							</td>
 							<td>
-								<strong><?php echo esc_html( $change->actor ); ?></strong>
-								<span class="epi-change-source"><?php echo esc_html( $change->source ); ?></span>
+								<span class="bw-table__primary"><?php echo esc_html( $change->actor ); ?></span>
+								<span class="bw-table__sub"><?php echo esc_html( $change->source ); ?></span>
 							</td>
 							<td>
 								<?php if ( 'product_variation' === $change->object_type ) : ?>
-									<span class="epi-change-object"><?php echo esc_html( sprintf( /* translators: %d: variation ID. */ __( 'Variation #%d', 'blueworx_client_forum' ), $change->object_id ) ); ?></span>
+									<span class="bw-badge bw-badge--info"><?php echo esc_html( sprintf( /* translators: %d: variation ID. */ __( 'Variation #%d', 'blueworx_client_forum' ), $change->object_id ) ); ?></span>
 								<?php endif; ?>
 								<code><?php echo esc_html( self::get_field_label( $change ) ); ?></code>
 							</td>
@@ -436,24 +446,68 @@ final class EPI_Product_Change_Log {
 		<?php
 
 		if ( $paginate && $total > $per_page ) {
-			$total_pages = (int) ceil( $total / $per_page );
-			$base_url    = EPI_Product_Meta::get_full_page_url( $product_id ) . '%_%#epi-change-log';
-
-			echo '<div class="tablenav"><div class="tablenav-pages">';
-			echo wp_kses_post(
-				paginate_links(
-					array(
-						'base'      => $base_url,
-						'format'    => '&history_page=%#%',
-						'current'   => $page,
-						'total'     => $total_pages,
-						'prev_text' => __( '&laquo; Previous', 'blueworx_client_forum' ),
-						'next_text' => __( 'Next &raquo;', 'blueworx_client_forum' ),
-					)
-				)
-			);
-			echo '</div></div>';
+			self::render_pager( $product_id, $page, (int) ceil( $total / $per_page ), $total );
 		}
+	}
+
+	/**
+	 * Render the change log's pager.
+	 *
+	 * Built by hand rather than with paginate_links(), which returns WordPress's
+	 * own page-numbers markup. The design system has a pager of its own, and a
+	 * screen carries one set of controls, not two.
+	 *
+	 * @param int $product_id  Product ID.
+	 * @param int $page        Current page.
+	 * @param int $total_pages Number of pages.
+	 * @param int $total_items Number of recorded changes.
+	 * @return void
+	 */
+	private static function render_pager( $product_id, $page, $total_pages, $total_items ) {
+		$base = EPI_Product_Meta::get_full_page_url( $product_id );
+
+		$page_url = static function ( $number ) use ( $base ) {
+			return add_query_arg( 'history_page', absint( $number ), $base ) . '#epi-change-log';
+		};
+		?>
+		<div class="bw-tablefoot">
+			<div class="bw-pager">
+				<span class="bw-pager__count">
+					<?php
+					printf(
+						/* translators: %s: number of recorded changes. */
+						esc_html( _n( '%s change', '%s changes', $total_items, 'blueworx_client_forum' ) ),
+						esc_html( number_format_i18n( $total_items ) )
+					);
+					?>
+				</span>
+				<div class="bw-pager__btns">
+					<?php if ( $page > 1 ) : ?>
+						<a class="bw-pager__btn" href="<?php echo esc_url( $page_url( $page - 1 ) ); ?>" aria-label="<?php esc_attr_e( 'Previous page', 'blueworx_client_forum' ); ?>">
+							<i class="bw-icon bw-icon--14" data-lucide="arrow-left" aria-hidden="true"></i>
+						</a>
+					<?php endif; ?>
+
+					<span class="bw-pager__of">
+						<?php
+						printf(
+							/* translators: 1: current page number, 2: total number of pages. */
+							esc_html__( 'Page %1$s of %2$s', 'blueworx_client_forum' ),
+							esc_html( number_format_i18n( $page ) ),
+							esc_html( number_format_i18n( $total_pages ) )
+						);
+						?>
+					</span>
+
+					<?php if ( $page < $total_pages ) : ?>
+						<a class="bw-pager__btn" href="<?php echo esc_url( $page_url( $page + 1 ) ); ?>" aria-label="<?php esc_attr_e( 'Next page', 'blueworx_client_forum' ); ?>">
+							<i class="bw-icon bw-icon--14" data-lucide="arrow-right" aria-hidden="true"></i>
+						</a>
+					<?php endif; ?>
+				</div>
+			</div>
+		</div>
+		<?php
 	}
 
 	/**
@@ -551,19 +605,19 @@ final class EPI_Product_Change_Log {
 		$wpdb->insert(
 			self::get_table_name(),
 			array(
-				'product_id' => absint( $product_id ),
-				'object_id'  => absint( $object_id ),
+				'product_id'  => absint( $product_id ),
+				'object_id'   => absint( $object_id ),
 				'object_type' => sanitize_key( $object_type ),
-				'changed_at' => current_time( 'mysql', true ),
-				'user_id'    => absint( $actor['user_id'] ),
-				'actor'      => sanitize_text_field( $actor['actor'] ),
-				'source'     => sanitize_text_field( $actor['source'] ),
-				'field_type' => sanitize_key( $field_type ),
-				'field_name' => sanitize_text_field( $field_name ),
-				'action'     => sanitize_key( $action ),
-				'old_value'  => $old_json,
-				'new_value'  => $new_json,
-				'request_id' => self::get_request_id(),
+				'changed_at'  => current_time( 'mysql', true ),
+				'user_id'     => absint( $actor['user_id'] ),
+				'actor'       => sanitize_text_field( $actor['actor'] ),
+				'source'      => sanitize_text_field( $actor['source'] ),
+				'field_type'  => sanitize_key( $field_type ),
+				'field_name'  => sanitize_text_field( $field_name ),
+				'action'      => sanitize_key( $action ),
+				'old_value'   => $old_json,
+				'new_value'   => $new_json,
+				'request_id'  => self::get_request_id(),
 			),
 			array( '%d', '%d', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
 		);
@@ -751,7 +805,7 @@ final class EPI_Product_Change_Log {
 		$value = json_decode( $json, true );
 
 		if ( null === $value && 'null' === $json ) {
-			echo '<span class="epi-meta-empty-value">' . esc_html__( 'Empty', 'blueworx_client_forum' ) . '</span>';
+			echo '<span class="bw-badge bw-badge--neutral">' . esc_html__( 'Empty', 'blueworx_client_forum' ) . '</span>';
 			return;
 		}
 
@@ -764,7 +818,7 @@ final class EPI_Product_Change_Log {
 		}
 
 		if ( '' === $display ) {
-			echo '<span class="epi-meta-empty-value">' . esc_html__( 'Empty', 'blueworx_client_forum' ) . '</span>';
+			echo '<span class="bw-badge bw-badge--neutral">' . esc_html__( 'Empty', 'blueworx_client_forum' ) . '</span>';
 			return;
 		}
 
