@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The standalone metadata page and the purge tool run the full width of the screen.
 - The purge tool shows its figures as counts rather than a wall of bold text, and long image lists scroll in place instead of pushing the page down.
 - The change log's pager is the design system's, not WordPress's.
+- The copy of the shared BlueWorx admin design is up to date with the Foundation.
 
 ### Removed
 - The catch-up flag on the admin design check in CI. A screen that is not built from the design system now fails a pull request.
