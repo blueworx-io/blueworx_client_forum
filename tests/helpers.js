@@ -19,8 +19,17 @@ async function loginAsAdmin(page) {
   await page.waitForURL(/wp-admin/);
 }
 
+// Save whatever is open in the BlueWorx page editor, and wait for the save bar
+// to say it landed. The wording is the library's, so it lives here once rather
+// than in every spec that saves something.
+async function saveEditor(page, expect) {
+  await page.locator('.bw-savebar .bw-btn--primary').click();
+  await expect(page.locator('.bw-savebar')).toContainText('Everything is saved');
+}
+
 module.exports = {
   loginAsAdmin,
+  saveEditor,
   ADMIN_USER,
   ADMIN_PASS,
   LAB_SCREEN,

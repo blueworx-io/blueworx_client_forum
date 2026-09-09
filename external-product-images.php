@@ -29,6 +29,14 @@ define( 'EPI_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'EPI_EPIM_IMAGE_BASE', 'https://epim.online/webproduct/assetimage/' );
 
 /*
+ * The shared admin design system, then the page editor library that enqueues
+ * against it. This order matters: the design system's registrar decides which
+ * copy on the site wins, and that has to be settled before anything enqueues.
+ */
+require_once EPI_PLUGIN_DIR . 'assets/blueworx-admin-design.php';
+require_once EPI_PLUGIN_DIR . 'blueworx-page-editor/blueworx-page-editor.php';
+
+/*
  * Self-updating from GitHub Releases. The site checks this repo's releases and
  * installs the zip attached to one, exactly like a wordpress.org update, so
  * nobody uploads a zip to update the plugin.
@@ -127,8 +135,12 @@ final class EPI_Plugin {
 		// page works even when a dependency (WooCommerce / Elementor) is missing.
 		require_once EPI_PLUGIN_DIR . 'includes/class-epi-feature-registry.php';
 		require_once EPI_PLUGIN_DIR . 'includes/class-epi-lab-page.php';
+		require_once EPI_PLUGIN_DIR . 'includes/class-epi-forum-page-type.php';
+		require_once EPI_PLUGIN_DIR . 'includes/class-epi-forum-page-editor.php';
 
 		EPI_Lab_Page::init();
+		EPI_Forum_Page_Type::init();
+		EPI_Forum_Page_Editor::init();
 
 		// Most features need WooCommerce. Load the existing product classes (so
 		// their static helpers stay available regardless of which features are
