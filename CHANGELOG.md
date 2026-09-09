@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.0]
+
+### Added
+- Forum Pages: long-form support pages with every heading, paragraph, photo and button
+  editable in one place, under Forum Pages in the menu.
+- Each section of a Forum Page can be switched off, and the page numbers its sections and
+  builds its "on this page" links from whichever ones are left.
+- Drop `[forum_page]` into an Elementor template for Forum Pages and the site's own header
+  and footer stay in charge of the page. See `docs/elementor-template.md`.
+
 ## [1.7.1]
 
 ### Fixed
