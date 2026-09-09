@@ -64,10 +64,15 @@ than a Forum Page it renders nothing, and says why to a logged-in editor only.
 Two things the editor never maintains by hand, because they go wrong the moment a section is
 switched off:
 
-- **Section numbers** (01, 02, 03 … in the design) are counted from the visible sections in
-  order at render time.
-- **The "on this page" bar** is built from the visible sections, each using its own `nav_label`
-  field for the wording.
+Both cover the same eight numbered sections, and only those: What they are, How they work,
+Advantages, Where they work, Comparison, The range, Specifying, FAQs. The hero, the "on this
+page" bar itself and the closing CTA are neither numbered nor listed in the bar.
+
+- **Section numbers** (01–08 in the design) are counted from whichever of those eight are
+  visible, in order, at render time.
+- **The "on this page" bar** is built from the same list, each section using its own `nav_label`
+  field for the wording — which is not the heading ("Compare", where the heading reads
+  "Kinetic, battery RF and wired switching").
 
 ## The editor screen
 
@@ -83,8 +88,8 @@ Five tabs, plus the Publish tab the library appends itself:
 | Products | The range, Specifying |
 | Close | FAQs, Closing CTA |
 
-Every panel except Hero is `hideable`. Every hideable panel carries a `nav_label` text field
-feeding the "on this page" bar.
+Every panel except Hero is `hideable`. The eight numbered panels each carry a `nav_label` text
+field feeding the "on this page" bar; the bar panel and the closing CTA do not.
 
 ### Hero — `hero`
 
