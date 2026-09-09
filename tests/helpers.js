@@ -27,9 +27,19 @@ async function saveEditor(page, expect) {
   await expect(page.locator('.bw-savebar')).toContainText('Everything is saved');
 }
 
+// A hideable panel's show/hide switch. It belongs to the panel head rather than
+// the fields grid, so it carries no id of its own — it is found by the panel it
+// heads. Reads "Shown" or "Hidden", and clicking it flips the panel.
+function panelSwitch(page, panelTitle) {
+  return page.locator(
+    `section.bw-card:has(.bw-card__title:text-is("${panelTitle}")) label.bw-switch`
+  );
+}
+
 module.exports = {
   loginAsAdmin,
   saveEditor,
+  panelSwitch,
   ADMIN_USER,
   ADMIN_PASS,
   LAB_SCREEN,
