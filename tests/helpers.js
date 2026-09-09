@@ -41,10 +41,24 @@ function panelSwitch(page, panelTitle) {
   );
 }
 
+// A repeater field. The rows are drawn by the library and the wrapper carries
+// no id, so it is found by the label that heads it. Row cells reuse plain ids
+// like "title-0" across every repeater on the screen, so anything inside a
+// repeater has to be looked up within this container rather than page-wide.
+function repeater(page, fieldId) {
+  return page.locator(`.bw-field:has(label[for="${fieldId}"])`);
+}
+
+async function addRepeaterRow(page, fieldId) {
+  await repeater(page, fieldId).getByRole('button', { name: 'Add a row' }).click();
+}
+
 module.exports = {
   loginAsAdmin,
   saveEditor,
   panelSwitch,
+  repeater,
+  addRepeaterRow,
   ADMIN_USER,
   ADMIN_PASS,
   LAB_SCREEN,

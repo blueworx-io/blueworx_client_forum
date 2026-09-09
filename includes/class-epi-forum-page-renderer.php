@@ -158,6 +158,14 @@ final class EPI_Forum_Page_Renderer {
 			array(),
 			EPI_VERSION
 		);
+
+		wp_register_script(
+			'epi-forum-page',
+			EPI_PLUGIN_URL . 'assets/js/epi-forum-page.js',
+			array(),
+			EPI_VERSION,
+			true
+		);
 	}
 
 	/**
@@ -199,6 +207,7 @@ final class EPI_Forum_Page_Renderer {
 		}
 
 		wp_enqueue_style( 'epi-forum-page' );
+		wp_enqueue_script( 'epi-forum-page' );
 
 		$numbers = array_flip( self::visible_sections( $id ) );
 
