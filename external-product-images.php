@@ -135,14 +135,8 @@ final class EPI_Plugin {
 		// page works even when a dependency (WooCommerce / Elementor) is missing.
 		require_once EPI_PLUGIN_DIR . 'includes/class-epi-feature-registry.php';
 		require_once EPI_PLUGIN_DIR . 'includes/class-epi-lab-page.php';
-		require_once EPI_PLUGIN_DIR . 'includes/class-epi-forum-page-type.php';
-		require_once EPI_PLUGIN_DIR . 'includes/class-epi-forum-page-editor.php';
-		require_once EPI_PLUGIN_DIR . 'includes/class-epi-forum-page-renderer.php';
 
 		EPI_Lab_Page::init();
-		EPI_Forum_Page_Type::init();
-		EPI_Forum_Page_Editor::init();
-		EPI_Forum_Page_Renderer::init();
 
 		// Most features need WooCommerce. Load the existing product classes (so
 		// their static helpers stay available regardless of which features are

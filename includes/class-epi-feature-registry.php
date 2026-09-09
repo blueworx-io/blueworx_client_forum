@@ -45,6 +45,7 @@ final class EPI_Feature_Registry {
 	 */
 	public static function groups() {
 		return array(
+			'content'         => __( 'Content', 'blueworx_client_forum' ),
 			'pricing'         => __( 'Pricing', 'blueworx_client_forum' ),
 			'product-display' => __( 'Product display', 'blueworx_client_forum' ),
 			'shop'            => __( 'Shop behaviour', 'blueworx_client_forum' ),
@@ -68,6 +69,17 @@ final class EPI_Feature_Registry {
 		$price_danger = __( 'This controls live store prices. Turning it off changes what customers see and pay. Are you sure?', 'blueworx_client_forum' );
 
 		return array(
+			// --- Content -------------------------------------------------.
+			'forum-pages'                 => array(
+				'title'          => __( 'Forum Pages', 'blueworx_client_forum' ),
+				'description'    => __( 'Long-form support pages, edited under Forum Pages and placed with [forum_page].', 'blueworx_client_forum' ),
+				'group'          => 'content',
+				'dangerous'      => false,
+				'danger_message' => '',
+				'dependencies'   => array(),
+				'boot'           => array( __CLASS__, 'boot_forum_pages' ),
+			),
+
 			// --- Pricing -------------------------------------------------.
 			'role-based-pricing'          => array(
 				'title'          => __( 'Role-based pricing', 'blueworx_client_forum' ),
@@ -303,6 +315,21 @@ final class EPI_Feature_Registry {
 		return function () use ( $file ) {
 			require EPI_PLUGIN_DIR . 'includes/snippets/' . $file;
 		};
+	}
+
+	/**
+	 * Boot the Forum Pages record type, its editor and its front end.
+	 *
+	 * @return void
+	 */
+	public static function boot_forum_pages() {
+		require_once EPI_PLUGIN_DIR . 'includes/class-epi-forum-page-type.php';
+		require_once EPI_PLUGIN_DIR . 'includes/class-epi-forum-page-editor.php';
+		require_once EPI_PLUGIN_DIR . 'includes/class-epi-forum-page-renderer.php';
+
+		EPI_Forum_Page_Type::init();
+		EPI_Forum_Page_Editor::init();
+		EPI_Forum_Page_Renderer::init();
 	}
 
 	/**

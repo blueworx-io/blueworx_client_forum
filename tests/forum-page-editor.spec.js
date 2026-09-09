@@ -66,3 +66,9 @@ test('the editor says so when there is no record to edit', async ({ page }) => {
 
   await expect(page.locator('#wpbody-content')).toContainText('could not be found');
 });
+
+test('Forum Pages is offered as a feature on the Lab screen', async ({ page }) => {
+  await page.goto('/wp-admin/options-general.php?page=bwlab');
+
+  await expect(page.locator('#epi-lab-form')).toContainText('Forum Pages');
+});
