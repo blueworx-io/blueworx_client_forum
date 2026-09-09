@@ -21,6 +21,7 @@ $epi_options = array(
 	'epi_feature_flags',
 	'epi_change_log_db_version',
 	'one_time_wc_product_image_purge_plan',
+	'epi_forum_page_rewrites',
 );
 
 foreach ( $epi_options as $epi_option ) {

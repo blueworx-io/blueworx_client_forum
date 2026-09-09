@@ -22,6 +22,18 @@ final class EPI_Forum_Page_Type {
 	const SCREEN    = 'forum-page';
 
 	/**
+	 * Marks the rewrite rules as having been rebuilt for this post type.
+	 *
+	 * Registering a post type does not teach WordPress the addresses that go
+	 * with it — until the rules are rebuilt, every Forum Page is a 404. The
+	 * plugin cannot do that on activation alone, because the feature can be
+	 * switched on long afterwards, so the rebuild is stamped and happens once
+	 * however the post type first appears.
+	 */
+	const REWRITE_OPTION  = 'epi_forum_page_rewrites';
+	const REWRITE_VERSION = '1';
+
+	/**
 	 * Hook the post type and its list-table row action.
 	 *
 	 * @return void
@@ -57,6 +69,26 @@ final class EPI_Forum_Page_Type {
 				'show_in_rest' => true,
 			)
 		);
+
+		self::maybe_flush_rewrites();
+	}
+
+	/**
+	 * Rebuild the rewrite rules the first time this post type is registered.
+	 *
+	 * Guarded by a stored stamp so it runs once rather than on every request —
+	 * flushing on every load is expensive and is a well-known way to make a
+	 * site crawl.
+	 *
+	 * @return void
+	 */
+	private static function maybe_flush_rewrites() {
+		if ( self::REWRITE_VERSION === get_option( self::REWRITE_OPTION ) ) {
+			return;
+		}
+
+		flush_rewrite_rules( false );
+		update_option( self::REWRITE_OPTION, self::REWRITE_VERSION );
 	}
 
 	/**

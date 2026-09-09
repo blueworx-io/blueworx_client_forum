@@ -1,0 +1,162 @@
+/**
+ * Forum Pages — front end.
+ *
+ * One block of rules per section, in the order the page renders them, so this
+ * file reads the same way the page does.
+ *
+ * Values come from the Figma design (file ocfLyNE9GtyOYMxqq7Hwt7). The page
+ * sits inside the site's own header and footer, so nothing here styles the
+ * chrome or resets anything outside .epi-forum-page.
+ */
+
+.epi-forum-page {
+	--epi-fp-navy: #051a2d;
+	--epi-fp-accent: #a6203c;
+	--epi-fp-muted: #7c8794;
+	--epi-fp-light: #c9cfd6;
+	--epi-fp-line: rgba( 255, 255, 255, 0.18 );
+	--epi-fp-rule: #e3e7ec;
+	--epi-fp-ink: #051a2d;
+	--epi-fp-page: #ffffff;
+	--epi-fp-gutter: 10%;
+
+	font-family: Lato, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	color: var( --epi-fp-ink );
+	background: var( --epi-fp-page );
+}
+
+.epi-forum-page *,
+.epi-forum-page *::before,
+.epi-forum-page *::after {
+	box-sizing: border-box;
+}
+
+.epi-forum-page__section {
+	padding: 72px var( --epi-fp-gutter );
+}
+
+/* Buttons are shared by the hero and the closing call to action. */
+.epi-forum-page__button {
+	display: inline-block;
+	margin: 0 12px 12px 0;
+	padding: 14px 28px;
+	border-radius: 999px;
+	background: var( --epi-fp-accent );
+	color: #ffffff;
+	font-size: 16px;
+	line-height: 1.2;
+	text-decoration: none;
+}
+
+.epi-forum-page__button--ghost {
+	background: #ffffff;
+	color: var( --epi-fp-navy );
+}
+
+.epi-forum-page__button:hover,
+.epi-forum-page__button:focus {
+	opacity: 0.9;
+	color: inherit;
+}
+
+.epi-forum-page__button--ghost:hover,
+.epi-forum-page__button--ghost:focus {
+	color: var( --epi-fp-navy );
+}
+
+/* --- Hero ---------------------------------------------------------------- */
+
+.epi-forum-page__hero {
+	position: relative;
+	padding: 76px var( --epi-fp-gutter ) 40px;
+	background-color: var( --epi-fp-navy );
+	color: #ffffff;
+	overflow: hidden;
+}
+
+/* The hero photograph sits behind the copy, darkened so the text stays
+   readable whatever the picture is. */
+.epi-forum-page__heroimage {
+	position: absolute;
+	inset: 0;
+	z-index: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	opacity: 0.35;
+}
+
+.epi-forum-page__hero > *:not( .epi-forum-page__heroimage ) {
+	position: relative;
+	z-index: 1;
+}
+
+.epi-forum-page__crumbs {
+	margin-bottom: 28px;
+	font-size: 13px;
+	color: var( --epi-fp-muted );
+}
+
+.epi-forum-page__crumbs a {
+	color: var( --epi-fp-light );
+	text-decoration: none;
+}
+
+.epi-forum-page__crumbs span {
+	margin: 0 6px;
+}
+
+.epi-forum-page__eyebrow {
+	display: inline-block;
+	margin: 0 0 22px;
+	padding: 7px 16px;
+	border: 1px solid var( --epi-fp-line );
+	border-radius: 999px;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.epi-forum-page__hero h1 {
+	max-width: 15ch;
+	margin: 0 0 22px;
+	font-size: clamp( 32px, 3.6vw, 52px );
+	font-weight: 700;
+	line-height: 1.12;
+	color: #ffffff;
+}
+
+.epi-forum-page__hero .epi-forum-page__intro {
+	max-width: 52ch;
+	margin: 0 0 34px;
+	font-size: 19px;
+	line-height: 1.55;
+	color: var( --epi-fp-light );
+}
+
+.epi-forum-page__chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 22px;
+	margin: 34px 0 0;
+	padding: 22px 0 0;
+	border-top: 1px solid var( --epi-fp-line );
+	list-style: none;
+	font-size: 12px;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var( --epi-fp-muted );
+}
+
+@media ( max-width: 782px ) {
+	.epi-forum-page {
+		--epi-fp-gutter: 24px;
+	}
+
+	.epi-forum-page__section,
+	.epi-forum-page__hero {
+		padding-top: 48px;
+		padding-bottom: 48px;
+	}
+}
