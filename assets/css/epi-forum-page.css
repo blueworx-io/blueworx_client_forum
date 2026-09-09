@@ -11,17 +11,20 @@
 
 .epi-forum-page {
 	--epi-fp-navy: #051a2d;
-	--epi-fp-accent: #a6203c;
-	--epi-fp-muted: #7c8794;
+	--epi-fp-accent: #a71f31;
+	--epi-fp-slate: #7c8794;
 	--epi-fp-light: #c9cfd6;
+	--epi-fp-grey: #9a9a9a;
+	--epi-fp-body: #1f1f1f;
+	--epi-fp-quiet: #6b6b6b;
 	--epi-fp-line: rgba( 255, 255, 255, 0.18 );
 	--epi-fp-rule: #e3e7ec;
-	--epi-fp-ink: #051a2d;
 	--epi-fp-page: #ffffff;
 	--epi-fp-gutter: 10%;
+	--epi-fp-rail: 164px;
 
 	font-family: Lato, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-	color: var( --epi-fp-ink );
+	color: var( --epi-fp-body );
 	background: var( --epi-fp-page );
 }
 
@@ -31,8 +34,64 @@
 	box-sizing: border-box;
 }
 
+.epi-forum-page img {
+	max-width: 100%;
+	height: auto;
+}
+
+/* Every numbered section: the number sits in a rail to the left of the
+   heading, which is why the heading starts where it does in the design. */
 .epi-forum-page__section {
 	padding: 72px var( --epi-fp-gutter );
+}
+
+.epi-forum-page__number {
+	margin: 0;
+	font-size: 64px;
+	font-weight: 700;
+	line-height: 1;
+	color: var( --epi-fp-accent );
+}
+
+.epi-forum-page__section > h2 {
+	margin: 0 0 18px;
+	font-size: clamp( 26px, 2.6vw, 36px );
+	font-weight: 700;
+	line-height: 1.2;
+	color: var( --epi-fp-navy );
+}
+
+.epi-forum-page__section > .epi-forum-page__intro {
+	max-width: 62ch;
+	margin: 0 0 40px;
+	font-size: 18px;
+	line-height: 1.55;
+	color: var( --epi-fp-quiet );
+}
+
+/* The number and heading share a row; everything under them runs full width. */
+@media ( min-width: 783px ) {
+	.epi-forum-page__section {
+		display: grid;
+		grid-template-columns: var( --epi-fp-rail ) minmax( 0, 1fr );
+		column-gap: 0;
+		align-items: start;
+	}
+
+	.epi-forum-page__number {
+		grid-column: 1;
+		grid-row: 1;
+	}
+
+	.epi-forum-page__section > h2 {
+		grid-column: 2;
+		grid-row: 1;
+		padding-top: 12px;
+	}
+
+	.epi-forum-page__section > *:not( .epi-forum-page__number ):not( h2 ) {
+		grid-column: 2;
+	}
 }
 
 /* Buttons are shared by the hero and the closing call to action. */
@@ -56,7 +115,7 @@
 .epi-forum-page__button:hover,
 .epi-forum-page__button:focus {
 	opacity: 0.9;
-	color: inherit;
+	color: #ffffff;
 }
 
 .epi-forum-page__button--ghost:hover,
@@ -94,7 +153,7 @@
 .epi-forum-page__crumbs {
 	margin-bottom: 28px;
 	font-size: 13px;
-	color: var( --epi-fp-muted );
+	color: var( --epi-fp-slate );
 }
 
 .epi-forum-page__crumbs a {
@@ -146,8 +205,536 @@
 	font-size: 12px;
 	letter-spacing: 0.06em;
 	text-transform: uppercase;
-	color: var( --epi-fp-muted );
+	color: var( --epi-fp-slate );
 }
+
+/* --- On this page -------------------------------------------------------- */
+
+.epi-forum-page__bar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 22px;
+	padding: 16px var( --epi-fp-gutter );
+	border-bottom: 1px solid var( --epi-fp-rule );
+	background: var( --epi-fp-page );
+}
+
+.epi-forum-page__barlabel {
+	margin: 0;
+	font-size: 12px;
+	letter-spacing: 0.06em;
+	color: var( --epi-fp-grey );
+}
+
+.epi-forum-page__bar ul {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 22px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.epi-forum-page__bar a {
+	font-size: 15px;
+	color: var( --epi-fp-quiet );
+	text-decoration: none;
+}
+
+.epi-forum-page__bar a:hover,
+.epi-forum-page__bar a:focus {
+	color: var( --epi-fp-navy );
+}
+
+.epi-forum-page__phone {
+	margin-left: auto;
+	font-size: 15px;
+	font-weight: 700;
+	color: var( --epi-fp-navy );
+	text-decoration: none;
+}
+
+/* --- What they are ------------------------------------------------------- */
+
+.epi-forum-page__what .epi-forum-page__body {
+	max-width: 52ch;
+	font-size: 17px;
+	line-height: 1.65;
+	color: var( --epi-fp-body );
+}
+
+.epi-forum-page__parts {
+	display: grid;
+	gap: 14px;
+	max-width: 380px;
+	margin: 0 0 34px;
+	padding: 0;
+	list-style: none;
+}
+
+.epi-forum-page__parts li {
+	padding-top: 12px;
+	border-top: 1px solid var( --epi-fp-rule );
+}
+
+.epi-forum-page__parts h3 {
+	margin: 0 0 2px;
+	font-size: 12px;
+	font-weight: 700;
+	color: var( --epi-fp-navy );
+}
+
+.epi-forum-page__parts p {
+	margin: 0;
+	font-size: 11px;
+	color: var( --epi-fp-grey );
+}
+
+.epi-forum-page__pullquote {
+	max-width: 44ch;
+	margin: 34px 0 0;
+	padding: 26px 0 0;
+	border-top: 1px solid var( --epi-fp-rule );
+	font-size: 21px;
+	line-height: 1.45;
+	color: var( --epi-fp-navy );
+}
+
+@media ( min-width: 1024px ) {
+	.epi-forum-page__what .epi-forum-page__body,
+	.epi-forum-page__what .epi-forum-page__pullquote {
+		max-width: 46ch;
+	}
+
+	.epi-forum-page__parts {
+		float: right;
+		margin-left: 48px;
+	}
+}
+
+/* --- How they work (dark) ------------------------------------------------ */
+
+.epi-forum-page__how {
+	background: var( --epi-fp-navy );
+	color: #ffffff;
+}
+
+.epi-forum-page__how > h2 {
+	color: #ffffff;
+}
+
+.epi-forum-page__how > .epi-forum-page__intro {
+	color: var( --epi-fp-light );
+}
+
+.epi-forum-page__steptabs {
+	margin: 0 0 34px;
+	padding: 0;
+	list-style: none;
+	border-top: 1px solid var( --epi-fp-line );
+}
+
+.epi-forum-page__steptabs button {
+	display: flex;
+	gap: 16px;
+	width: 100%;
+	padding: 16px 0;
+	border: 0;
+	border-bottom: 1px solid var( --epi-fp-line );
+	background: none;
+	font-family: inherit;
+	font-size: 17px;
+	color: var( --epi-fp-light );
+	text-align: left;
+	cursor: pointer;
+}
+
+.epi-forum-page__steptabs button[aria-selected="true"] {
+	color: #ffffff;
+}
+
+.epi-forum-page__stepnumber {
+	font-size: 12px;
+	font-weight: 700;
+	color: var( --epi-fp-slate );
+}
+
+.epi-forum-page__steptabs button[aria-selected="true"] .epi-forum-page__stepnumber {
+	color: #ffffff;
+}
+
+.epi-forum-page__step {
+	border-top: 1px solid var( --epi-fp-line );
+	padding-top: 24px;
+}
+
+.epi-forum-page__stepof {
+	margin: 0 0 10px;
+	font-size: 12px;
+	letter-spacing: 0.06em;
+	color: var( --epi-fp-slate );
+}
+
+.epi-forum-page__step h3 {
+	margin: 0 0 14px;
+	font-size: 28px;
+	font-weight: 700;
+	color: #ffffff;
+}
+
+.epi-forum-page__step p {
+	max-width: 46ch;
+	margin: 0;
+	font-size: 17px;
+	line-height: 1.6;
+	color: var( --epi-fp-light );
+}
+
+@media ( min-width: 1024px ) {
+	.epi-forum-page__how .epi-forum-page__steptabs {
+		float: left;
+		width: 26%;
+		margin-right: 6%;
+	}
+}
+
+/* --- Advantages ---------------------------------------------------------- */
+
+.epi-forum-page__advantagegrid {
+	display: grid;
+	gap: 28px;
+	grid-template-columns: repeat( auto-fit, minmax( 300px, 1fr ) );
+}
+
+.epi-forum-page__advantagelist {
+	padding: 26px 28px;
+	border: 1px solid var( --epi-fp-rule );
+}
+
+.epi-forum-page__advantagelist h3 {
+	margin: 0 0 6px;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	color: var( --epi-fp-grey );
+}
+
+.epi-forum-page__advantagelist ul {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.epi-forum-page__advantagelist li {
+	padding: 16px 0;
+	border-top: 1px solid var( --epi-fp-rule );
+	font-size: 16px;
+	line-height: 1.5;
+	color: var( --epi-fp-body );
+}
+
+/* --- Where they work ----------------------------------------------------- */
+
+.epi-forum-page__cards {
+	display: grid;
+	gap: 30px;
+	grid-template-columns: repeat( auto-fit, minmax( 260px, 1fr ) );
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.epi-forum-page__card img {
+	width: 100%;
+	aspect-ratio: 16 / 11;
+	object-fit: cover;
+}
+
+.epi-forum-page__card h3 {
+	margin: 16px 0 8px;
+	font-size: 17px;
+	font-weight: 700;
+	color: var( --epi-fp-navy );
+}
+
+.epi-forum-page__card p {
+	margin: 0;
+	font-size: 15px;
+	line-height: 1.5;
+	color: var( --epi-fp-quiet );
+}
+
+/* The first card leads the section, as it does in the design. */
+@media ( min-width: 1024px ) {
+	.epi-forum-page__cards {
+		grid-template-columns: repeat( 3, 1fr );
+	}
+
+	.epi-forum-page__card:first-child {
+		grid-column: span 1;
+		grid-row: span 2;
+	}
+
+	.epi-forum-page__card:first-child img {
+		aspect-ratio: 3 / 2;
+	}
+
+	.epi-forum-page__card:first-child h3 {
+		font-size: 24px;
+	}
+
+	.epi-forum-page__card:first-child p {
+		font-size: 17px;
+	}
+}
+
+/* --- Comparison (dark) --------------------------------------------------- */
+
+.epi-forum-page__comparison {
+	background: var( --epi-fp-navy );
+	color: #ffffff;
+}
+
+.epi-forum-page__comparison > h2 {
+	color: #ffffff;
+}
+
+.epi-forum-page__tablewrap {
+	overflow-x: auto;
+}
+
+.epi-forum-page__comparison table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.epi-forum-page__comparison th,
+.epi-forum-page__comparison td {
+	padding: 18px 16px 18px 0;
+	border-bottom: 1px solid var( --epi-fp-line );
+	font-size: 16px;
+	text-align: left;
+	vertical-align: top;
+}
+
+.epi-forum-page__comparison thead th {
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	color: var( --epi-fp-slate );
+}
+
+/* The first column of figures is the one the page is arguing for. */
+.epi-forum-page__comparison thead th:first-of-type,
+.epi-forum-page__comparison tbody td:first-of-type {
+	color: #ffffff;
+}
+
+.epi-forum-page__comparison tbody th {
+	font-weight: 700;
+	color: #ffffff;
+}
+
+.epi-forum-page__comparison tbody td {
+	color: var( --epi-fp-light );
+}
+
+/* --- Specifying ---------------------------------------------------------- */
+
+.epi-forum-page__points {
+	display: grid;
+	gap: 0;
+	grid-template-columns: repeat( auto-fit, minmax( 280px, 1fr ) );
+	margin: 0 0 48px;
+	padding: 0;
+	list-style: none;
+	counter-reset: epi-fp-point;
+	border-top: 1px solid var( --epi-fp-rule );
+}
+
+.epi-forum-page__points li {
+	counter-increment: epi-fp-point;
+	padding: 26px 28px;
+	border-right: 1px solid var( --epi-fp-rule );
+	border-bottom: 1px solid var( --epi-fp-rule );
+}
+
+.epi-forum-page__points li::before {
+	content: counter( epi-fp-point, decimal-leading-zero );
+	display: block;
+	margin-bottom: 14px;
+	font-size: 13px;
+	font-weight: 700;
+	color: var( --epi-fp-accent );
+}
+
+.epi-forum-page__points h3 {
+	margin: 0 0 10px;
+	font-size: 18px;
+	font-weight: 700;
+	color: var( --epi-fp-navy );
+}
+
+.epi-forum-page__points p,
+.epi-forum-page__trouble p {
+	margin: 0;
+	font-size: 15px;
+	line-height: 1.55;
+	color: var( --epi-fp-quiet );
+}
+
+.epi-forum-page__trouble > h3 {
+	margin: 0 0 18px;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	color: var( --epi-fp-grey );
+}
+
+.epi-forum-page__trouble h4 {
+	margin: 0 0 8px;
+	font-size: 17px;
+	font-weight: 700;
+	color: var( --epi-fp-navy );
+}
+
+@media ( min-width: 1024px ) {
+	.epi-forum-page__trouble {
+		display: grid;
+		gap: 0;
+		grid-template-columns: repeat( 3, 1fr );
+		border-top: 1px solid var( --epi-fp-rule );
+	}
+
+	.epi-forum-page__trouble > h3 {
+		grid-column: 1 / -1;
+		padding-top: 18px;
+	}
+
+	.epi-forum-page__trouble h4 {
+		padding: 24px 28px 0;
+		border-left: 1px solid var( --epi-fp-rule );
+	}
+
+	.epi-forum-page__trouble p {
+		padding: 0 28px 24px;
+		border-left: 1px solid var( --epi-fp-rule );
+	}
+}
+
+/* --- FAQs ---------------------------------------------------------------- */
+
+.epi-forum-page__faqlist {
+	display: grid;
+	gap: 0 48px;
+	grid-template-columns: repeat( auto-fit, minmax( 320px, 1fr ) );
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.epi-forum-page__faqlist li {
+	border-top: 1px solid var( --epi-fp-rule );
+}
+
+.epi-forum-page__faqlist h3 {
+	margin: 0;
+}
+
+.epi-forum-page__faqlist button {
+	display: flex;
+	justify-content: space-between;
+	gap: 16px;
+	width: 100%;
+	padding: 20px 0;
+	border: 0;
+	background: none;
+	font-family: inherit;
+	font-size: 17px;
+	font-weight: 700;
+	color: var( --epi-fp-navy );
+	text-align: left;
+	cursor: pointer;
+}
+
+.epi-forum-page__faqlist button::after {
+	content: "+";
+	font-size: 20px;
+	font-weight: 400;
+	color: var( --epi-fp-quiet );
+}
+
+.epi-forum-page__faqlist button[aria-expanded="true"]::after {
+	content: "–";
+}
+
+.epi-forum-page__answer p {
+	margin: 0;
+	padding: 0 0 22px;
+	font-size: 16px;
+	line-height: 1.6;
+	color: var( --epi-fp-body );
+}
+
+/* --- Closing call to action (dark) --------------------------------------- */
+
+.epi-forum-page__cta {
+	background: var( --epi-fp-navy );
+	color: #ffffff;
+}
+
+.epi-forum-page__cta > .epi-forum-page__eyebrow {
+	padding: 0;
+	border: 0;
+	font-weight: 400;
+	color: var( --epi-fp-slate );
+}
+
+.epi-forum-page__cta h2 {
+	max-width: 18ch;
+	font-size: clamp( 28px, 2.9vw, 38px );
+	color: #ffffff;
+}
+
+.epi-forum-page__cta .epi-forum-page__intro {
+	max-width: 52ch;
+	font-size: 17px;
+	line-height: 1.6;
+	color: var( --epi-fp-light );
+}
+
+.epi-forum-page__stats {
+	display: grid;
+	gap: 0;
+	grid-template-columns: repeat( auto-fit, minmax( 200px, 1fr ) );
+	margin: 44px 0 0;
+	padding: 32px 0 0;
+	border-top: 1px solid var( --epi-fp-line );
+	list-style: none;
+}
+
+.epi-forum-page__stats li + li {
+	padding-left: 32px;
+	border-left: 1px solid var( --epi-fp-line );
+}
+
+.epi-forum-page__stats strong {
+	display: block;
+	margin-bottom: 12px;
+	font-size: 32px;
+	font-weight: 700;
+	color: #ffffff;
+}
+
+.epi-forum-page__stats span {
+	font-size: 12px;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var( --epi-fp-slate );
+}
+
+/* --- Narrow screens ------------------------------------------------------ */
 
 @media ( max-width: 782px ) {
 	.epi-forum-page {
@@ -158,5 +745,22 @@
 	.epi-forum-page__hero {
 		padding-top: 48px;
 		padding-bottom: 48px;
+	}
+
+	.epi-forum-page__number {
+		font-size: 40px;
+	}
+
+	.epi-forum-page__points li,
+	.epi-forum-page__advantagelist {
+		padding-left: 0;
+		padding-right: 0;
+		border-right: 0;
+		border-left: 0;
+	}
+
+	.epi-forum-page__stats li + li {
+		padding-left: 0;
+		border-left: 0;
 	}
 }

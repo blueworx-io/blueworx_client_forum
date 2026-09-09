@@ -105,10 +105,25 @@ final class EPI_Forum_Page_Renderer {
 	}
 
 	/**
+	 * Where a section's markup lives.
+	 *
+	 * @param string $panel Panel id.
+	 * @return string
+	 */
+	public static function partial( $panel ) {
+		return EPI_PLUGIN_DIR . 'includes/forum-page/section-' . $panel . '.php';
+	}
+
+	/**
 	 * The numbered sections this record actually shows, in order.
 	 *
 	 * Feeds both the numbering and the on-this-page bar, so the two can never
 	 * disagree.
+	 *
+	 * A section with no partial is not counted. The section list names every
+	 * section the design has, and one of them can be declared before its markup
+	 * exists — counting it anyway numbered the page 05, 07, 08 and put a link
+	 * in the bar pointing at nothing.
 	 *
 	 * @param int $id Post id.
 	 * @return array List of panel ids.
@@ -117,9 +132,15 @@ final class EPI_Forum_Page_Renderer {
 		$out = array();
 
 		foreach ( self::sections() as $panel => $section ) {
-			if ( $section['numbered'] && self::shown( $id, $panel ) ) {
-				$out[] = $panel;
+			if ( ! $section['numbered'] || ! self::shown( $id, $panel ) ) {
+				continue;
 			}
+
+			if ( ! file_exists( self::partial( $panel ) ) ) {
+				continue;
+			}
+
+			$out[] = $panel;
 		}
 
 		return $out;
@@ -189,7 +210,7 @@ final class EPI_Forum_Page_Renderer {
 				continue;
 			}
 
-			$partial = EPI_PLUGIN_DIR . 'includes/forum-page/section-' . $panel . '.php';
+			$partial = self::partial( $panel );
 
 			if ( ! file_exists( $partial ) ) {
 				continue;

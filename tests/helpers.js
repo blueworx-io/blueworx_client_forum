@@ -23,6 +23,11 @@ async function loginAsAdmin(page) {
 // to say it landed. The wording is the library's, so it lives here once rather
 // than in every spec that saves something.
 async function saveEditor(page, expect) {
+  // Insist there is something to save first. "Everything is saved." is also
+  // what the bar says before anything is touched, so without this a click that
+  // missed its target — a switch, say — reads as a successful save and the
+  // test passes having changed nothing.
+  await expect(page.locator('.bw-savebar')).toContainText('Unsaved changes');
   await page.locator('.bw-savebar .bw-btn--primary').click();
   await expect(page.locator('.bw-savebar')).toContainText('Everything is saved');
 }
