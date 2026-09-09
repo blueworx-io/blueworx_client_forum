@@ -599,27 +599,22 @@
 	color: var( --epi-fp-navy );
 }
 
-@media ( min-width: 1024px ) {
+/* Each symptom is one block, so a heading and its advice cannot land in
+   different columns. */
+.epi-forum-page__troubleitem {
+	padding: 24px 0;
+	border-top: 1px solid var( --epi-fp-rule );
+}
+
+@media ( min-width: 900px ) {
 	.epi-forum-page__trouble {
 		display: grid;
-		gap: 0;
-		grid-template-columns: repeat( 3, 1fr );
-		border-top: 1px solid var( --epi-fp-rule );
+		gap: 0 28px;
+		grid-template-columns: repeat( auto-fit, minmax( 260px, 1fr ) );
 	}
 
 	.epi-forum-page__trouble > h3 {
 		grid-column: 1 / -1;
-		padding-top: 18px;
-	}
-
-	.epi-forum-page__trouble h4 {
-		padding: 24px 28px 0;
-		border-left: 1px solid var( --epi-fp-rule );
-	}
-
-	.epi-forum-page__trouble p {
-		padding: 0 28px 24px;
-		border-left: 1px solid var( --epi-fp-rule );
 	}
 }
 

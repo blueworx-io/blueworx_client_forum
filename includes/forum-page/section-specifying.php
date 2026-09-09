@@ -34,8 +34,10 @@ $epi_trouble = EPI_Forum_Page_Renderer::rows( $post_id, 'specifying_trouble' );
 		<div class="epi-forum-page__trouble">
 			<h3><?php echo esc_html( $epi_tlabel ); ?></h3>
 			<?php foreach ( $epi_trouble as $epi_item ) : ?>
-				<h4><?php echo esc_html( isset( $epi_item['title'] ) ? $epi_item['title'] : '' ); ?></h4>
-				<p><?php echo esc_html( isset( $epi_item['body'] ) ? $epi_item['body'] : '' ); ?></p>
+				<div class="epi-forum-page__troubleitem">
+					<h4><?php echo esc_html( isset( $epi_item['title'] ) ? $epi_item['title'] : '' ); ?></h4>
+					<p><?php echo esc_html( isset( $epi_item['body'] ) ? $epi_item['body'] : '' ); ?></p>
+				</div>
 			<?php endforeach; ?>
 		</div>
 	<?php endif; ?>
