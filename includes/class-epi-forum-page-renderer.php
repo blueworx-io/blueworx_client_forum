@@ -191,16 +191,26 @@ final class EPI_Forum_Page_Renderer {
 	}
 
 	/**
-	 * Render the Forum Page being viewed.
+	 * Render a Forum Page: the one named by `id`, or the one being viewed.
 	 *
+	 * `[forum_page]` belongs in the Forum Pages template; `[forum_page id="12"]`
+	 * puts that page inside any other page on the site.
+	 *
+	 * @param array|string $atts Shortcode attributes.
 	 * @return string
 	 */
-	public static function shortcode() {
-		$id = get_the_ID();
+	public static function shortcode( $atts = array() ) {
+		$atts   = shortcode_atts( array( 'id' => 0 ), $atts, 'forum_page' );
+		$picked = (int) $atts['id'];
+		$id     = $picked > 0 ? $picked : get_the_ID();
 
-		if ( ! $id || EPI_Forum_Page_Type::POST_TYPE !== get_post_type( $id ) ) {
+		// A page placed by id only shows once it is published; the page being
+		// viewed is already whatever WordPress let the visitor see.
+		$hidden = $picked > 0 && 'publish' !== get_post_status( $picked );
+
+		if ( ! $id || $hidden || EPI_Forum_Page_Type::POST_TYPE !== get_post_type( $id ) ) {
 			if ( current_user_can( 'edit_posts' ) ) {
-				return '<p>' . esc_html__( 'The [forum_page] shortcode only renders on a Forum Page.', 'blueworx_client_forum' ) . '</p>';
+				return '<p>' . esc_html__( 'The [forum_page] shortcode needs a published Forum Page: use it in the Forum Pages template, or give it an id from the Forum Pages list.', 'blueworx_client_forum' ) . '</p>';
 			}
 
 			return '';

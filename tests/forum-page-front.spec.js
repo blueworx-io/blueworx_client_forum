@@ -122,3 +122,26 @@ test('the stepper shows one step at a time and the FAQs collapse', async ({ page
   await question.click();
   await expect(question).toHaveAttribute('aria-expanded', 'true');
 });
+
+test('[forum_page id] renders a chosen page inside an ordinary page', async ({ page }) => {
+  await loginAsAdmin(page);
+  const id = await seedForumPage(page, {
+    title: 'Placed by id',
+    heading: 'Heading placed by id',
+  });
+
+  // Pages use the block editor, so make the host page over REST instead.
+  const nonce = await page.evaluate(() =>
+    fetch('/wp-admin/admin-ajax.php?action=rest-nonce', { credentials: 'same-origin' }).then((r) =>
+      r.text()
+    )
+  );
+  const created = await page.request.post('/wp-json/wp/v2/pages', {
+    headers: { 'X-WP-Nonce': nonce },
+    data: { title: `Host page for ${id}`, content: `[forum_page id="${id}"]`, status: 'publish' },
+  });
+  const hostId = (await created.json()).id;
+
+  await page.goto(`/?page_id=${hostId}`);
+  await expect(page.locator('.epi-forum-page__hero h1')).toHaveText('Heading placed by id');
+});
