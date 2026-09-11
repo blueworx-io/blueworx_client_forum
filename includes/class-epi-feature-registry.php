@@ -326,10 +326,12 @@ final class EPI_Feature_Registry {
 		require_once EPI_PLUGIN_DIR . 'includes/class-epi-forum-page-type.php';
 		require_once EPI_PLUGIN_DIR . 'includes/class-epi-forum-page-editor.php';
 		require_once EPI_PLUGIN_DIR . 'includes/class-epi-forum-page-renderer.php';
+		require_once EPI_PLUGIN_DIR . 'includes/class-epi-forum-page-seed.php';
 
 		EPI_Forum_Page_Type::init();
 		EPI_Forum_Page_Editor::init();
 		EPI_Forum_Page_Renderer::init();
+		EPI_Forum_Page_Seed::init();
 	}
 
 	/**
