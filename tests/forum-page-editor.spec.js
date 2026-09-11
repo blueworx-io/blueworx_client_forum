@@ -41,6 +41,14 @@ test('the editor is not a menu item; it opens from the list', async ({ page }) =
   await expect(page.locator('#adminmenu .wp-submenu li.current')).toContainText('Forum Pages');
 });
 
+test('the list shows each page its shortcode', async ({ page }) => {
+  const id = await createForumPage(page, 'Has a shortcode');
+  await page.goto('/wp-admin/edit.php?post_type=forum_page');
+  await expect(page.locator(`#post-${id} .column-epi_shortcode`)).toContainText(
+    `[forum_page id="${id}"]`
+  );
+});
+
 test('the editor opens on a real record and saves the hero heading', async ({ page }) => {
   const id = await createForumPage(page, 'Kinetic wireless switches');
 

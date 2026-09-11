@@ -43,6 +43,51 @@ final class EPI_Forum_Page_Type {
 		add_filter( 'post_row_actions', array( __CLASS__, 'row_action' ), 10, 2 );
 		add_action( 'admin_menu', array( __CLASS__, 'hide_editor_menu_item' ), 99 );
 		add_filter( 'submenu_file', array( __CLASS__, 'current_menu_item' ) );
+		add_filter( 'manage_edit-' . self::POST_TYPE . '_columns', array( __CLASS__, 'list_columns' ) );
+		add_action( 'manage_' . self::POST_TYPE . '_posts_custom_column', array( __CLASS__, 'list_column' ), 10, 2 );
+	}
+
+	/**
+	 * A Shortcode column after Title, so each page's tag is there to copy.
+	 *
+	 * @param array $columns List table columns.
+	 * @return array
+	 */
+	public static function list_columns( $columns ) {
+		$out = array();
+
+		foreach ( $columns as $key => $label ) {
+			$out[ $key ] = $label;
+
+			if ( 'title' === $key ) {
+				$out['epi_shortcode'] = __( 'Shortcode', 'blueworx_client_forum' );
+			}
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Print the Shortcode cell.
+	 *
+	 * @param string $column  Column key.
+	 * @param int    $post_id The row's post.
+	 * @return void
+	 */
+	public static function list_column( $column, $post_id ) {
+		if ( 'epi_shortcode' === $column ) {
+			echo '<code>' . esc_html( self::shortcode_for( $post_id ) ) . '</code>';
+		}
+	}
+
+	/**
+	 * The shortcode that places one record on any page.
+	 *
+	 * @param int $id Post id.
+	 * @return string
+	 */
+	public static function shortcode_for( $id ) {
+		return sprintf( '[forum_page id="%d"]', (int) $id );
 	}
 
 	/**
