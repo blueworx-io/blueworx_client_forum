@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.0]
+
+### Added
+- The Kinetic wireless switches page comes with the plugin, filled in and ready to edit
+  under Forum Pages. It is added once; edit or delete it as you like.
+- Every Forum Page has its own shortcode, shown in the Forum Pages list, so a page can be
+  dropped into any Elementor page with `[forum_page id="…"]`.
+
 ## [1.8.0]
 
 ### Added
