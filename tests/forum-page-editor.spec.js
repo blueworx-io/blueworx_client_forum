@@ -23,6 +23,24 @@ test('Forum Pages has its own menu section', async ({ page }) => {
   await expect(page.locator('#adminmenu')).toContainText('Forum Pages');
 });
 
+test('the editor is not a menu item; it opens from the list', async ({ page }) => {
+  const id = await createForumPage(page, 'Opened from the list');
+
+  await page.goto('/wp-admin/edit.php?post_type=forum_page');
+  await expect(page.locator('#adminmenu a', { hasText: 'Edit Forum Page' })).toBeHidden();
+
+  const row = page.locator(`#post-${id}`);
+  await row.hover();
+  await row.locator('.row-actions a', { hasText: 'Edit' }).first().click();
+
+  await page.waitForURL(/page=forum-page/);
+  await expect(page.locator('#bw-page-editor')).toBeVisible();
+
+  // The menu still says where you are: the list, since the editor has no item.
+  await expect(page.locator('#adminmenu a', { hasText: 'Edit Forum Page' })).toBeHidden();
+  await expect(page.locator('#adminmenu .wp-submenu li.current')).toContainText('Forum Pages');
+});
+
 test('the editor opens on a real record and saves the hero heading', async ({ page }) => {
   const id = await createForumPage(page, 'Kinetic wireless switches');
 

@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   builds its "on this page" links from whichever ones are left.
 - Drop `[forum_page]` into an Elementor template for Forum Pages and the site's own header
   and footer stay in charge of the page. See `docs/elementor-template.md`.
+- The Forum Pages menu lists just the pages and Add New. Each page is edited from the
+  list, and the menu shows the list as where you are while you edit.
 
 ## [1.7.1]
 

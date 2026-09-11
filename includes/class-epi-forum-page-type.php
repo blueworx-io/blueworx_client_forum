@@ -41,6 +41,55 @@ final class EPI_Forum_Page_Type {
 	public static function init() {
 		add_action( 'init', array( __CLASS__, 'register' ) );
 		add_filter( 'post_row_actions', array( __CLASS__, 'row_action' ), 10, 2 );
+		add_action( 'admin_menu', array( __CLASS__, 'hide_editor_menu_item' ), 99 );
+		add_filter( 'submenu_file', array( __CLASS__, 'current_menu_item' ) );
+	}
+
+	/**
+	 * Take the editor out of the Forum Pages menu.
+	 *
+	 * The library adds a menu item for every screen it registers, but this one
+	 * only makes sense with a record — the list's Edit link is the way in.
+	 *
+	 * The item is hidden, not removed: WordPress works out which menu a plugin
+	 * page belongs to by finding it in the menu, and a page it cannot place is
+	 * one nobody is allowed to open. So the entry stays and carries the core
+	 * `hidden` class instead.
+	 *
+	 * @return void
+	 */
+	public static function hide_editor_menu_item() {
+		global $submenu;
+
+		$parent = 'edit.php?post_type=' . self::POST_TYPE;
+		if ( empty( $submenu[ $parent ] ) ) {
+			return;
+		}
+
+		foreach ( $submenu[ $parent ] as $i => $item ) {
+			if ( self::SCREEN === $item[2] ) {
+				$submenu[ $parent ][ $i ][4] = 'hidden'; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+			}
+		}
+	}
+
+	/**
+	 * Light up the Forum Pages list while a record is being edited.
+	 *
+	 * The editor's own menu item is hidden, so without this nothing in the
+	 * menu shows where you are.
+	 *
+	 * @param string|null $submenu_file The submenu item WordPress would mark current.
+	 * @return string|null
+	 */
+	public static function current_menu_item( $submenu_file ) {
+		global $plugin_page;
+
+		if ( self::SCREEN === $plugin_page ) {
+			return 'edit.php?post_type=' . self::POST_TYPE;
+		}
+
+		return $submenu_file;
 	}
 
 	/**
