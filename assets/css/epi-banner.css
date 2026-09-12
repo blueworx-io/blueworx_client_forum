@@ -16,9 +16,16 @@
 	--epi-bn-height: 620px;
 	/* 110px of the 1440 canvas: 7.64% of the banner, so 15.28% of the half. */
 	--epi-bn-inset: 15.28%;
+	/* The backgrounds run edge to edge; the text, arrows, dots and badge sit
+	   in a centred box no wider than this. */
+	--epi-bn-max: 1300px;
+	--epi-bn-gutter: 24px;
+	/* Distance from the banner's edge to that box. */
+	--epi-bn-edge: var( --epi-bn-gutter );
 
 	position: relative;
 	width: 100%;
+	container-type: inline-size;
 	font-family: Lato, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 	line-height: 1.5;
 	background: var( --epi-bn-navy );
@@ -36,6 +43,12 @@
 	font-family: inherit;
 	text-transform: none;
 	letter-spacing: normal;
+}
+
+@supports ( width: 1cqw ) {
+	.epi-banner {
+		--epi-bn-edge: max( var( --epi-bn-gutter ), calc( 50cqw - var( --epi-bn-max ) / 2 ) );
+	}
 }
 
 /* Every slide sits in the same cell; the one showing is the one you see. */
@@ -63,7 +76,8 @@
 	position: relative;
 	display: flex;
 	align-items: center;
-	padding: 72px var( --epi-bn-inset );
+	/* 48px of arrow, then the gap the design leaves before the text. */
+	padding: 72px var( --epi-bn-inset ) 72px calc( var( --epi-bn-edge ) + 85px );
 	background: var( --epi-bn-navy );
 	color: #ffffff;
 	overflow: hidden;
@@ -177,7 +191,8 @@
 .epi-banner__badge {
 	position: absolute;
 	top: 48px;
-	right: 80px;
+	/* The photo is the right half, so its own edge is the box edge. */
+	right: calc( var( --epi-bn-edge ) + 10px );
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -230,11 +245,11 @@
 }
 
 .epi-banner .epi-banner__arrow--prev {
-	left: 25px;
+	left: var( --epi-bn-edge );
 }
 
 .epi-banner .epi-banner__arrow--next {
-	right: 25px;
+	right: var( --epi-bn-edge );
 }
 
 .epi-banner__arrow svg {
@@ -262,7 +277,8 @@
 
 .epi-banner__dots {
 	position: absolute;
-	right: 60px;
+	/* Lines the dots up under the chevron in the next arrow. */
+	right: calc( var( --epi-bn-edge ) + 19px );
 	bottom: 47px;
 	display: flex;
 	gap: 12px;
@@ -312,7 +328,7 @@
 	}
 
 	.epi-banner__panel {
-		padding: 48px var( --epi-bn-inset ) 84px;
+		padding: 48px var( --epi-bn-edge ) 84px;
 	}
 
 	.epi-banner__text {
@@ -334,11 +350,11 @@
 	}
 
 	.epi-banner .epi-banner__arrow--prev {
-		left: 16px;
+		left: var( --epi-bn-edge );
 	}
 
 	.epi-banner .epi-banner__arrow--next {
-		left: 72px;
+		left: calc( var( --epi-bn-edge ) + 56px );
 		right: auto;
 	}
 
@@ -350,12 +366,12 @@
 	}
 
 	.epi-banner__dots {
-		right: 24px;
+		right: var( --epi-bn-edge );
 		bottom: 40px;
 	}
 
 	.epi-banner__badge {
 		top: 20px;
-		right: 20px;
+		right: var( --epi-bn-edge );
 	}
 }
