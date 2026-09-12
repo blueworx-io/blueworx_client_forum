@@ -79,6 +79,15 @@ final class EPI_Feature_Registry {
 				'dependencies'   => array(),
 				'boot'           => array( __CLASS__, 'boot_forum_pages' ),
 			),
+			'banner'                      => array(
+				'title'          => __( 'Banner slider', 'blueworx_client_forum' ),
+				'description'    => __( 'The home-page banner: an Elementor widget with the three designed slides built in, also placed with [forum_banner].', 'blueworx_client_forum' ),
+				'group'          => 'content',
+				'dangerous'      => false,
+				'danger_message' => '',
+				'dependencies'   => array(),
+				'boot'           => array( __CLASS__, 'boot_banner' ),
+			),
 
 			// --- Pricing -------------------------------------------------.
 			'role-based-pricing'          => array(
@@ -332,6 +341,26 @@ final class EPI_Feature_Registry {
 		EPI_Forum_Page_Editor::init();
 		EPI_Forum_Page_Renderer::init();
 		EPI_Forum_Page_Seed::init();
+	}
+
+	/**
+	 * Boot the banner slider: the shortcode everywhere, the widget when
+	 * Elementor is there to ask for it.
+	 *
+	 * @return void
+	 */
+	public static function boot_banner() {
+		require_once EPI_PLUGIN_DIR . 'includes/class-epi-banner.php';
+
+		EPI_Banner::init();
+
+		add_action(
+			'elementor/widgets/register',
+			static function ( $widgets_manager ) {
+				require_once EPI_PLUGIN_DIR . 'includes/class-epi-banner-widget.php';
+				$widgets_manager->register( new \EPI_Banner_Widget() );
+			}
+		);
 	}
 
 	/**

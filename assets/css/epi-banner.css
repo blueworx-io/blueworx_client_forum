@@ -1,0 +1,341 @@
+/**
+ * The banner slider — front end.
+ *
+ * Values are from the Figma design (file ocfLyNE9GtyOYMxqq7Hwt7, frames
+ * 14:240, 14:265, 14:291): a 1440×620 canvas split down the middle, text on
+ * the left, photo on the right. Each slide is dark (navy panel) or light
+ * (white panel); the arrows and dots follow whichever slide is showing.
+ */
+
+.epi-banner {
+	--epi-bn-navy: #051a2d;
+	--epi-bn-accent: #a71f31;
+	--epi-bn-slate: #7c8794;
+	--epi-bn-light: #c9cfd6;
+	--epi-bn-body: #1f1f1f;
+	--epi-bn-height: 620px;
+	/* 110px of the 1440 canvas: 7.64% of the banner, so 15.28% of the half. */
+	--epi-bn-inset: 15.28%;
+
+	position: relative;
+	width: 100%;
+	font-family: Lato, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	line-height: 1.5;
+	background: var( --epi-bn-navy );
+	overflow: hidden;
+}
+
+.epi-banner *,
+.epi-banner *::before,
+.epi-banner *::after {
+	box-sizing: border-box;
+}
+
+.epi-banner :where( h2, p ) {
+	margin: 0;
+	font-family: inherit;
+	text-transform: none;
+	letter-spacing: normal;
+}
+
+/* Every slide sits in the same cell; the one showing is the one you see. */
+.epi-banner__slides {
+	display: grid;
+}
+
+.epi-banner__slide {
+	grid-area: 1 / 1;
+	display: grid;
+	grid-template-columns: repeat( 2, minmax( 0, 1fr ) );
+	min-height: var( --epi-bn-height );
+	transition: opacity 0.4s ease, visibility 0.4s ease;
+}
+
+.epi-banner__slide[aria-hidden="true"] {
+	opacity: 0;
+	visibility: hidden;
+	pointer-events: none;
+}
+
+/* --- Text panel ---------------------------------------------------------- */
+
+.epi-banner__panel {
+	position: relative;
+	display: flex;
+	align-items: center;
+	padding: 72px var( --epi-bn-inset );
+	background: var( --epi-bn-navy );
+	color: #ffffff;
+	overflow: hidden;
+}
+
+.epi-banner__slide--light .epi-banner__panel {
+	background: #ffffff;
+	color: var( --epi-bn-navy );
+}
+
+/* Two thin rings, mostly off the panel — as drawn. */
+.epi-banner__arc {
+	position: absolute;
+	top: 172px;
+	left: -388px;
+	width: 949px;
+	height: 949px;
+	fill: none;
+	stroke: currentColor;
+	stroke-opacity: 0.16;
+	stroke-width: 1.4;
+	pointer-events: none;
+}
+
+.epi-banner__text {
+	position: relative;
+	max-width: 530px;
+}
+
+.epi-banner__eyebrow {
+	font-size: 13px;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	color: var( --epi-bn-slate );
+}
+
+.epi-banner__eyebrow--red {
+	color: var( --epi-bn-accent );
+}
+
+.epi-banner__heading {
+	margin-top: 12px;
+	font-size: clamp( 32px, 3.2vw, 46px );
+	font-weight: 700;
+	line-height: 1.2;
+	color: inherit;
+}
+
+.epi-banner__body {
+	margin-top: 22px;
+	font-size: 16px;
+	line-height: 24px;
+	color: var( --epi-bn-light );
+}
+
+.epi-banner__slide--light .epi-banner__body {
+	color: var( --epi-bn-body );
+}
+
+.epi-banner__button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 54px;
+	margin-top: 38px;
+	padding: 14px 48px;
+	border-radius: 999px;
+	background: var( --epi-bn-accent );
+	color: #ffffff;
+	font-size: 16px;
+	line-height: 1.2;
+	text-decoration: none;
+	transition: background-color 0.15s ease;
+}
+
+.epi-banner__button:hover,
+.epi-banner__button:focus {
+	background: #8f1a2a;
+	color: #ffffff;
+}
+
+.epi-banner__footnote {
+	margin-top: 42px;
+	font-size: 12px;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	color: var( --epi-bn-slate );
+}
+
+/* --- Photo --------------------------------------------------------------- */
+
+/* The photo fills whatever height the text panel needs; it never sets it. */
+.epi-banner__media {
+	position: relative;
+	min-height: 0;
+	background: var( --epi-bn-light );
+	overflow: hidden;
+}
+
+.epi-banner__media img {
+	position: absolute;
+	inset: 0;
+	display: block;
+	width: 100%;
+	height: 100%;
+	max-width: none;
+	object-fit: cover;
+}
+
+.epi-banner__badge {
+	position: absolute;
+	top: 48px;
+	right: 80px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 126px;
+	min-height: 34px;
+	padding: 8px 24px;
+	border-radius: 999px;
+	background: var( --epi-bn-accent );
+	color: #ffffff;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+}
+
+/* --- Arrows and dots ----------------------------------------------------- */
+
+.epi-banner__arrow {
+	position: absolute;
+	top: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 44px;
+	height: 44px;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	border-radius: 50%;
+	background: transparent;
+	color: #ffffff;
+	cursor: pointer;
+	transform: translateY( -50% );
+	transition: color 0.4s ease;
+}
+
+.epi-banner__arrow--prev {
+	left: 27px;
+}
+
+.epi-banner__arrow--next {
+	right: 27px;
+}
+
+.epi-banner__arrow svg {
+	width: 14px;
+	height: 28px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.7;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.epi-banner__arrow:focus-visible {
+	outline: 2px solid var( --epi-bn-accent );
+	outline-offset: 2px;
+}
+
+/* The left arrow sits on the panel, so it takes the panel's text colour. */
+.epi-banner--light .epi-banner__arrow--prev {
+	color: var( --epi-bn-navy );
+}
+
+.epi-banner__dots {
+	position: absolute;
+	right: 60px;
+	bottom: 47px;
+	display: flex;
+	gap: 12px;
+}
+
+.epi-banner__dot {
+	width: 10px;
+	height: 10px;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	border-radius: 50%;
+	background: var( --epi-bn-slate );
+	cursor: pointer;
+	transition: background-color 0.2s ease;
+}
+
+.epi-banner--light .epi-banner__dot {
+	background: var( --epi-bn-light );
+}
+
+.epi-banner__dot[aria-selected="true"] {
+	background: var( --epi-bn-accent );
+}
+
+.epi-banner__dot:focus-visible {
+	outline: 2px solid var( --epi-bn-accent );
+	outline-offset: 2px;
+}
+
+/* --- Narrower screens ---------------------------------------------------- */
+
+@media ( max-width: 900px ) {
+	.epi-banner {
+		--epi-bn-inset: 24px;
+	}
+
+	.epi-banner__slide {
+		grid-template-columns: minmax( 0, 1fr );
+		grid-template-rows: auto auto;
+		min-height: 0;
+	}
+
+	.epi-banner__media {
+		order: -1;
+		aspect-ratio: 16 / 10;
+	}
+
+	.epi-banner__panel {
+		padding: 48px var( --epi-bn-inset ) 84px;
+	}
+
+	.epi-banner__text {
+		max-width: none;
+	}
+
+	.epi-banner__arc {
+		top: auto;
+		bottom: -600px;
+	}
+
+	.epi-banner__arrow {
+		top: auto;
+		bottom: 24px;
+		transform: none;
+		color: inherit;
+	}
+
+	.epi-banner__arrow--prev {
+		left: 16px;
+		color: #ffffff;
+	}
+
+	.epi-banner__arrow--next {
+		left: 68px;
+		right: auto;
+		color: #ffffff;
+	}
+
+	.epi-banner--light .epi-banner__arrow--prev,
+	.epi-banner--light .epi-banner__arrow--next {
+		color: var( --epi-bn-navy );
+	}
+
+	.epi-banner__dots {
+		right: 24px;
+		bottom: 40px;
+	}
+
+	.epi-banner__badge {
+		top: 20px;
+		right: 20px;
+	}
+}
