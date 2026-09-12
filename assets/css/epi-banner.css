@@ -195,34 +195,50 @@
 
 /* --- Arrows and dots ----------------------------------------------------- */
 
-.epi-banner__arrow {
+/* Doubled-up selectors so a theme's own button styling (padding, borders,
+   shadows, line-height) cannot push the arrow off centre. */
+.epi-banner .epi-banner__arrow,
+.epi-banner .epi-banner__arrow:hover,
+.epi-banner .epi-banner__arrow:focus,
+.epi-banner .epi-banner__arrow:active {
 	position: absolute;
 	top: 50%;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 44px;
-	height: 44px;
+	width: 48px;
+	height: 48px;
+	min-width: 0;
+	min-height: 0;
 	margin: 0;
 	padding: 0;
-	border: 0;
+	border: 1px solid transparent;
 	border-radius: 50%;
 	background: transparent;
+	box-shadow: none;
 	color: #ffffff;
+	font-size: 0;
+	line-height: 0;
 	cursor: pointer;
 	transform: translateY( -50% );
-	transition: color 0.4s ease;
+	transition: color 0.4s ease, border-color 0.15s ease;
 }
 
-.epi-banner__arrow--prev {
-	left: 27px;
+.epi-banner .epi-banner__arrow:hover,
+.epi-banner .epi-banner__arrow:focus-visible {
+	border-color: currentColor;
 }
 
-.epi-banner__arrow--next {
-	right: 27px;
+.epi-banner .epi-banner__arrow--prev {
+	left: 25px;
+}
+
+.epi-banner .epi-banner__arrow--next {
+	right: 25px;
 }
 
 .epi-banner__arrow svg {
+	display: block;
 	width: 14px;
 	height: 28px;
 	fill: none;
@@ -232,13 +248,15 @@
 	stroke-linejoin: round;
 }
 
-.epi-banner__arrow:focus-visible {
+.epi-banner .epi-banner__arrow:focus-visible {
 	outline: 2px solid var( --epi-bn-accent );
 	outline-offset: 2px;
 }
 
 /* The left arrow sits on the panel, so it takes the panel's text colour. */
-.epi-banner--light .epi-banner__arrow--prev {
+.epi-banner--light .epi-banner__arrow--prev,
+.epi-banner--light .epi-banner__arrow--prev:hover,
+.epi-banner--light .epi-banner__arrow--prev:focus {
 	color: var( --epi-bn-navy );
 }
 
@@ -306,26 +324,28 @@
 		bottom: -600px;
 	}
 
-	.epi-banner__arrow {
+	.epi-banner .epi-banner__arrow,
+	.epi-banner .epi-banner__arrow:hover,
+	.epi-banner .epi-banner__arrow:focus {
 		top: auto;
 		bottom: 24px;
 		transform: none;
-		color: inherit;
+		color: #ffffff;
 	}
 
-	.epi-banner__arrow--prev {
+	.epi-banner .epi-banner__arrow--prev {
 		left: 16px;
-		color: #ffffff;
 	}
 
-	.epi-banner__arrow--next {
-		left: 68px;
+	.epi-banner .epi-banner__arrow--next {
+		left: 72px;
 		right: auto;
-		color: #ffffff;
 	}
 
 	.epi-banner--light .epi-banner__arrow--prev,
-	.epi-banner--light .epi-banner__arrow--next {
+	.epi-banner--light .epi-banner__arrow--next,
+	.epi-banner--light .epi-banner__arrow:hover,
+	.epi-banner--light .epi-banner__arrow:focus {
 		color: var( --epi-bn-navy );
 	}
 
