@@ -8,6 +8,11 @@
 	'use strict';
 
 	function banner( root ) {
+		if ( root.getAttribute( 'data-epi-banner-ready' ) ) {
+			return;
+		}
+		root.setAttribute( 'data-epi-banner-ready', '1' );
+
 		var slides = Array.prototype.slice.call( root.querySelectorAll( '.epi-banner__slide' ) );
 		var dots = Array.prototype.slice.call( root.querySelectorAll( '.epi-banner__dot' ) );
 		var prev = root.querySelector( '.epi-banner__arrow--prev' );
@@ -140,5 +145,19 @@
 		start();
 	}
 
-	Array.prototype.slice.call( document.querySelectorAll( '.epi-banner' ) ).forEach( banner );
+	function init( scope ) {
+		Array.prototype.slice.call( ( scope || document ).querySelectorAll( '.epi-banner' ) ).forEach( banner );
+	}
+
+	init( document );
+
+	// Elementor's editor redraws a widget without reloading the page, so it
+	// tells us when a banner is ready rather than us finding it at load.
+	if ( window.jQuery ) {
+		window.jQuery( window ).on( 'elementor/frontend/init', function () {
+			window.elementorFrontend.hooks.addAction( 'frontend/element_ready/epi-forum-banner.default', function ( $scope ) {
+				init( $scope[ 0 ] );
+			} );
+		} );
+	}
 }() );
