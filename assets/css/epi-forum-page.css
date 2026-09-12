@@ -896,13 +896,14 @@ body:has( .epi-forum-page--breakout ) .wp-block-post-terms {
 	color: var( --epi-fp-accent );
 }
 
-.epi-forum-page__product .epi-forum-page__button {
-	margin-top: auto;
-	padding-top: 14px;
+/* The card stretches to its row, and the button sits at the bottom of it, so
+   every Read more in a row lines up whatever the name above it wraps to. */
+.epi-forum-page__product .epi-forum-page__sku {
+	margin-bottom: 14px;
 }
 
-.epi-forum-page__product .epi-forum-page__sku + .epi-forum-page__button {
-	margin-top: 14px;
+.epi-forum-page__product .epi-forum-page__button {
+	margin-top: auto;
 }
 
 .epi-forum-page__button--outline {
