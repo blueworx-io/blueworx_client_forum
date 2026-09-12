@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.0]
+
+### Added
+- Banner slider: an Elementor widget ("Forum: Banner slider") with the three designed
+  slides built in. Every word, button, photo and panel colour is editable; it moves on by
+  itself at a time you choose, and the arrows and dots always work. `[forum_banner]`
+  places the designed slides anywhere without Elementor.
+
 ## [1.10.0]
 
 ### Added
