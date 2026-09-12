@@ -149,6 +149,9 @@ final class EPI_Forum_Page_Renderer {
 	/**
 	 * Register the front-end assets. Enqueued only when the shortcode runs.
 	 *
+	 * The version carries the file's modification time, so a changed stylesheet
+	 * is never served from a browser's or a host's cache under the old name.
+	 *
 	 * @return void
 	 */
 	public static function register_assets() {
@@ -156,16 +159,28 @@ final class EPI_Forum_Page_Renderer {
 			'epi-forum-page',
 			EPI_PLUGIN_URL . 'assets/css/epi-forum-page.css',
 			array(),
-			EPI_VERSION
+			self::asset_version( 'assets/css/epi-forum-page.css' )
 		);
 
 		wp_register_script(
 			'epi-forum-page',
 			EPI_PLUGIN_URL . 'assets/js/epi-forum-page.js',
 			array(),
-			EPI_VERSION,
+			self::asset_version( 'assets/js/epi-forum-page.js' ),
 			true
 		);
+	}
+
+	/**
+	 * A cache-busting version for one plugin file.
+	 *
+	 * @param string $file Path under the plugin directory.
+	 * @return string
+	 */
+	private static function asset_version( $file ) {
+		$time = file_exists( EPI_PLUGIN_DIR . $file ) ? filemtime( EPI_PLUGIN_DIR . $file ) : 0;
+
+		return EPI_VERSION . ( $time ? '.' . $time : '' );
 	}
 
 	/**
@@ -187,7 +202,13 @@ final class EPI_Forum_Page_Renderer {
 			return $content;
 		}
 
-		return $content . self::shortcode();
+		// The theme's content column would box the design in; the breakout
+		// class lets it run the full width of the window, as designed.
+		return $content . str_replace(
+			'<div class="epi-forum-page">',
+			'<div class="epi-forum-page epi-forum-page--breakout alignfull">',
+			self::shortcode()
+		);
 	}
 
 	/**

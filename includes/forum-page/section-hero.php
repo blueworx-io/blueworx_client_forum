@@ -22,8 +22,22 @@ $epi_chips   = array_filter(
 		EPI_Forum_Page_Renderer::value( $post_id, 'hero_meta_updated' ),
 	)
 );
+$epi_buttons = array();
+
+foreach ( array( 1, 2 ) as $epi_n ) {
+	$epi_label = EPI_Forum_Page_Renderer::value( $post_id, 'hero_cta' . $epi_n . '_label' );
+	$epi_url   = EPI_Forum_Page_Renderer::value( $post_id, 'hero_cta' . $epi_n . '_url' );
+
+	if ( $epi_label && $epi_url ) {
+		$epi_buttons[ $epi_n ] = array( $epi_label, $epi_url );
+	}
+}
 ?>
 <section class="epi-forum-page__hero">
+	<?php if ( $epi_image ) : ?>
+		<?php echo wp_get_attachment_image( $epi_image, 'full', false, array( 'class' => 'epi-forum-page__heroimage' ) ); ?>
+	<?php endif; ?>
+
 	<?php if ( $epi_crumb ) : ?>
 		<nav class="epi-forum-page__crumbs" aria-label="<?php esc_attr_e( 'Breadcrumb', 'blueworx_client_forum' ); ?>">
 			<a href="<?php echo esc_url( home_url( '/' ) ); ?>"><?php esc_html_e( 'Home', 'blueworx_client_forum' ); ?></a>
@@ -42,19 +56,13 @@ $epi_chips   = array_filter(
 		<p class="epi-forum-page__intro"><?php echo esc_html( $epi_intro ); ?></p>
 	<?php endif; ?>
 
-	<?php
-	foreach ( array( 1, 2 ) as $epi_n ) :
-		$epi_label = EPI_Forum_Page_Renderer::value( $post_id, 'hero_cta' . $epi_n . '_label' );
-		$epi_url   = EPI_Forum_Page_Renderer::value( $post_id, 'hero_cta' . $epi_n . '_url' );
-
-		if ( ! $epi_label || ! $epi_url ) {
-			continue;
-		}
-		?>
-		<a class="epi-forum-page__button<?php echo 2 === $epi_n ? ' epi-forum-page__button--ghost' : ''; ?>" href="<?php echo esc_url( $epi_url ); ?>"><?php echo esc_html( $epi_label ); ?></a>
-		<?php
-	endforeach;
-	?>
+	<?php if ( $epi_buttons ) : ?>
+		<div class="epi-forum-page__buttons">
+			<?php foreach ( $epi_buttons as $epi_n => $epi_button ) : ?>
+				<a class="epi-forum-page__button<?php echo 2 === $epi_n ? ' epi-forum-page__button--ghost' : ''; ?>" href="<?php echo esc_url( $epi_button[1] ); ?>"><?php echo esc_html( $epi_button[0] ); ?></a>
+			<?php endforeach; ?>
+		</div>
+	<?php endif; ?>
 
 	<?php if ( $epi_chips ) : ?>
 		<ul class="epi-forum-page__chips">
@@ -62,9 +70,5 @@ $epi_chips   = array_filter(
 				<li><?php echo esc_html( $epi_chip ); ?></li>
 			<?php endforeach; ?>
 		</ul>
-	<?php endif; ?>
-
-	<?php if ( $epi_image ) : ?>
-		<?php echo wp_get_attachment_image( $epi_image, 'large', false, array( 'class' => 'epi-forum-page__heroimage' ) ); ?>
 	<?php endif; ?>
 </section>

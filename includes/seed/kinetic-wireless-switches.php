@@ -58,22 +58,22 @@ return array(
 			array(
 				'title' => 'Press',
 				'body'  => 'The rocker moves a lever inside the plate. That movement is the only energy the switch ever needs.',
-				'image' => 'kinetic-switch.png',
+				'image' => 0,
 			),
 			array(
 				'title' => 'Generate',
 				'body'  => 'The movement drives a miniature generator, producing a brief pulse of power — no battery, no supply.',
-				'image' => 'kinetic-switch.png',
+				'image' => 0,
 			),
 			array(
 				'title' => 'Transmit',
 				'body'  => 'The pulse powers a short radio signal carrying the command and the switch identity.',
-				'image' => 'kinetic-switch.png',
+				'image' => 0,
 			),
 			array(
 				'title' => 'Switch',
 				'body'  => 'The paired receiver on the lighting circuit reads the command and switches or dims the load.',
-				'image' => 'kinetic-switch.png',
+				'image' => 0,
 			),
 		),
 
@@ -260,7 +260,7 @@ return array(
 			),
 			array(
 				'value' => 'ISO 9001',
-				'label' => 'REGISTERED',
+				'label' => '& ISO 14001',
 			),
 		),
 	),

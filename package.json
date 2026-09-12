@@ -1,6 +1,6 @@
 {
   "name": "blueworx-client-forum",
-  "version": "1.9.0",
+  "version": "1.9.1",
   "private": true,
   "description": "BlueWorx Lab | Forum Lighting — site functionality plugin for Forum Lighting.",
   "scripts": {

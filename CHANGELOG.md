@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.1]
+
+### Fixed
+- Forum Pages now match the design: content sits in a centred column on wide screens,
+  the switch diagram and step drawings are in, the steps show one at a time, and every
+  section is laid out as drawn.
+- Without an Elementor template a Forum Page now runs the full width of the window
+  instead of sitting in the theme's narrow column.
+- Changes to the page's styling reach visitors straight away instead of waiting on a
+  browser cache.
+
 ## [1.9.0]
 
 ### Added

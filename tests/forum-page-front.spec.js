@@ -116,11 +116,11 @@ test('the stepper shows one step at a time and the FAQs collapse', async ({ page
   await expect(page.locator('#how-step-1')).toBeVisible();
   await expect(page.locator('#how-step-0')).toBeHidden();
 
-  // The answer starts collapsed and the question opens it.
+  // The first question starts open, as in the design; clicking it closes it.
   const question = page.locator('#faqs button[aria-expanded]').first();
-  await expect(question).toHaveAttribute('aria-expanded', 'false');
-  await question.click();
   await expect(question).toHaveAttribute('aria-expanded', 'true');
+  await question.click();
+  await expect(question).toHaveAttribute('aria-expanded', 'false');
 });
 
 test('[forum_page id] renders a chosen page inside an ordinary page', async ({ page }) => {
