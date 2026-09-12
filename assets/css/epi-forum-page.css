@@ -826,6 +826,104 @@ body:has( .epi-forum-page--breakout ) .wp-block-post-terms {
 	color: #ffffff;
 }
 
+/* --- The range ----------------------------------------------------------- */
+
+.epi-forum-page__range {
+	background: var( --epi-fp-panel );
+}
+
+.epi-forum-page__products {
+	display: grid;
+	grid-template-columns: repeat( 4, minmax( 0, 1fr ) );
+	gap: 26px;
+	margin-top: 40px;
+}
+
+.epi-forum-page__product {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	padding: 22px;
+	border-radius: 12px;
+	background: #ffffff;
+}
+
+.epi-forum-page__productimage {
+	display: flex;
+	align-items: flex-end;
+	justify-content: center;
+	width: 100%;
+	aspect-ratio: 222 / 138;
+	padding-bottom: 12px;
+	border: 1px solid var( --epi-fp-rule );
+	border-radius: 8px;
+	background-color: var( --epi-fp-panel );
+	background-image:
+		linear-gradient( to top right, transparent calc( 50% - 0.5px ), #e6e4e2 calc( 50% - 0.5px ), #e6e4e2 calc( 50% + 0.5px ), transparent calc( 50% + 0.5px ) ),
+		linear-gradient( to top left, transparent calc( 50% - 0.5px ), #e6e4e2 calc( 50% - 0.5px ), #e6e4e2 calc( 50% + 0.5px ), transparent calc( 50% + 0.5px ) );
+	overflow: hidden;
+}
+
+.epi-forum-page__productimage img {
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+	background: #ffffff;
+}
+
+.epi-forum-page__productimage .epi-forum-page__label {
+	font-weight: 400;
+}
+
+.epi-forum-page__product h3 {
+	margin-top: 20px;
+	font-size: 17px;
+	font-weight: 700;
+	line-height: 1.35;
+	color: var( --epi-fp-navy );
+}
+
+.epi-forum-page__product p {
+	margin-top: 8px;
+	font-size: 15px;
+	line-height: 23px;
+	color: var( --epi-fp-quiet );
+}
+
+.epi-forum-page__product .epi-forum-page__sku {
+	margin-top: 8px;
+	font-size: 14px;
+	color: var( --epi-fp-accent );
+}
+
+.epi-forum-page__product .epi-forum-page__button {
+	margin-top: auto;
+	padding-top: 14px;
+}
+
+.epi-forum-page__product .epi-forum-page__sku + .epi-forum-page__button {
+	margin-top: 14px;
+}
+
+.epi-forum-page__button--outline {
+	min-height: 40px;
+	padding: 8px 20px;
+	border: 1px solid var( --epi-fp-navy );
+	background: #ffffff;
+	color: var( --epi-fp-navy );
+	font-size: 14px;
+}
+
+.epi-forum-page__button--outline:hover,
+.epi-forum-page__button--outline:focus {
+	background: var( --epi-fp-navy );
+	color: #ffffff;
+}
+
+.epi-forum-page__range > .epi-forum-page__buttons {
+	margin-top: 36px;
+}
+
 /* --- Specifying ---------------------------------------------------------- */
 
 .epi-forum-page__points {
@@ -1061,7 +1159,8 @@ body:has( .epi-forum-page--breakout ) .wp-block-post-terms {
 	}
 
 	.epi-forum-page__points,
-	.epi-forum-page__troublegrid {
+	.epi-forum-page__troublegrid,
+	.epi-forum-page__products {
 		grid-template-columns: repeat( 2, minmax( 0, 1fr ) );
 	}
 
@@ -1200,7 +1299,8 @@ body:has( .epi-forum-page--breakout ) .wp-block-post-terms {
 	.epi-forum-page__advantagegrid,
 	.epi-forum-page__cards,
 	.epi-forum-page__points,
-	.epi-forum-page__troublegrid {
+	.epi-forum-page__troublegrid,
+	.epi-forum-page__products {
 		grid-template-columns: minmax( 0, 1fr );
 	}
 

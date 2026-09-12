@@ -169,6 +169,30 @@ return array(
 			),
 		),
 
+		'range_nav_label'          => 'The range',
+		'range_heading'            => 'Plates, dimmers and receivers',
+		'range_intro'              => 'Kinetic is the Forum sub-brand for lighting controls. Plate and receiver are ordered as a pair.',
+		'range_products'           => array(
+			array(
+				'sku'   => '',
+				'blurb' => 'Single circuit on, off and pair',
+			),
+			array(
+				'sku'   => '',
+				'blurb' => 'Two circuits from one plate',
+			),
+			array(
+				'sku'   => '',
+				'blurb' => 'Level control on dimmable loads',
+			),
+			array(
+				'sku'   => '',
+				'blurb' => 'Fits at the fitting or in the void',
+			),
+		),
+		'range_more_label'         => 'See all Kinetic controls',
+		'range_more_url'           => '/product-category/kinetic/',
+
 		'specifying_nav_label'     => 'Specifying',
 		'specifying_heading'       => 'Six things to settle on site',
 		'specifying_points'        => array(

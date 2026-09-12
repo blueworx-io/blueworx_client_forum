@@ -145,3 +145,40 @@ test('[forum_page id] renders a chosen page inside an ordinary page', async ({ p
   await page.goto(`/?page_id=${hostId}`);
   await expect(page.locator('.epi-forum-page__hero h1')).toHaveText('Heading placed by id');
 });
+
+test('the range shows a product picked by SKU', async ({ page }) => {
+  await loginAsAdmin(page);
+
+  // A product to point at, made over REST so the test owns it. CI's harness
+  // has no WooCommerce, so there the row falls back to what was typed.
+  const nonce = await page.evaluate(() =>
+    fetch('/wp-admin/admin-ajax.php?action=rest-nonce', { credentials: 'same-origin' }).then((r) =>
+      r.text()
+    )
+  );
+  const sku = `EPI-TEST-${Date.now()}`;
+  const created = await page.request.post('/wp-json/wc/v3/products', {
+    headers: { 'X-WP-Nonce': nonce },
+    data: { name: 'Kinetic 1 Gang Wireless Wall Switch', sku, regular_price: '25', status: 'publish' },
+  });
+  const hasProduct = created.ok();
+
+  const id = await newForumPage(page, 'Range by SKU');
+  await page.locator('.bw-tabs').getByText('Products').click();
+  await page.fill('#range_heading', 'Plates, dimmers and receivers');
+  await addRepeaterRow(page, 'range_products');
+  const row = repeater(page, 'range_products');
+  await row.locator('input[type="text"]').nth(0).fill(sku);
+  await row.locator('input[type="text"]').nth(1).fill('Single circuit on, off and pair');
+  await saveEditor(page, expect);
+
+  await page.goto(`/?p=${id}&post_type=forum_page`);
+  const card = page.locator('#range .epi-forum-page__product').first();
+  await expect(card).toContainText('Single circuit on, off and pair');
+  await expect(card).toContainText(sku);
+
+  if (hasProduct) {
+    await expect(card).toContainText('Kinetic 1 Gang Wireless Wall Switch');
+    await expect(card.locator('a.epi-forum-page__button')).toHaveAttribute('href', /kinetic-1-gang/);
+  }
+});

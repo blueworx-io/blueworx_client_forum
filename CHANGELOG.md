@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.0]
+
+### Added
+- "The range" section on a Forum Page: enter each product's SKU and a one-line
+  description, and the name, photo and link come from the product itself.
+
 ## [1.9.1]
 
 ### Fixed

@@ -461,6 +461,58 @@ final class EPI_Forum_Page_Editor {
 			'label'  => __( 'Products', 'blueworx_client_forum' ),
 			'panels' => array(
 				array(
+					'id'       => 'range',
+					'eyebrow'  => __( 'Forum page · The range', 'blueworx_client_forum' ),
+					'title'    => __( 'The range', 'blueworx_client_forum' ),
+					'note'     => __( 'Pick each product by its SKU. The name, photo and link come from the product itself; only the one-line description is typed here.', 'blueworx_client_forum' ),
+					'hideable' => true,
+					'fields'   => array(
+						array(
+							'id'    => 'range_nav_label',
+							'kind'  => 'text',
+							'label' => __( 'Short name', 'blueworx_client_forum' ),
+						),
+						array(
+							'id'    => 'range_heading',
+							'kind'  => 'text',
+							'label' => __( 'Heading', 'blueworx_client_forum' ),
+						),
+						array(
+							'id'    => 'range_intro',
+							'kind'  => 'textarea',
+							'label' => __( 'Intro', 'blueworx_client_forum' ),
+						),
+						array(
+							'id'     => 'range_products',
+							'kind'   => 'repeater',
+							'label'  => __( 'Products', 'blueworx_client_forum' ),
+							'fields' => array(
+								array(
+									'id'    => 'sku',
+									'kind'  => 'text',
+									'label' => __( 'SKU', 'blueworx_client_forum' ),
+								),
+								array(
+									'id'    => 'blurb',
+									'kind'  => 'text',
+									'label' => __( 'One-line description', 'blueworx_client_forum' ),
+								),
+							),
+						),
+						array(
+							'id'    => 'range_more_label',
+							'kind'  => 'text',
+							'label' => __( 'See-all button', 'blueworx_client_forum' ),
+						),
+						array(
+							'id'     => 'range_more_url',
+							'kind'   => 'text',
+							'format' => 'url',
+							'label'  => __( 'See-all link', 'blueworx_client_forum' ),
+						),
+					),
+				),
+				array(
 					'id'       => 'specifying',
 					'eyebrow'  => __( 'Forum page · Specifying', 'blueworx_client_forum' ),
 					'title'    => __( 'Specifying', 'blueworx_client_forum' ),
