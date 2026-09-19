@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.1]
+
+### Fixed
+- Product bullets now show exactly as typed on the product. "IP44 Rating" no longer
+  becomes "Ip44 rating".
+
 ## [1.11.0]
 
 ### Added

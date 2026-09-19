@@ -4,7 +4,7 @@ Tags: woocommerce, elementor, product gallery, product images, site functionalit
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.11.0
+Stable tag: 1.11.1
 License: GPLv2 or later
 
 Site functionality plugin for Forum Lighting: one control centre to switch the WooCommerce gallery, metadata, pricing and more on or off.
@@ -47,6 +47,10 @@ The stored value may be a JSON array of URLs OR a comma-separated list — both
 are handled automatically. Placeholders remain as a safety fallback.
 
 == Changelog ==
+
+= 1.11.1 =
+* Product bullets now show exactly as typed on the product. "IP44 Rating" no
+  longer becomes "Ip44 rating".
 
 = 1.8.0 =
 * Forum Pages: long-form support pages with every heading, paragraph, photo and
