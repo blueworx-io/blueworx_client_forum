@@ -45,6 +45,7 @@ final class EPI_Feature_Registry {
 	 */
 	public static function groups() {
 		return array(
+			'content'         => __( 'Content', 'blueworx_client_forum' ),
 			'pricing'         => __( 'Pricing', 'blueworx_client_forum' ),
 			'product-display' => __( 'Product display', 'blueworx_client_forum' ),
 			'shop'            => __( 'Shop behaviour', 'blueworx_client_forum' ),
@@ -68,6 +69,26 @@ final class EPI_Feature_Registry {
 		$price_danger = __( 'This controls live store prices. Turning it off changes what customers see and pay. Are you sure?', 'blueworx_client_forum' );
 
 		return array(
+			// --- Content -------------------------------------------------.
+			'forum-pages'                 => array(
+				'title'          => __( 'Forum Pages', 'blueworx_client_forum' ),
+				'description'    => __( 'Long-form support pages, edited under Forum Pages and placed with [forum_page].', 'blueworx_client_forum' ),
+				'group'          => 'content',
+				'dangerous'      => false,
+				'danger_message' => '',
+				'dependencies'   => array(),
+				'boot'           => array( __CLASS__, 'boot_forum_pages' ),
+			),
+			'banner'                      => array(
+				'title'          => __( 'Banner slider', 'blueworx_client_forum' ),
+				'description'    => __( 'The home-page banner: an Elementor widget with the three designed slides built in, also placed with [forum_banner].', 'blueworx_client_forum' ),
+				'group'          => 'content',
+				'dangerous'      => false,
+				'danger_message' => '',
+				'dependencies'   => array(),
+				'boot'           => array( __CLASS__, 'boot_banner' ),
+			),
+
 			// --- Pricing -------------------------------------------------.
 			'role-based-pricing'          => array(
 				'title'          => __( 'Role-based pricing', 'blueworx_client_forum' ),
@@ -303,6 +324,43 @@ final class EPI_Feature_Registry {
 		return function () use ( $file ) {
 			require EPI_PLUGIN_DIR . 'includes/snippets/' . $file;
 		};
+	}
+
+	/**
+	 * Boot the Forum Pages record type, its editor and its front end.
+	 *
+	 * @return void
+	 */
+	public static function boot_forum_pages() {
+		require_once EPI_PLUGIN_DIR . 'includes/class-epi-forum-page-type.php';
+		require_once EPI_PLUGIN_DIR . 'includes/class-epi-forum-page-editor.php';
+		require_once EPI_PLUGIN_DIR . 'includes/class-epi-forum-page-renderer.php';
+		require_once EPI_PLUGIN_DIR . 'includes/class-epi-forum-page-seed.php';
+
+		EPI_Forum_Page_Type::init();
+		EPI_Forum_Page_Editor::init();
+		EPI_Forum_Page_Renderer::init();
+		EPI_Forum_Page_Seed::init();
+	}
+
+	/**
+	 * Boot the banner slider: the shortcode everywhere, the widget when
+	 * Elementor is there to ask for it.
+	 *
+	 * @return void
+	 */
+	public static function boot_banner() {
+		require_once EPI_PLUGIN_DIR . 'includes/class-epi-banner.php';
+
+		EPI_Banner::init();
+
+		add_action(
+			'elementor/widgets/register',
+			static function ( $widgets_manager ) {
+				require_once EPI_PLUGIN_DIR . 'includes/class-epi-banner-widget.php';
+				$widgets_manager->register( new \EPI_Banner_Widget() );
+			}
+		);
 	}
 
 	/**

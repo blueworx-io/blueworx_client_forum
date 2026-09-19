@@ -47,6 +47,9 @@ INCLUDE=(
 	# The vendored update checker. The main plugin file requires it unguarded,
 	# so a zip without it fatals the moment WordPress activates the plugin.
 	"plugin-update-checker"
+	# The vendored page editor library. The main plugin file requires it
+	# unguarded, so a zip without it fatals on activate.
+	"blueworx-page-editor"
 )
 
 # Belt and braces. The allowlist alone already excludes these, so a hit here

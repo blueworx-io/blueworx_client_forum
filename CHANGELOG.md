@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.0]
+
+### Added
+- Banner slider: an Elementor widget ("Forum: Banner slider") with the three designed
+  slides built in. Every word, button, photo and panel colour is editable; it moves on by
+  itself at a time you choose, and the arrows and dots always work. `[forum_banner]`
+  places the designed slides anywhere without Elementor.
+
+## [1.10.0]
+
+### Added
+- "The range" section on a Forum Page: enter each product's SKU and a one-line
+  description, and the name, photo and link come from the product itself.
+
+## [1.9.1]
+
+### Fixed
+- Forum Pages now match the design: content sits in a centred column on wide screens,
+  the switch diagram and step drawings are in, the steps show one at a time, and every
+  section is laid out as drawn.
+- Without an Elementor template a Forum Page now runs the full width of the window
+  instead of sitting in the theme's narrow column.
+- Changes to the page's styling reach visitors straight away instead of waiting on a
+  browser cache.
+
+## [1.9.0]
+
+### Added
+- The Kinetic wireless switches page comes with the plugin, filled in and ready to edit
+  under Forum Pages. It is added once; edit or delete it as you like.
+- Every Forum Page has its own shortcode, shown in the Forum Pages list, so a page can be
+  dropped into any Elementor page with `[forum_page id="…"]`.
+
+## [1.8.0]
+
+### Added
+- Forum Pages: long-form support pages with every heading, paragraph, photo and button
+  editable in one place, under Forum Pages in the menu.
+- Each section of a Forum Page can be switched off, and the page numbers its sections and
+  builds its "on this page" links from whichever ones are left.
+- Drop `[forum_page]` into an Elementor template for Forum Pages and the site's own header
+  and footer stay in charge of the page. See `docs/elementor-template.md`.
+- The Forum Pages menu lists just the pages and Add New. Each page is edited from the
+  list, and the menu shows the list as where you are while you edit.
+
 ## [1.7.1]
 
 ### Fixed

@@ -3,7 +3,7 @@
  * Plugin Name:       BlueWorx Lab | Forum Lighting
  * Plugin URI:        https://blueworx.io/
  * Description:        Site functionality plugin for Forum Lighting. A control centre under Settings > BlueWorx Lab switches features on or off, including the WooCommerce product gallery, metadata tools, pricing rules and more.
- * Version:           1.7.1
+ * Version:           1.11.0
  * Author:            BlueWorx
  * Author URI:        https://blueworx.io/
  * Text Domain:       blueworx_client_forum
@@ -22,11 +22,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Core plugin constants.
  */
-define( 'EPI_VERSION', '1.7.1' );
+define( 'EPI_VERSION', '1.11.0' );
 define( 'EPI_PLUGIN_FILE', __FILE__ );
 define( 'EPI_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'EPI_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'EPI_EPIM_IMAGE_BASE', 'https://epim.online/webproduct/assetimage/' );
+
+/*
+ * The shared admin design system, then the page editor library that enqueues
+ * against it. This order matters: the design system's registrar decides which
+ * copy on the site wins, and that has to be settled before anything enqueues.
+ */
+require_once EPI_PLUGIN_DIR . 'assets/blueworx-admin-design.php';
+require_once EPI_PLUGIN_DIR . 'blueworx-page-editor/blueworx-page-editor.php';
 
 /*
  * Self-updating from GitHub Releases. The site checks this repo's releases and

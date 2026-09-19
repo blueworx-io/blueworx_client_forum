@@ -4,7 +4,7 @@ Tags: woocommerce, elementor, product gallery, product images, site functionalit
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.7.1
+Stable tag: 1.11.0
 License: GPLv2 or later
 
 Site functionality plugin for Forum Lighting: one control centre to switch the WooCommerce gallery, metadata, pricing and more on or off.
@@ -47,6 +47,14 @@ The stored value may be a JSON array of URLs OR a comma-separated list — both
 are handled automatically. Placeholders remain as a safety fallback.
 
 == Changelog ==
+
+= 1.8.0 =
+* Forum Pages: long-form support pages with every heading, paragraph, photo and
+  button editable in one place, under Forum Pages in the menu.
+* Each section of a Forum Page can be switched off, and the page numbers its
+  sections and builds its "on this page" links from whichever ones are left.
+* Drop [forum_page] into an Elementor template for Forum Pages and the site's own
+  header and footer stay in charge of the page.
 
 = 1.7.1 =
 * The Save changes bar now sits along the bottom of the window on every admin
