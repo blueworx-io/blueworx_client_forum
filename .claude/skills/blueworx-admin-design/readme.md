@@ -194,6 +194,17 @@ Styling lives in `.css` files beside each group (`core.css`, `forms.css` + `form
 that cannot ship React can use the classes alone: `.bw-btn.bw-btn--primary`, `.bw-card`,
 `.bw-table`, `.bw-formrow`, and so on.
 
+Two patterns exist only as classes, because they are read rather than operated and every
+screen that shows one is PHP: `.bw-schedule`, a gantt with the controls taken off, and
+`.bw-calendar`, a month grid. The calendar is a `table` with `.bw-calendar__day` cells,
+each holding a `.bw-calendar__daynum` and a `.bw-calendar__entries` list; a day outside the
+month is `--outside`, today is `--today`, and an entry's leading `.bw-calendar__kind` word
+takes its tone from an `--accent`, `--success`, `--warning`, `--danger` or `--info`
+modifier on the entry. Every day cell carries its short weekday name in `data-weekday`, and a day
+with nothing on it is also `--empty`: under 782px the grid becomes a list of the days that have
+something on them, and those are what it reads. Its `.bw-calendar__nav` is two ghost buttons around a
+`.bw-calendar__month` heading. See `components/data/data-calendar.card.html`.
+
 ### Which control for which job
 
 | Job | Use |
@@ -214,6 +225,7 @@ that cannot ship React can use the classes alone: `.bw-btn.bw-btn--primary`, `.b
 | Optional or advanced settings | `Accordion` |
 | Derived figures that stay put while tabs change | `SummaryStrip` |
 | Phases against a week or date scale | `Gantt` |
+| Dates on the month they fall in | `.bw-calendar` (classes only) |
 
 ### Intentional additions
 
@@ -326,6 +338,7 @@ window, one per screen).
 | Fields that only exist while a condition holds | `bw-conditional` |
 | The record's title, and the slug beneath it | `bw-titleinput`, `bw-permalink` |
 | A small muted note with an icon | `bw-fieldnote` |
+| A line that goes somewhere else — a demo site, a help page | a `link` field: its `label` is the link's text, `url` where it goes; opens in a new tab, no heading, stores nothing |
 | A collapsible group | `bw-accordion` (not a new control) |
 | Rows that fall into named groups, each with its own subtotal | a `repeater` with `group_by` and `subtotal_of` |
 | Phases on a week or date scale | `gantt` |
