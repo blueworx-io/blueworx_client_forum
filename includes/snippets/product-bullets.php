@@ -64,10 +64,12 @@ add_shortcode(
 					continue;
 				}
 
+				// Shown exactly as typed on the product: the old tidy-up
+				// (lowercase, then capitalise) turned "IP44" into "Ip44".
 				$bullets[] = array(
 					'order' => $order,
 					'seq'   => $seq++,
-					'text'  => esc_html( ucfirst( strtolower( $value ) ) ),
+					'text'  => esc_html( $value ),
 				);
 			}
 		}
