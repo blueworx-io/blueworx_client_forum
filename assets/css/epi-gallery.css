@@ -43,6 +43,47 @@
 	opacity: 0;
 }
 
+/* Arrows ------------------------------------------------------------------ */
+.epi-gallery__arrow {
+	position: absolute;
+	top: 50%;
+	transform: translateY(-50%);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	padding: 0;
+	cursor: pointer;
+	color: var(--epi-active);
+	background-color: rgba(255, 255, 255, 0.9);
+	border: 1px solid var(--epi-border);
+	border-radius: 50%;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+	transition: background-color 0.2s ease, box-shadow 0.2s ease;
+	-webkit-appearance: none;
+	appearance: none;
+}
+
+.epi-gallery__arrow:hover,
+.epi-gallery__arrow:focus-visible {
+	background-color: #ffffff;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14);
+	outline: none;
+}
+
+.epi-gallery__arrow:focus-visible {
+	border-color: var(--epi-active);
+}
+
+.epi-gallery__arrow--prev {
+	left: 12px;
+}
+
+.epi-gallery__arrow--next {
+	right: 12px;
+}
+
 /* Thumbnail strip -------------------------------------------------------- */
 .epi-gallery__thumbs {
 	list-style: none;
@@ -96,16 +137,19 @@
 }
 
 /* Layout variant: thumbnails on the left -------------------------------- */
-.epi-thumbs-left .epi-gallery {
+.epi-thumbs-left .epi-gallery,
+.epi-gallery.epi-thumbs-left {
 	flex-direction: row-reverse;
 	align-items: flex-start;
 }
 
-.epi-thumbs-left .epi-gallery__stage {
+.epi-thumbs-left .epi-gallery__stage,
+.epi-gallery.epi-thumbs-left .epi-gallery__stage {
 	flex: 1 1 auto;
 }
 
-.epi-thumbs-left .epi-gallery__thumbs {
+.epi-thumbs-left .epi-gallery__thumbs,
+.epi-gallery.epi-thumbs-left .epi-gallery__thumbs {
 	flex: 0 0 96px;
 	grid-template-columns: 1fr;
 	width: 96px;
@@ -118,11 +162,13 @@
 	}
 
 	/* Force the left-thumbnail variant back to a stacked layout on mobile. */
-	.epi-thumbs-left .epi-gallery {
+	.epi-thumbs-left .epi-gallery,
+.epi-gallery.epi-thumbs-left {
 		flex-direction: column;
 	}
 
-	.epi-thumbs-left .epi-gallery__thumbs {
+	.epi-thumbs-left .epi-gallery__thumbs,
+.epi-gallery.epi-thumbs-left .epi-gallery__thumbs {
 		flex: 1 1 auto;
 		width: 100%;
 		grid-template-columns: repeat(4, 1fr);

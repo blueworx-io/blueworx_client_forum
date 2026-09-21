@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.12.0]
+
+### Added
+- The product gallery widget can now take its pictures from the WooCommerce gallery
+  (the media library) as well as ePim. Pick the source on the widget.
+- Arrows on the main image that loop through every picture, and the
+  [forum_product_gallery] shortcode for placing the gallery without Elementor.
+
+### Changed
+- The featured image opens the gallery and sits last in the thumbnail strip, so
+  stepping on from it runs through the gallery and back round.
+
 ## [1.11.1]
 
 ### Fixed
