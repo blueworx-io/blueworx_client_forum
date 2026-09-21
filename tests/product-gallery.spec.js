@@ -132,3 +132,57 @@ test('ePim source builds the same order from the ids as ePim asset URLs', async 
   await expect(thumbs.nth(1)).toHaveAttribute('data-epi-full', epim(second));
   await expect(thumbs.nth(2)).toHaveAttribute('data-epi-full', epim(featured));
 });
+
+test('the enlarge button opens the image in a modal, with the arrows still looping', async ({
+  page,
+}) => {
+  const { id, featured, first, second } = await productPage(
+    page,
+    '[forum_product_gallery source="woocommerce"]'
+  );
+  await page.goto(`/?page_id=${id}`);
+
+  const gallery = page.locator('.epi-gallery');
+  const modal = page.locator('.epi-lightbox');
+  const large = modal.locator('.epi-lightbox__image');
+
+  await expect(modal).toBeHidden();
+  await gallery.locator('.epi-gallery__enlarge').click();
+
+  await expect(modal).toBeVisible();
+  await expect(modal).toHaveAttribute('role', 'dialog');
+  await expect(large).toHaveAttribute('src', new RegExp(featured.slug));
+  await expect(modal.locator('.epi-lightbox__count')).toHaveText('3 / 3');
+
+  await modal.locator('.epi-lightbox__arrow--next').click();
+  await expect(large).toHaveAttribute('src', new RegExp(first.slug));
+  await expect(modal.locator('.epi-lightbox__count')).toHaveText('1 / 3');
+
+  await page.keyboard.press('ArrowRight');
+  await expect(large).toHaveAttribute('src', new RegExp(second.slug));
+
+  // The gallery behind keeps step, so closing leaves it where the shopper was.
+  await page.keyboard.press('Escape');
+  await expect(modal).toBeHidden();
+  await expect(gallery.locator('.epi-gallery__main-image')).toHaveAttribute(
+    'src',
+    new RegExp(second.slug)
+  );
+});
+
+test('the modal fits a phone and closes on the overlay', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  const { id } = await productPage(page, '[forum_product_gallery source="woocommerce"]');
+  await page.goto(`/?page_id=${id}`);
+
+  await page.locator('.epi-gallery__enlarge').click();
+  const modal = page.locator('.epi-lightbox');
+  await expect(modal).toBeVisible();
+
+  const box = await modal.locator('.epi-lightbox__image').boundingBox();
+  expect(box.width).toBeLessThanOrEqual(375);
+  expect(box.height).toBeLessThanOrEqual(667);
+
+  await modal.locator('.epi-lightbox__overlay').click({ position: { x: 5, y: 5 } });
+  await expect(modal).toBeHidden();
+});

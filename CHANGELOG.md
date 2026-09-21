@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (the media library) as well as ePim. Pick the source on the widget.
 - Arrows on the main image that loop through every picture, and the
   [forum_product_gallery] shortcode for placing the gallery without Elementor.
+- An enlarge button on the main image that opens the pictures full size over the
+  page, with arrows, swipe and keyboard to move through them. Works on phones.
 
 ### Changed
 - The featured image opens the gallery and sits last in the thumbnail strip, so

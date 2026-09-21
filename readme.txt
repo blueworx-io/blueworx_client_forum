@@ -48,6 +48,8 @@ be placed anywhere with [forum_product_gallery].
 * Arrows on the main image loop through every picture; the featured image opens
   the gallery and sits last in the thumbnails.
 * [forum_product_gallery] places the gallery without Elementor.
+* An enlarge button opens the pictures full size over the page, with arrows,
+  swipe and keyboard to move through them.
 
 = 1.11.1 =
 * Product bullets now show exactly as typed on the product. "IP44 Rating" no

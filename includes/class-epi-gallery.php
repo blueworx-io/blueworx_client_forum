@@ -14,7 +14,8 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * Renders the gallery: the featured image on show, the thumbnails beneath,
- * and arrows that loop through the lot.
+ * arrows that loop through the lot, and an enlarge button that opens the
+ * same images in a lightbox over the page.
  *
  * @since 1.12.0
  */
@@ -116,6 +117,10 @@ final class EPI_Gallery {
 		<div class="epi-gallery epi-thumbs-<?php echo esc_attr( $thumbs ); ?>" id="<?php echo esc_attr( $gallery_id ); ?>" data-epi-gallery>
 
 			<div class="epi-gallery__stage">
+				<button type="button" class="epi-gallery__enlarge" data-epi-enlarge aria-label="<?php esc_attr_e( 'Enlarge image', 'blueworx_client_forum' ); ?>">
+					<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M11 8v6"/><path d="M8 11h6"/></svg>
+				</button>
+
 				<img
 					class="epi-gallery__main-image"
 					src="<?php echo esc_url( $main_image ); ?>"
@@ -171,6 +176,31 @@ final class EPI_Gallery {
 					<?php endforeach; ?>
 				</ul>
 			<?php endif; ?>
+
+			<?php
+			// The lightbox. Hidden until the enlarge button opens it; the script
+			// moves it to the end of the page so nothing in the theme can clip it.
+			?>
+			<div class="epi-lightbox" data-epi-lightbox role="dialog" aria-modal="true" aria-label="<?php echo esc_attr( $alt_base ); ?>" hidden>
+				<div class="epi-lightbox__overlay" data-epi-close></div>
+				<div class="epi-lightbox__panel">
+					<button type="button" class="epi-lightbox__close" data-epi-close aria-label="<?php esc_attr_e( 'Close', 'blueworx_client_forum' ); ?>">
+						<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+					</button>
+					<?php if ( count( $images ) > 1 ) : ?>
+						<button type="button" class="epi-lightbox__arrow epi-lightbox__arrow--prev" data-epi-lightbox-prev aria-label="<?php esc_attr_e( 'Previous image', 'blueworx_client_forum' ); ?>">
+							<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+						</button>
+						<button type="button" class="epi-lightbox__arrow epi-lightbox__arrow--next" data-epi-lightbox-next aria-label="<?php esc_attr_e( 'Next image', 'blueworx_client_forum' ); ?>">
+							<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+						</button>
+					<?php endif; ?>
+					<img class="epi-lightbox__image" src="<?php echo esc_url( $main_image ); ?>" alt="<?php echo esc_attr( $alt_base ); ?>" data-epi-lightbox-image decoding="async" />
+					<?php if ( count( $images ) > 1 ) : ?>
+						<p class="epi-lightbox__count" data-epi-lightbox-count aria-live="polite"><?php echo esc_html( count( $images ) . ' / ' . count( $images ) ); ?></p>
+					<?php endif; ?>
+				</div>
+			</div>
 
 		</div>
 		<?php
