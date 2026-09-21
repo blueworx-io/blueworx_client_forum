@@ -5,9 +5,12 @@
  * theme, WooCommerce, or other plugins.
  */
 
+/* Sized to match the WooCommerce gallery it replaces on the product template:
+   the picture is the full width of its column, square, edge to edge, with the
+   thumbnails a quarter width each beneath. */
 .epi-gallery {
-	--epi-gap: 16px;
-	--epi-radius: 12px;
+	--epi-gap: 15px;
+	--epi-radius: 0;
 	--epi-border: #e6e6e6;
 	--epi-active: #111111;
 	--epi-bg: #f7f7f7;
@@ -25,7 +28,7 @@
 	position: relative;
 	width: 100%;
 	overflow: hidden;
-	border: 1px solid var(--epi-border);
+	border: 0;
 	border-radius: var(--epi-radius);
 	background-color: var(--epi-bg);
 	aspect-ratio: 1 / 1;
@@ -34,7 +37,7 @@
 .epi-gallery__main-image {
 	width: 100%;
 	height: 100%;
-	object-fit: contain;
+	object-fit: cover;
 	display: block;
 	transition: opacity 0.25s ease;
 }
@@ -106,8 +109,8 @@
 	cursor: pointer;
 	overflow: hidden;
 	background-color: var(--epi-bg);
-	border: 1px solid var(--epi-border);
-	border-radius: calc(var(--epi-radius) - 4px);
+	border: 0;
+	border-radius: var(--epi-radius);
 	aspect-ratio: 1 / 1;
 	transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 	-webkit-appearance: none;
@@ -126,7 +129,7 @@
 
 .epi-gallery__thumb.is-active {
 	border-color: var(--epi-active);
-	box-shadow: 0 0 0 2px var(--epi-active);
+	box-shadow: inset 0 0 0 2px var(--epi-active);
 }
 
 .epi-gallery__thumb-image {

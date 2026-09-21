@@ -186,3 +186,18 @@ test('the modal fits a phone and closes on the overlay', async ({ page }) => {
   await modal.locator('.epi-lightbox__overlay').click({ position: { x: 5, y: 5 } });
   await expect(modal).toBeHidden();
 });
+
+// The live product template shows the picture at the full width of its column,
+// square, edge to edge — this gallery replaces it, so it must take up the same
+// space or the page shifts.
+test('the main image fills the full width of the gallery and is square', async ({ page }) => {
+  const { id } = await productPage(page, '[forum_product_gallery source="woocommerce"]');
+  await page.goto(`/?page_id=${id}`);
+
+  const gallery = await page.locator('.epi-gallery').boundingBox();
+  const main = await page.locator('.epi-gallery__main-image').boundingBox();
+
+  expect(main.width).toBe(gallery.width);
+  expect(main.height).toBe(main.width);
+  expect(main.x).toBe(gallery.x);
+});
