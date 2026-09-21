@@ -7,10 +7,11 @@
 
 /* Sized to match the WooCommerce gallery it replaces on the product template:
    the picture is the full width of its column, square, edge to edge, with the
-   thumbnails a quarter width each beneath. */
+   thumbnails a quarter width each beneath. Corners match the site's product
+   cards. */
 .epi-gallery {
 	--epi-gap: 15px;
-	--epi-radius: 0;
+	--epi-radius: 12px;
 	--epi-border: #e6e6e6;
 	--epi-active: #111111;
 	--epi-bg: #f7f7f7;
@@ -110,7 +111,7 @@
 	overflow: hidden;
 	background-color: var(--epi-bg);
 	border: 0;
-	border-radius: var(--epi-radius);
+	border-radius: calc(var(--epi-radius) - 4px);
 	aspect-ratio: 1 / 1;
 	transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 	-webkit-appearance: none;

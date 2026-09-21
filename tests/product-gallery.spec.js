@@ -200,4 +200,8 @@ test('the main image fills the full width of the gallery and is square', async (
   expect(main.width).toBe(gallery.width);
   expect(main.height).toBe(main.width);
   expect(main.x).toBe(gallery.x);
+
+  // Rounded like the site's product cards, not square.
+  await expect(page.locator('.epi-gallery__stage')).toHaveCSS('border-radius', '12px');
+  await expect(page.locator('.epi-gallery__thumb').first()).toHaveCSS('border-radius', '8px');
 });
