@@ -3,9 +3,10 @@
  * Image data provider.
  *
  * This is the SINGLE place responsible for resolving the list of image URLs
- * for a product. It builds external ePim asset URLs from the product's image
- * IDs (`_thumbnail_id` + `_product_image_gallery`) and falls back to the
- * bundled placeholder set when a product has no IDs.
+ * for a product. The product's image IDs (`_thumbnail_id` and
+ * `_product_image_gallery`) are read either as ePim asset IDs, turned into
+ * external ePim URLs, or as WordPress media, served from the media library.
+ * A product with no images falls back to the bundled placeholder set.
  *
  * @package ExternalProductImages
  */
@@ -25,41 +26,37 @@ class EPI_Images_Provider {
 	/**
 	 * Get the normalised, sanitised list of image URLs for a product.
 	 *
+	 * The list is in strip order: the gallery images first, the featured
+	 * image last. The gallery opens on the featured image, so from there the
+	 * arrows run the gallery in order and loop back round.
+	 *
 	 * Always returns at least one URL (falls back to placeholders) so the
 	 * product page can never break because images are missing.
 	 *
-	 * @param int $product_id WooCommerce product ID.
+	 * @param int    $product_id WooCommerce product ID.
+	 * @param string $source     'epim' (the IDs are ePim asset IDs) or
+	 *                           'woocommerce' (the IDs are media library items).
 	 * @return string[] List of validated image URLs.
 	 */
-	public static function get_images( $product_id ) {
+	public static function get_images( $product_id, $source = 'epim' ) {
 		$product_id = absint( $product_id );
 		$urls       = array();
 
-		/**
-		 * ------------------------------------------------------------------
-		 *  STEP 1 — BUILD URLS FROM ePim IMAGE IDS
-		 * ------------------------------------------------------------------
-		 *
-		 * Featured image (`_thumbnail_id`) first, then the gallery IDs
-		 * (`_product_image_gallery`, comma-separated). These are ePim asset
-		 * IDs, not WordPress attachments — we construct external URLs and
-		 * never import anything into the media library.
-		 */
 		if ( $product_id ) {
 			$ids = array();
+
+			$gallery = get_post_meta( $product_id, '_product_image_gallery', true );
+			if ( ! empty( $gallery ) ) {
+				$ids = explode( ',', (string) $gallery );
+			}
 
 			$thumbnail_id = get_post_meta( $product_id, '_thumbnail_id', true );
 			if ( $thumbnail_id ) {
 				$ids[] = $thumbnail_id;
 			}
 
-			$gallery = get_post_meta( $product_id, '_product_image_gallery', true );
-			if ( ! empty( $gallery ) ) {
-				$ids = array_merge( $ids, explode( ',', (string) $gallery ) );
-			}
-
 			foreach ( $ids as $id ) {
-				$url = self::build_image_url( $id );
+				$url = 'woocommerce' === $source ? self::media_image_url( $id ) : self::build_image_url( $id );
 
 				if ( '' !== $url ) {
 					$urls[] = $url;
@@ -69,14 +66,7 @@ class EPI_Images_Provider {
 			$urls = array_values( array_unique( $urls ) );
 		}
 
-		/**
-		 * ------------------------------------------------------------------
-		 *  STEP 2 — FALLBACK TO PLACEHOLDERS
-		 * ------------------------------------------------------------------
-		 *
-		 * Used now (no meta yet) and forever as a safety net when a product
-		 * has no external images. This keeps requirement #13/#14 satisfied.
-		 */
+		// Used whenever a product has no images, so the gallery never renders empty.
 		if ( empty( $urls ) ) {
 			$urls = self::get_placeholder_images();
 		}
@@ -84,10 +74,11 @@ class EPI_Images_Provider {
 		/**
 		 * Allow themes/other plugins to filter the final image list.
 		 *
-		 * @param string[] $urls       Resolved image URLs.
+		 * @param string[] $urls       Resolved image URLs, gallery first, featured last.
 		 * @param int      $product_id Product ID.
+		 * @param string   $source     'epim' or 'woocommerce'.
 		 */
-		return apply_filters( 'epi_product_images', $urls, $product_id );
+		return apply_filters( 'epi_product_images', $urls, $product_id, $source );
 	}
 
 	/**
@@ -117,6 +108,24 @@ class EPI_Images_Provider {
 	}
 
 	/**
+	 * The media library URL for a single attachment ID.
+	 *
+	 * @param int|string $id Attachment ID (stored in product meta).
+	 * @return string Escaped URL, or '' when the ID is not an image.
+	 */
+	public static function media_image_url( $id ) {
+		$id = absint( $id );
+
+		if ( ! $id || ! wp_attachment_is_image( $id ) ) {
+			return '';
+		}
+
+		$url = wp_get_attachment_image_url( $id, 'large' );
+
+		return $url ? esc_url_raw( $url ) : '';
+	}
+
+	/**
 	 * First bundled placeholder, used as the <img> onerror fallback.
 	 *
 	 * @return string
@@ -128,23 +137,11 @@ class EPI_Images_Provider {
 	}
 
 	/**
-	 * Demo image set used until product meta is wired up.
-	 *
-	 * ============================================================
-	 *  DEMO IMAGES — temporary, shown on EVERY product
-	 * ============================================================
+	 * The bundled placeholder set, shown when a product has no images.
 	 *
 	 * A fixed set of lighting-product placeholder images bundled with the
-	 * plugin (assets/images/*.svg). Themed for a wholesale lighting supplier
-	 * and fully self-contained — no external service, so they can never break
-	 * or fail to load. The same set is shown for all products on purpose: this
-	 * is purely for demoing the gallery layout/behaviour while the real product
-	 * data is prepared.
-	 *
-	 * To swap in your own demo images, drop files into assets/images/ and
-	 * replace the file names below. When the real data feed is ready, enable
-	 * STEP 1 in get_images() and these are automatically used only as a
-	 * fallback.
+	 * plugin (assets/images/*.svg). Fully self-contained — no external
+	 * service, so they can never break or fail to load.
 	 *
 	 * @return string[]
 	 */

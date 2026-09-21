@@ -4,7 +4,7 @@ Tags: woocommerce, elementor, product gallery, product images, site functionalit
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.11.1
+Stable tag: 1.12.1
 License: GPLv2 or later
 
 Site functionality plugin for Forum Lighting: one control centre to switch the WooCommerce gallery, metadata, pricing and more on or off.
@@ -12,16 +12,20 @@ Site functionality plugin for Forum Lighting: one control centre to switch the W
 == Description ==
 
 Provides a new Elementor widget, "Forum: Product Image Gallery", that renders a
-modern product gallery (main image + clickable thumbnails) without relying on
-the native WooCommerce gallery output.
+modern product gallery (main image, clickable thumbnails and looping arrows)
+without relying on the native WooCommerce gallery output. The same gallery can
+be placed anywhere with [forum_product_gallery].
 
 * Auto-detects the current WooCommerce product.
+* Pictures come from ePim (by image ID) or the WooCommerce gallery — pick the
+  source on the widget, or with source="woocommerce" on the shortcode.
+* The featured image opens the gallery and sits last in the thumbnails, so the
+  arrows run through every picture and back round.
 * Shows product and WooCommerce metadata in a searchable admin section.
 * Copies metadata to the clipboard or downloads it as a JSON file.
 * Keeps a full product change log for users, imports, and external APIs.
 * Shows when each product was last updated and who edited it.
-* Uses placeholder images now; switches to product meta image URLs later by
-  changing a single file.
+* Products with no pictures show bundled placeholders, so a page never breaks.
 * Loads CSS/JS only on pages where the widget is used.
 * Fully responsive and accessible. Vanilla JS, no jQuery dependency.
 
@@ -36,17 +40,16 @@ the native WooCommerce gallery output.
 5. Drag in the "Forum: Product Image Gallery" widget from the WooCommerce / General
    category. Save.
 
-== Switching from placeholders to product meta ==
-
-Open includes/class-epi-images-provider.php:
-
-1. Set META_KEY to your real meta key.
-2. Uncomment the "STEP 1 — READ FROM PRODUCT META" block in get_images().
-
-The stored value may be a JSON array of URLs OR a comma-separated list — both
-are handled automatically. Placeholders remain as a safety fallback.
-
 == Changelog ==
+
+= 1.12.1 =
+* The gallery widget can take its pictures from the WooCommerce gallery as well
+  as ePim. Pick the source on the widget.
+* Arrows on the main image loop through every picture; the featured image opens
+  the gallery and sits last in the thumbnails.
+* [forum_product_gallery] places the gallery without Elementor.
+* An enlarge button opens the pictures full size over the page, with arrows,
+  swipe and keyboard to move through them.
 
 = 1.11.1 =
 * Product bullets now show exactly as typed on the product. "IP44 Rating" no

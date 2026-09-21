@@ -111,12 +111,12 @@ final class EPI_Feature_Registry {
 
 			// --- Product display ----------------------------------------.
 			'gallery'                     => array(
-				'title'          => __( 'External image gallery', 'blueworx_client_forum' ),
-				'description'    => __( 'The Elementor product gallery widget (main image plus clickable thumbnails).', 'blueworx_client_forum' ),
+				'title'          => __( 'Product image gallery', 'blueworx_client_forum' ),
+				'description'    => __( 'The Elementor product gallery widget (main image, thumbnails and looping arrows), fed from ePim or the WooCommerce gallery; also placed with [forum_product_gallery].', 'blueworx_client_forum' ),
 				'group'          => 'product-display',
 				'dangerous'      => false,
 				'danger_message' => '',
-				'dependencies'   => array( 'woocommerce', 'elementor' ),
+				'dependencies'   => array(),
 				'boot'           => array( __CLASS__, 'boot_gallery' ),
 			),
 			'epim-featured-image'         => array(
@@ -364,12 +364,15 @@ final class EPI_Feature_Registry {
 	}
 
 	/**
-	 * Boot the existing Elementor gallery widget feature.
+	 * Boot the product gallery: the shortcode always, the widget when Elementor is there.
 	 *
 	 * @return void
 	 */
 	public static function boot_gallery() {
 		require_once EPI_PLUGIN_DIR . 'includes/class-epi-images-provider.php';
+		require_once EPI_PLUGIN_DIR . 'includes/class-epi-gallery.php';
+
+		EPI_Gallery::init();
 
 		add_action(
 			'elementor/widgets/register',
@@ -378,9 +381,6 @@ final class EPI_Feature_Registry {
 				$widgets_manager->register( new \EPI_Widget() );
 			}
 		);
-
-		add_action( 'elementor/frontend/after_register_styles', array( 'EPI_Plugin', 'register_gallery_assets' ) );
-		add_action( 'elementor/frontend/after_register_scripts', array( 'EPI_Plugin', 'register_gallery_assets' ) );
 	}
 
 	/**

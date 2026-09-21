@@ -5,8 +5,12 @@
  * theme, WooCommerce, or other plugins.
  */
 
+/* Sized to match the WooCommerce gallery it replaces on the product template:
+   the picture is the full width of its column, square, edge to edge, with the
+   thumbnails a quarter width each beneath. Corners match the site's product
+   cards. */
 .epi-gallery {
-	--epi-gap: 16px;
+	--epi-gap: 15px;
 	--epi-radius: 12px;
 	--epi-border: #e6e6e6;
 	--epi-active: #111111;
@@ -25,7 +29,7 @@
 	position: relative;
 	width: 100%;
 	overflow: hidden;
-	border: 1px solid var(--epi-border);
+	border: 0;
 	border-radius: var(--epi-radius);
 	background-color: var(--epi-bg);
 	aspect-ratio: 1 / 1;
@@ -34,13 +38,54 @@
 .epi-gallery__main-image {
 	width: 100%;
 	height: 100%;
-	object-fit: contain;
+	object-fit: cover;
 	display: block;
 	transition: opacity 0.25s ease;
 }
 
 .epi-gallery__main-image.is-fading {
 	opacity: 0;
+}
+
+/* Arrows ------------------------------------------------------------------ */
+.epi-gallery__arrow {
+	position: absolute;
+	top: 50%;
+	transform: translateY(-50%);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	padding: 0;
+	cursor: pointer;
+	color: var(--epi-active);
+	background-color: rgba(255, 255, 255, 0.9);
+	border: 1px solid var(--epi-border);
+	border-radius: 50%;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+	transition: background-color 0.2s ease, box-shadow 0.2s ease;
+	-webkit-appearance: none;
+	appearance: none;
+}
+
+.epi-gallery__arrow:hover,
+.epi-gallery__arrow:focus-visible {
+	background-color: #ffffff;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14);
+	outline: none;
+}
+
+.epi-gallery__arrow:focus-visible {
+	border-color: var(--epi-active);
+}
+
+.epi-gallery__arrow--prev {
+	left: 12px;
+}
+
+.epi-gallery__arrow--next {
+	right: 12px;
 }
 
 /* Thumbnail strip -------------------------------------------------------- */
@@ -65,7 +110,7 @@
 	cursor: pointer;
 	overflow: hidden;
 	background-color: var(--epi-bg);
-	border: 1px solid var(--epi-border);
+	border: 0;
 	border-radius: calc(var(--epi-radius) - 4px);
 	aspect-ratio: 1 / 1;
 	transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
@@ -85,7 +130,7 @@
 
 .epi-gallery__thumb.is-active {
 	border-color: var(--epi-active);
-	box-shadow: 0 0 0 2px var(--epi-active);
+	box-shadow: inset 0 0 0 2px var(--epi-active);
 }
 
 .epi-gallery__thumb-image {
@@ -96,16 +141,19 @@
 }
 
 /* Layout variant: thumbnails on the left -------------------------------- */
-.epi-thumbs-left .epi-gallery {
+.epi-thumbs-left .epi-gallery,
+.epi-gallery.epi-thumbs-left {
 	flex-direction: row-reverse;
 	align-items: flex-start;
 }
 
-.epi-thumbs-left .epi-gallery__stage {
+.epi-thumbs-left .epi-gallery__stage,
+.epi-gallery.epi-thumbs-left .epi-gallery__stage {
 	flex: 1 1 auto;
 }
 
-.epi-thumbs-left .epi-gallery__thumbs {
+.epi-thumbs-left .epi-gallery__thumbs,
+.epi-gallery.epi-thumbs-left .epi-gallery__thumbs {
 	flex: 0 0 96px;
 	grid-template-columns: 1fr;
 	width: 96px;
@@ -118,11 +166,13 @@
 	}
 
 	/* Force the left-thumbnail variant back to a stacked layout on mobile. */
-	.epi-thumbs-left .epi-gallery {
+	.epi-thumbs-left .epi-gallery,
+.epi-gallery.epi-thumbs-left {
 		flex-direction: column;
 	}
 
-	.epi-thumbs-left .epi-gallery__thumbs {
+	.epi-thumbs-left .epi-gallery__thumbs,
+.epi-gallery.epi-thumbs-left .epi-gallery__thumbs {
 		flex: 1 1 auto;
 		width: 100%;
 		grid-template-columns: repeat(4, 1fr);
@@ -136,5 +186,196 @@
 
 	.epi-gallery__thumbs {
 		grid-template-columns: repeat(3, 1fr);
+	}
+}
+
+/* Enlarge button ---------------------------------------------------------- */
+.epi-gallery__enlarge {
+	position: absolute;
+	top: 12px;
+	right: 12px;
+	z-index: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	padding: 0;
+	cursor: pointer;
+	color: var(--epi-active);
+	background-color: rgba(255, 255, 255, 0.9);
+	border: 1px solid var(--epi-border);
+	border-radius: 50%;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+	transition: background-color 0.2s ease, box-shadow 0.2s ease;
+	-webkit-appearance: none;
+	appearance: none;
+}
+
+.epi-gallery__enlarge:hover,
+.epi-gallery__enlarge:focus-visible {
+	background-color: #ffffff;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14);
+	outline: none;
+}
+
+.epi-gallery__enlarge:focus-visible {
+	border-color: var(--epi-active);
+}
+
+/* Lightbox ----------------------------------------------------------------- */
+/* The script moves this to the end of <body>, so it cannot inherit the
+   gallery's custom properties and carries its own. */
+.epi-lightbox {
+	--epi-lightbox-gap: 16px;
+	--epi-lightbox-control: 44px;
+
+	position: fixed;
+	inset: 0;
+	z-index: 100000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: var(--epi-lightbox-gap);
+	box-sizing: border-box;
+}
+
+/* `hidden` must win over the flex display above, or the dialog never closes. */
+.epi-lightbox[hidden] {
+	display: none;
+}
+
+.epi-lightbox__overlay {
+	position: absolute;
+	inset: 0;
+	background-color: rgba(0, 0, 0, 0.85);
+	cursor: pointer;
+}
+
+.epi-lightbox__panel {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	max-width: 100%;
+	max-height: 100%;
+}
+
+.epi-lightbox__image {
+	display: block;
+	max-width: calc(100vw - 2 * var(--epi-lightbox-gap));
+	max-height: calc(100vh - 2 * var(--epi-lightbox-gap));
+	width: auto;
+	height: auto;
+	object-fit: contain;
+	border-radius: 8px;
+	background-color: #ffffff;
+	user-select: none;
+	-webkit-user-drag: none;
+}
+
+.epi-lightbox__close,
+.epi-lightbox__arrow {
+	position: absolute;
+	z-index: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: var(--epi-lightbox-control);
+	height: var(--epi-lightbox-control);
+	padding: 0;
+	cursor: pointer;
+	color: #111111;
+	background-color: rgba(255, 255, 255, 0.92);
+	border: 0;
+	border-radius: 50%;
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+	transition: background-color 0.2s ease, transform 0.2s ease;
+	-webkit-appearance: none;
+	appearance: none;
+}
+
+.epi-lightbox__close:hover,
+.epi-lightbox__close:focus-visible,
+.epi-lightbox__arrow:hover,
+.epi-lightbox__arrow:focus-visible {
+	background-color: #ffffff;
+	transform: scale(1.06);
+	outline: none;
+}
+
+.epi-lightbox__close:focus-visible,
+.epi-lightbox__arrow:focus-visible {
+	box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.6), 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.epi-lightbox__close {
+	top: 12px;
+	right: 12px;
+}
+
+.epi-lightbox__arrow--prev {
+	left: 12px;
+	top: 50%;
+	transform: translateY(-50%);
+}
+
+.epi-lightbox__arrow--next {
+	right: 12px;
+	top: 50%;
+	transform: translateY(-50%);
+}
+
+.epi-lightbox__arrow--prev:hover,
+.epi-lightbox__arrow--prev:focus-visible,
+.epi-lightbox__arrow--next:hover,
+.epi-lightbox__arrow--next:focus-visible {
+	transform: translateY(-50%) scale(1.06);
+}
+
+.epi-lightbox__count {
+	position: absolute;
+	left: 50%;
+	bottom: 12px;
+	transform: translateX(-50%);
+	margin: 0;
+	padding: 4px 12px;
+	font-size: 13px;
+	line-height: 1.4;
+	color: #ffffff;
+	background-color: rgba(0, 0, 0, 0.6);
+	border-radius: 999px;
+	pointer-events: none;
+}
+
+/* The page behind must not scroll while the lightbox is open. */
+body.epi-lightbox-open {
+	overflow: hidden;
+}
+
+@media (max-width: 767px) {
+	.epi-lightbox {
+		--epi-lightbox-gap: 8px;
+		--epi-lightbox-control: 40px;
+	}
+
+	.epi-gallery__enlarge {
+		top: 8px;
+		right: 8px;
+		width: 36px;
+		height: 36px;
+	}
+
+	.epi-lightbox__close {
+		top: 8px;
+		right: 8px;
+	}
+
+	.epi-lightbox__arrow--prev {
+		left: 8px;
+	}
+
+	.epi-lightbox__arrow--next {
+		right: 8px;
 	}
 }
