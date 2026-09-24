@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.12.2]
+
+### Fixed
+- The featured image is now the first thumbnail in the gallery, not the last, so
+  the last gallery picture (the dimensional drawing) comes last.
+
 ## [1.12.1]
 
 ### Added

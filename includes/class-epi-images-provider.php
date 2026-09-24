@@ -26,9 +26,9 @@ class EPI_Images_Provider {
 	/**
 	 * Get the normalised, sanitised list of image URLs for a product.
 	 *
-	 * The list is in strip order: the gallery images first, the featured
-	 * image last. The gallery opens on the featured image, so from there the
-	 * arrows run the gallery in order and loop back round.
+	 * The list is in strip order: the featured image first, then the gallery
+	 * images in the order they were set, so whatever sits last in the gallery
+	 * (the dimensional drawing) comes last.
 	 *
 	 * Always returns at least one URL (falls back to placeholders) so the
 	 * product page can never break because images are missing.
@@ -45,14 +45,14 @@ class EPI_Images_Provider {
 		if ( $product_id ) {
 			$ids = array();
 
-			$gallery = get_post_meta( $product_id, '_product_image_gallery', true );
-			if ( ! empty( $gallery ) ) {
-				$ids = explode( ',', (string) $gallery );
-			}
-
 			$thumbnail_id = get_post_meta( $product_id, '_thumbnail_id', true );
 			if ( $thumbnail_id ) {
 				$ids[] = $thumbnail_id;
+			}
+
+			$gallery = get_post_meta( $product_id, '_product_image_gallery', true );
+			if ( ! empty( $gallery ) ) {
+				$ids = array_merge( $ids, explode( ',', (string) $gallery ) );
 			}
 
 			foreach ( $ids as $id ) {
@@ -74,7 +74,7 @@ class EPI_Images_Provider {
 		/**
 		 * Allow themes/other plugins to filter the final image list.
 		 *
-		 * @param string[] $urls       Resolved image URLs, gallery first, featured last.
+		 * @param string[] $urls       Resolved image URLs, featured first, then the gallery.
 		 * @param int      $product_id Product ID.
 		 * @param string   $source     'epim' or 'woocommerce'.
 		 */
