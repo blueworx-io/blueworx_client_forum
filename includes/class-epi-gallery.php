@@ -90,7 +90,7 @@ final class EPI_Gallery {
 		$source   = 'woocommerce' === $settings['source'] ? 'woocommerce' : 'epim';
 		$thumbs   = 'left' === $settings['thumb_position'] ? 'left' : 'bottom';
 
-		// Gallery first, featured last — and the featured one is what opens.
+		// Featured first, then the gallery — and the featured one is what opens.
 		$images = EPI_Images_Provider::get_images( $product_id, $source );
 
 		if ( empty( $images ) ) {
@@ -100,7 +100,7 @@ final class EPI_Gallery {
 		wp_enqueue_style( 'epi-gallery' );
 		wp_enqueue_script( 'epi-gallery' );
 
-		$start      = count( $images ) - 1;
+		$start      = 0;
 		$main_image = $images[ $start ];
 		$gallery_id = 'epi-gallery-' . wp_unique_id();
 
@@ -197,7 +197,7 @@ final class EPI_Gallery {
 					<?php endif; ?>
 					<img class="epi-lightbox__image" src="<?php echo esc_url( $main_image ); ?>" alt="<?php echo esc_attr( $alt_base ); ?>" data-epi-lightbox-image decoding="async" />
 					<?php if ( count( $images ) > 1 ) : ?>
-						<p class="epi-lightbox__count" data-epi-lightbox-count aria-live="polite"><?php echo esc_html( count( $images ) . ' / ' . count( $images ) ); ?></p>
+						<p class="epi-lightbox__count" data-epi-lightbox-count aria-live="polite"><?php echo esc_html( ( $start + 1 ) . ' / ' . count( $images ) ); ?></p>
 					<?php endif; ?>
 				</div>
 			</div>

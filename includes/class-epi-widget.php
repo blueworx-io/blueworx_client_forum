@@ -113,7 +113,7 @@ class EPI_Widget extends Widget_Base {
 					'epim'        => esc_html__( 'ePim (live, by image ID)', 'blueworx_client_forum' ),
 					'woocommerce' => esc_html__( 'WooCommerce gallery (media library)', 'blueworx_client_forum' ),
 				),
-				'description' => esc_html__( 'Either way the featured image opens the gallery and sits last in the thumbnails, so the arrows loop through every image.', 'blueworx_client_forum' ),
+				'description' => esc_html__( 'Either way the featured image opens the gallery and sits first in the thumbnails, followed by the gallery in its own order. The arrows loop through every image.', 'blueworx_client_forum' ),
 			)
 		);
 

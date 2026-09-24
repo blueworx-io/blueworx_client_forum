@@ -4,7 +4,7 @@ Tags: woocommerce, elementor, product gallery, product images, site functionalit
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.12.1
+Stable tag: 1.12.2
 License: GPLv2 or later
 
 Site functionality plugin for Forum Lighting: one control centre to switch the WooCommerce gallery, metadata, pricing and more on or off.
@@ -19,8 +19,8 @@ be placed anywhere with [forum_product_gallery].
 * Auto-detects the current WooCommerce product.
 * Pictures come from ePim (by image ID) or the WooCommerce gallery — pick the
   source on the widget, or with source="woocommerce" on the shortcode.
-* The featured image opens the gallery and sits last in the thumbnails, so the
-  arrows run through every picture and back round.
+* The featured image opens the gallery and sits first in the thumbnails,
+  followed by the gallery in its own order.
 * Shows product and WooCommerce metadata in a searchable admin section.
 * Copies metadata to the clipboard or downloads it as a JSON file.
 * Keeps a full product change log for users, imports, and external APIs.
@@ -41,6 +41,10 @@ be placed anywhere with [forum_product_gallery].
    category. Save.
 
 == Changelog ==
+
+= 1.12.2 =
+* The featured image is now the first thumbnail in the gallery, not the last,
+  so the last gallery picture (the dimensional drawing) comes last.
 
 = 1.12.1 =
 * The gallery widget can take its pictures from the WooCommerce gallery as well

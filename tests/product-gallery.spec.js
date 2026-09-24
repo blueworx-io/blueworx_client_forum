@@ -9,9 +9,9 @@ const { loginAsAdmin } = require('./helpers');
 // featured image where a product does, and the gallery meta is opened to REST
 // by a test-only mu-plugin (tests/support/) that the spec installs itself.
 //
-// The rule under test: the featured image is what the shopper sees first, but
-// in the thumbnail strip it comes last, so stepping through the images from it
-// runs the gallery and then loops back round.
+// The rule under test: the featured image comes first, both on show and in the
+// thumbnail strip, then the gallery in its own order — so whatever sits last in
+// the gallery (the dimensional drawing) comes last.
 
 const SUPPORT = path.resolve(__dirname, 'support', 'epi-test-gallery-meta.php');
 const MU_DIR = path.resolve(__dirname, '..', '.wp-test', 'wp', 'wp-content', 'mu-plugins');
@@ -73,7 +73,7 @@ async function productPage(page, content) {
   return { id: host.id, featured, first, second };
 }
 
-test('WooCommerce source shows the featured image first and lists it last in the thumbnails', async ({
+test('WooCommerce source shows the featured image first and lists it first in the thumbnails', async ({
   page,
 }) => {
   const { id, featured, first, second } = await productPage(
@@ -88,10 +88,10 @@ test('WooCommerce source shows the featured image first and lists it last in the
 
   await expect(main).toHaveAttribute('src', new RegExp(featured.slug));
   await expect(thumbs).toHaveCount(3);
-  await expect(thumbs.nth(0)).toHaveAttribute('data-epi-full', new RegExp(first.slug));
-  await expect(thumbs.nth(1)).toHaveAttribute('data-epi-full', new RegExp(second.slug));
-  await expect(thumbs.nth(2)).toHaveAttribute('data-epi-full', new RegExp(featured.slug));
-  await expect(thumbs.nth(2)).toHaveClass(/is-active/);
+  await expect(thumbs.nth(0)).toHaveAttribute('data-epi-full', new RegExp(featured.slug));
+  await expect(thumbs.nth(0)).toHaveClass(/is-active/);
+  await expect(thumbs.nth(1)).toHaveAttribute('data-epi-full', new RegExp(first.slug));
+  await expect(thumbs.nth(2)).toHaveAttribute('data-epi-full', new RegExp(second.slug));
 });
 
 test('the arrows loop through every image and back round to the featured one', async ({ page }) => {
@@ -113,6 +113,7 @@ test('the arrows loop through every image and back round to the featured one', a
   await next.click();
   await expect(main).toHaveAttribute('src', new RegExp(featured.slug));
 
+  // Back from the first image wraps round to the last.
   await prev.click();
   await expect(main).toHaveAttribute('src', new RegExp(second.slug));
 });
@@ -128,9 +129,9 @@ test('ePim source builds the same order from the ids as ePim asset URLs', async 
   const epim = (media) => `https://epim.online/webproduct/assetimage/${media.id}.jpg`;
 
   await expect(thumbs).toHaveCount(3);
-  await expect(thumbs.nth(0)).toHaveAttribute('data-epi-full', epim(first));
-  await expect(thumbs.nth(1)).toHaveAttribute('data-epi-full', epim(second));
-  await expect(thumbs.nth(2)).toHaveAttribute('data-epi-full', epim(featured));
+  await expect(thumbs.nth(0)).toHaveAttribute('data-epi-full', epim(featured));
+  await expect(thumbs.nth(1)).toHaveAttribute('data-epi-full', epim(first));
+  await expect(thumbs.nth(2)).toHaveAttribute('data-epi-full', epim(second));
 });
 
 test('the enlarge button opens the image in a modal, with the arrows still looping', async ({
@@ -152,11 +153,11 @@ test('the enlarge button opens the image in a modal, with the arrows still loopi
   await expect(modal).toBeVisible();
   await expect(modal).toHaveAttribute('role', 'dialog');
   await expect(large).toHaveAttribute('src', new RegExp(featured.slug));
-  await expect(modal.locator('.epi-lightbox__count')).toHaveText('3 / 3');
+  await expect(modal.locator('.epi-lightbox__count')).toHaveText('1 / 3');
 
   await modal.locator('.epi-lightbox__arrow--next').click();
   await expect(large).toHaveAttribute('src', new RegExp(first.slug));
-  await expect(modal.locator('.epi-lightbox__count')).toHaveText('1 / 3');
+  await expect(modal.locator('.epi-lightbox__count')).toHaveText('2 / 3');
 
   await page.keyboard.press('ArrowRight');
   await expect(large).toHaveAttribute('src', new RegExp(second.slug));
