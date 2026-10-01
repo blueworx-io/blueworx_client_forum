@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.12.3]
+
+### Fixed
+- The product change log and meta viewer no longer include SureRank's SEO checks,
+  so the log only shows real product changes. Old SureRank entries are cleared
+  when the update installs.
+
 ## [1.12.2]
 
 ### Fixed

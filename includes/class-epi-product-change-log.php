@@ -20,7 +20,7 @@ final class EPI_Product_Change_Log {
 	/**
 	 * Database schema version.
 	 */
-	const DB_VERSION = '1.0';
+	const DB_VERSION = '1.1';
 
 	/**
 	 * Values captured immediately before a metadata change.
@@ -83,7 +83,32 @@ final class EPI_Product_Change_Log {
 	public static function maybe_upgrade() {
 		if ( self::DB_VERSION !== get_option( 'epi_change_log_db_version' ) ) {
 			self::install();
+			self::delete_seo_plugin_rows();
 		}
+	}
+
+	/**
+	 * Remove rows recorded for SureRank's fields before they were excluded.
+	 *
+	 * SureRank rewrites its page checks on every scan, so the log filled with
+	 * its scores rather than product changes.
+	 *
+	 * @return void
+	 */
+	private static function delete_seo_plugin_rows() {
+		global $wpdb;
+
+		$table = self::get_table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- One-off cleanup of the plugin's own change-log table; table name is built from $wpdb->prefix.
+		$wpdb->query(
+			$wpdb->prepare(
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name derived from $wpdb->prefix; the patterns are bound via prepare().
+				"DELETE FROM {$table} WHERE field_type = 'meta' AND ( field_name LIKE %s OR field_name LIKE %s )",
+				$wpdb->esc_like( 'surerank_' ) . '%',
+				$wpdb->esc_like( '_surerank_' ) . '%'
+			)
+		);
 	}
 
 	/**
