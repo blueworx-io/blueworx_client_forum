@@ -3,7 +3,7 @@
  * Plugin Name:       BlueWorx Lab | Forum Lighting
  * Plugin URI:        https://blueworx.io/
  * Description:        Site functionality plugin for Forum Lighting. A control centre under Settings > BlueWorx Lab switches features on or off, including the WooCommerce product gallery, metadata tools, pricing rules and more.
- * Version:           1.12.2
+ * Version:           1.13.0
  * Author:            BlueWorx
  * Author URI:        https://blueworx.io/
  * Text Domain:       blueworx_client_forum
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Core plugin constants.
  */
-define( 'EPI_VERSION', '1.12.2' );
+define( 'EPI_VERSION', '1.13.0' );
 define( 'EPI_PLUGIN_FILE', __FILE__ );
 define( 'EPI_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'EPI_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -149,6 +149,7 @@ final class EPI_Plugin {
 			require_once EPI_PLUGIN_DIR . 'includes/class-epi-product-change-log.php';
 			require_once EPI_PLUGIN_DIR . 'includes/class-epi-product-meta.php';
 			EPI_Product_Change_Log::maybe_upgrade();
+			EPI_Product_Change_Log::register_always();
 		} else {
 			// The notice and the design system it needs are both registered by
 			// the Lab page. Keeping every admin hook in that one file is what

@@ -486,6 +486,8 @@ final class EPI_Product_Meta {
 			'_aioseo_',
 			'_rank_math_',
 			'rank_math_',
+			'surerank_',
+			'_surerank_',
 			'_oembed_',
 		);
 		$included          = ! in_array( $meta_key, $excluded_keys, true );
