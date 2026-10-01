@@ -43,6 +43,13 @@ final class EPI_Change_Fields {
 	 * @return array Meta key => label.
 	 */
 	public static function meta_fields() {
+		// Built once per request: every post meta write on the site asks.
+		static $fields = null;
+
+		if ( null !== $fields ) {
+			return $fields;
+		}
+
 		$fields = array(
 			'_sku'                   => __( 'SKU', 'blueworx_client_forum' ),
 			'_global_unique_id'      => __( 'GTIN', 'blueworx_client_forum' ),
@@ -85,7 +92,9 @@ final class EPI_Change_Fields {
 		 *
 		 * @param array $fields Meta key => readable label.
 		 */
-		return (array) apply_filters( 'epi_change_log_meta_fields', $fields );
+		$fields = (array) apply_filters( 'epi_change_log_meta_fields', $fields );
+
+		return $fields;
 	}
 
 	/**
@@ -197,19 +206,24 @@ final class EPI_Change_Fields {
 			$data[ 'meta:' . $key ] = 1 === count( $values ) ? $values[0] : $values;
 		}
 
-		foreach ( get_object_taxonomies( (string) get_post_type( $object_id ) ) as $taxonomy ) {
-			if ( ! self::is_tracked_taxonomy( $taxonomy ) ) {
-				continue;
-			}
+		// One query for every tracked taxonomy: a shop has a global attribute
+		// taxonomy per attribute, and one query each adds up on a bulk push.
+		$taxonomies = array_values(
+			array_filter(
+				get_object_taxonomies( (string) get_post_type( $object_id ) ),
+				array( __CLASS__, 'is_tracked_taxonomy' )
+			)
+		);
+		$terms      = $taxonomies ? wp_get_object_terms( $object_id, $taxonomies ) : array();
+		$names      = array();
 
-			$names = wp_get_object_terms( $object_id, $taxonomy, array( 'fields' => 'names' ) );
+		foreach ( is_wp_error( $terms ) ? array() : $terms as $term ) {
+			$names[ $term->taxonomy ][] = $term->name;
+		}
 
-			if ( is_wp_error( $names ) || empty( $names ) ) {
-				continue;
-			}
-
-			natcasesort( $names );
-			$data[ 'taxonomy:' . $taxonomy ] = array_values( $names );
+		foreach ( $names as $taxonomy => $taxonomy_names ) {
+			natcasesort( $taxonomy_names );
+			$data[ 'taxonomy:' . $taxonomy ] = array_values( $taxonomy_names );
 		}
 
 		ksort( $data );

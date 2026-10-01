@@ -96,17 +96,17 @@ final class EPI_Change_Store {
 	}
 
 	/**
-	 * Empty the recorded updates.
+	 * Drop the recorded updates table; install() makes it again.
 	 *
 	 * @return void
 	 */
-	public static function clear_changes() {
+	public static function drop_changes() {
 		global $wpdb;
 
 		$table = self::changes_table();
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- The plugin's own table; name built from $wpdb->prefix.
-		if ( false === $wpdb->query( "DELETE FROM {$table}" ) ) {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- The plugin's own table; name built from $wpdb->prefix.
+		if ( false === $wpdb->query( "DROP TABLE IF EXISTS {$table}" ) ) {
 			self::report( 'clearing old history', 0 );
 		}
 	}

@@ -228,3 +228,94 @@ test('the product screen shows the last updates and who made them', async ({ pag
   await expect(box).toContainText('ON-SCREEN');
   await expect(box).not.toContainText('Fatal error');
 });
+
+// Found in review: things real WooCommerce does that the specs above never did.
+
+test('a change WooCommerce makes late in the request still refreshes the stored copy', async ({
+  page,
+  request,
+}) => {
+  const id = await createProduct(page, 'Late sync product');
+
+  // WooCommerce syncs a variation's parent at shutdown; nobody records it, but
+  // the next real update must start from it.
+  await ok(
+    await request.post('/wp-json/epi-test/v1/write-meta', {
+      data: { id, key: '_sku', value: 'LATE', deferred: true },
+    }),
+    'deferred write'
+  );
+  await epimSave(request, id, { _sku: 'EPIM-LATE' });
+
+  const [latest] = await updates(page, id);
+  expect(latest.fields).toEqual([
+    expect.objectContaining({ field_name: '_sku', before: 'LATE', after: 'EPIM-LATE' }),
+  ]);
+});
+
+test('a background job started from wp-admin is not recorded as staff', async ({ page }) => {
+  const id = await createProduct(page, 'Sale ends product');
+
+  // Action Scheduler runs jobs such as "sale ended" with the admin's cookies.
+  await ok(
+    await page.request.post('/wp-json/epi-test/v1/write-meta', {
+      headers: { 'X-WP-Nonce': nonce },
+      data: { id, key: '_sale_price', value: '9', background: true },
+    }),
+    'background write'
+  );
+
+  expect(await updates(page, id)).toHaveLength(1);
+});
+
+test('a key holder who cannot edit products is not ePim', async ({ page, request }) => {
+  const id = await createProduct(page, 'Viewer product');
+
+  await ok(
+    await request.post('/wp-json/epi-test/v1/write-meta', {
+      headers: { 'X-EPI-Test-Key': 'viewer-test-key' },
+      data: { id, key: '_sku', value: 'VIEWER' },
+    }),
+    'viewer write'
+  );
+
+  expect(await updates(page, id)).toHaveLength(1);
+});
+
+test('the first stock change on a product with no stored copy keeps its "before"', async ({
+  page,
+}) => {
+  // Made while logging is off, so the product has no stored copy yet — as
+  // every product will be the day this ships.
+  await setLogging(page, false);
+  const id = await createProduct(page, 'Stock product');
+  await staffWriteMeta(page, id, '_manage_stock', 'yes');
+  await staffWriteMeta(page, id, '_stock', '5');
+  await setLogging(page, true);
+
+  await ok(
+    await page.request.post('/wp-json/epi-test/v1/set-stock', {
+      headers: { 'X-WP-Nonce': nonce },
+      data: { id, stock: 3 },
+    }),
+    'set stock'
+  );
+
+  const [latest] = await updates(page, id);
+  expect(latest.fields).toEqual(
+    expect.arrayContaining([expect.objectContaining({ field_name: '_stock', before: '5', after: '3' })])
+  );
+});
+
+// Last: the upgrade empties the whole log.
+test('upgrading from an older change log clears its history and finishes', async ({ page }) => {
+  const result = await ok(
+    await page.request.post('/wp-json/epi-test/v1/upgrade-from', {
+      headers: { 'X-WP-Nonce': nonce },
+      data: { version: '1.1' },
+    }),
+    'upgrade'
+  );
+
+  expect(result).toEqual({ version: '2.0', rows: 0 });
+});

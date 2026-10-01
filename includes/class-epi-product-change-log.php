@@ -38,7 +38,8 @@ final class EPI_Product_Change_Log {
 	/**
 	 * Products touched in this request.
 	 *
-	 * @var array Object ID => array( 'before' => array, 'taken_at' => int ). taken_at 0 means no stored copy.
+	 * @var array Object ID => array( 'source' => string, 'before' => array, 'taken_at' => int ).
+	 *            taken_at 0 means no stored copy.
 	 */
 	private static $touched = array();
 
@@ -58,13 +59,16 @@ final class EPI_Product_Change_Log {
 	public static function install() {
 		$installed = (string) get_option( 'epi_change_log_db_version', '' );
 
-		EPI_Change_Store::install();
+		// Saved first, so requests arriving mid-upgrade do not start their own.
+		update_option( 'epi_change_log_db_version', self::DB_VERSION, false );
 
+		// The old table can be large; dropping it is instant where deleting
+		// its rows is not.
 		if ( '' !== $installed && version_compare( $installed, '2.0', '<' ) ) {
-			EPI_Change_Store::clear_changes();
+			EPI_Change_Store::drop_changes();
 		}
 
-		update_option( 'epi_change_log_db_version', self::DB_VERSION, false );
+		EPI_Change_Store::install();
 	}
 
 	/**
@@ -100,9 +104,12 @@ final class EPI_Product_Change_Log {
 		add_action( 'pre_post_update', array( __CLASS__, 'before_post_write' ) );
 		add_action( 'wp_insert_post', array( __CLASS__, 'after_post_insert' ), 10, 3 );
 		add_action( 'set_object_terms', array( __CLASS__, 'after_terms_set' ), 10, 6 );
-		add_action( 'woocommerce_product_set_stock', array( __CLASS__, 'after_stock_set' ) );
-		add_action( 'woocommerce_variation_set_stock', array( __CLASS__, 'after_stock_set' ) );
-		add_action( 'shutdown', array( __CLASS__, 'flush' ), 1 );
+		add_action( 'woocommerce_product_before_set_stock', array( __CLASS__, 'on_stock_change' ) );
+		add_action( 'woocommerce_variation_before_set_stock', array( __CLASS__, 'on_stock_change' ) );
+		add_action( 'woocommerce_product_set_stock', array( __CLASS__, 'on_stock_change' ) );
+		add_action( 'woocommerce_variation_set_stock', array( __CLASS__, 'on_stock_change' ) );
+		// Late: WooCommerce syncs a variation's parent at shutdown priority 10.
+		add_action( 'shutdown', array( __CLASS__, 'flush' ), 100 );
 		add_action( 'add_meta_boxes_product', array( __CLASS__, 'add_meta_box' ) );
 	}
 
@@ -155,6 +162,7 @@ final class EPI_Product_Change_Log {
 	public static function after_post_insert( $post_id, $post, $update ) {
 		if ( ! $update && EPI_Change_Fields::product_id( $post_id ) ) {
 			self::$touched[ absint( $post_id ) ] = array(
+				'source'   => EPI_Change_Source::current( $post_id ),
 				'before'   => array(),
 				'taken_at' => 0,
 			);
@@ -182,7 +190,7 @@ final class EPI_Product_Change_Log {
 
 		self::touch( $object_id );
 
-		if ( ! isset( self::$touched[ $object_id ] ) || self::$touched[ $object_id ]['taken_at'] ) {
+		if ( ! isset( self::$touched[ $object_id ] ) || self::$touched[ $object_id ]['taken_at'] || EPI_Change_Source::IGNORED === self::$touched[ $object_id ]['source'] ) {
 			return;
 		}
 
@@ -196,12 +204,14 @@ final class EPI_Product_Change_Log {
 	}
 
 	/**
-	 * WooCommerce writes stock with plain SQL, past the meta hooks.
+	 * WooCommerce writes stock with plain SQL, past the meta hooks, between
+	 * a "before" and an "after" hook. Both mark the product touched; the
+	 * "before" one is what catches the old stock on a product with no copy.
 	 *
 	 * @param WC_Product $product Product or variation.
 	 * @return void
 	 */
-	public static function after_stock_set( $product ) {
+	public static function on_stock_change( $product ) {
 		if ( is_object( $product ) && method_exists( $product, 'get_id' ) ) {
 			self::touch( $product->get_id() );
 		}
@@ -270,7 +280,7 @@ final class EPI_Product_Change_Log {
 				continue;
 			}
 
-			$source = EPI_Change_Source::current( $object_id );
+			$source = $state['source'];
 
 			if ( EPI_Change_Source::IGNORED === $source ) {
 				continue;
@@ -501,14 +511,29 @@ final class EPI_Product_Change_Log {
 			return;
 		}
 
+		$source = EPI_Change_Source::current( $object_id );
+
+		// Nothing will be recorded, so there is no "before" to find; the copy
+		// is still refreshed at the end of the request.
+		if ( EPI_Change_Source::IGNORED === $source ) {
+			self::$touched[ $object_id ] = array(
+				'source'   => $source,
+				'before'   => array(),
+				'taken_at' => 0,
+			);
+			return;
+		}
+
 		$copy = EPI_Change_Store::get_snapshot( $object_id );
 
 		self::$touched[ $object_id ] = $copy
 			? array(
+				'source'   => $source,
 				'before'   => $copy['data'],
 				'taken_at' => $copy['taken_at'],
 			)
 			: array(
+				'source'   => $source,
 				'before'   => EPI_Change_Fields::read( $object_id ),
 				'taken_at' => 0,
 			);
