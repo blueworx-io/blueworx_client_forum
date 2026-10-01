@@ -28,7 +28,7 @@ those two sources is missed, and nothing else gets in.
 - **Only product data is tracked.** Fixed list below. SEO plugins (SureRank, Yoast and so on),
   sales totals, review counts, edit locks and any other plugin's fields are ignored.
 - **The on/off switch stays** in the plugin settings. If changes happen while it is off, the
-  next recorded update says "Includes changes made while logging was off".
+  next recorded update says "May include changes made while logging was off".
 - **Existing history is cleared** when this ships. It is mostly SureRank noise and the old
   method could miss changes, so it cannot be trusted.
 
@@ -71,7 +71,7 @@ A filter lets a developer add a field to the list if ePim starts sending somethi
 6. **Pruning.** After writing an update, anything older than the product's two most recent
    updates is deleted.
 7. **Logging off.** When logging is switched back on, the time is saved. A stored copy taken
-   before that time may be out of date, so the next update recorded against it is flagged.
+   before that time may be out of date, so the next update recorded against it is flagged "May include changes made while logging was off" (it cannot know for sure).
 8. **Deleted products.** Moving to the bin is a status change and is recorded. Permanently
    deleting a product removes its stored copy and its log.
 
