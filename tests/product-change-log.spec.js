@@ -210,3 +210,21 @@ test('permanently deleting a product removes its log', async ({ page }) => {
 
   expect(await updates(page, id)).toEqual([]);
 });
+
+test('the product screen shows the last updates and who made them', async ({ page, request }) => {
+  const id = await createProduct(page, 'Screen product');
+  await epimSave(request, id, { _sku: 'ON-SCREEN' });
+
+  // The edit screen pulls a lot through the harness's single-threaded server;
+  // the box's markup is what matters, not the load event.
+  await page.goto(`/wp-admin/post.php?post=${id}&action=edit`, { waitUntil: 'domcontentloaded' });
+
+  const box = page.locator('#epi-product-change-log');
+  const groups = box.locator('tr.bw-table__group');
+
+  await expect(groups).toHaveCount(2);
+  await expect(groups.first()).toContainText('ePim External API');
+  await expect(box).toContainText('SKU');
+  await expect(box).toContainText('ON-SCREEN');
+  await expect(box).not.toContainText('Fatal error');
+});
