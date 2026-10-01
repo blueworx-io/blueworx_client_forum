@@ -20,6 +20,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 $epi_options = array(
 	'epi_feature_flags',
 	'epi_change_log_db_version',
+	'epi_change_log_resumed_at',
 	'one_time_wc_product_image_purge_plan',
 	'epi_forum_page_rewrites',
 	'epi_forum_page_seeded',
@@ -31,6 +32,8 @@ foreach ( $epi_options as $epi_option ) {
 
 global $wpdb;
 
-// The plugin's own change-log table.
+// The plugin's own change-log tables.
 // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Dropping the plugin's own table on uninstall; the name is built from $wpdb->prefix.
 $wpdb->query( 'DROP TABLE IF EXISTS ' . $wpdb->prefix . 'epi_product_changes' );
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Dropping the plugin's own table on uninstall; the name is built from $wpdb->prefix.
+$wpdb->query( 'DROP TABLE IF EXISTS ' . $wpdb->prefix . 'epi_product_snapshots' );

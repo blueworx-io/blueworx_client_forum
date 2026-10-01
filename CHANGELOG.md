@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.13.0]
+
+### Changed
+- The product change log now keeps each product's last two updates from ePim or
+  from staff, showing every changed field before and after. ePim shows as
+  "ePim External API". Orders, other plugins and scheduled tasks are no longer
+  recorded, and older history is cleared when the update installs.
+
 ## [1.12.3]
 
 ### Fixed

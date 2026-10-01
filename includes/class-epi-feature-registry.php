@@ -273,7 +273,7 @@ final class EPI_Feature_Registry {
 			),
 			'change-log'                  => array(
 				'title'          => __( 'Product change log', 'blueworx_client_forum' ),
-				'description'    => __( 'Records and displays an audit trail of product changes (users, imports, APIs).', 'blueworx_client_forum' ),
+				'description'    => __( 'Keeps the last two updates to each product from ePim or from staff, showing each changed field before and after.', 'blueworx_client_forum' ),
 				'group'          => 'admin-product',
 				'dangerous'      => false,
 				'danger_message' => '',
