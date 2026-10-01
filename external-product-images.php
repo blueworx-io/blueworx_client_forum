@@ -149,6 +149,7 @@ final class EPI_Plugin {
 			require_once EPI_PLUGIN_DIR . 'includes/class-epi-product-change-log.php';
 			require_once EPI_PLUGIN_DIR . 'includes/class-epi-product-meta.php';
 			EPI_Product_Change_Log::maybe_upgrade();
+			EPI_Product_Change_Log::register_always();
 		} else {
 			// The notice and the design system it needs are both registered by
 			// the Lab page. Keeping every admin hook in that one file is what

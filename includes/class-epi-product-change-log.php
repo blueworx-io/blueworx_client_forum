@@ -2,6 +2,9 @@
 /**
  * WooCommerce product change log.
  *
+ * Keeps each product's last two updates from ePim or from staff, field by
+ * field, with the value before and after.
+ *
  * @package ExternalProductImages
  */
 
@@ -10,8 +13,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+require_once __DIR__ . '/change-log/class-epi-change-fields.php';
+require_once __DIR__ . '/change-log/class-epi-change-source.php';
+require_once __DIR__ . '/change-log/class-epi-change-store.php';
+
 /**
- * Records product changes made by users, imports, and API requests.
+ * Notices product writes, diffs them against a stored copy at the end of the
+ * request, and records ePim and staff updates.
  *
  * @since 1.0.6
  */
@@ -20,14 +28,19 @@ final class EPI_Product_Change_Log {
 	/**
 	 * Database schema version.
 	 */
-	const DB_VERSION = '1.1';
+	const DB_VERSION = '2.0';
 
 	/**
-	 * Values captured immediately before a metadata change.
-	 *
-	 * @var array
+	 * Option holding when logging was last switched back on, in milliseconds.
 	 */
-	private static $pending_meta = array();
+	const RESUMED_OPTION = 'epi_change_log_resumed_at';
+
+	/**
+	 * Products touched in this request.
+	 *
+	 * @var array Object ID => array( 'before' => array, 'taken_at' => int ). taken_at 0 means no stored copy.
+	 */
+	private static $touched = array();
 
 	/**
 	 * One identifier shared by all changes in the current request.
@@ -37,96 +50,282 @@ final class EPI_Product_Change_Log {
 	private static $request_id = '';
 
 	/**
-	 * Create or update the change log table.
+	 * Create or update the tables. Versions before 2.0 kept every change from
+	 * every source, mostly SEO noise; that history is cleared.
 	 *
 	 * @return void
 	 */
 	public static function install() {
-		global $wpdb;
+		$installed = (string) get_option( 'epi_change_log_db_version', '' );
 
-		$table_name      = self::get_table_name();
-		$charset_collate = $wpdb->get_charset_collate();
+		EPI_Change_Store::install();
 
-		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+		if ( '' !== $installed && version_compare( $installed, '2.0', '<' ) ) {
+			EPI_Change_Store::clear_changes();
+		}
 
-		$sql = "CREATE TABLE {$table_name} (
-			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-			product_id bigint(20) unsigned NOT NULL,
-			object_id bigint(20) unsigned NOT NULL,
-			object_type varchar(30) NOT NULL DEFAULT 'product',
-			changed_at datetime NOT NULL,
-			user_id bigint(20) unsigned NOT NULL DEFAULT 0,
-			actor varchar(191) NOT NULL DEFAULT '',
-			source varchar(50) NOT NULL DEFAULT '',
-			field_type varchar(30) NOT NULL DEFAULT '',
-			field_name varchar(191) NOT NULL DEFAULT '',
-			action varchar(30) NOT NULL DEFAULT 'updated',
-			old_value longtext NULL,
-			new_value longtext NULL,
-			request_id varchar(64) NOT NULL DEFAULT '',
-			PRIMARY KEY  (id),
-			KEY product_id (product_id),
-			KEY object_id (object_id),
-			KEY changed_at (changed_at),
-			KEY request_id (request_id)
-		) {$charset_collate};";
-
-		dbDelta( $sql );
 		update_option( 'epi_change_log_db_version', self::DB_VERSION, false );
 	}
 
 	/**
-	 * Upgrade the database table when required.
+	 * Upgrade the tables when required.
 	 *
 	 * @return void
 	 */
 	public static function maybe_upgrade() {
 		if ( self::DB_VERSION !== get_option( 'epi_change_log_db_version' ) ) {
 			self::install();
-			self::delete_seo_plugin_rows();
 		}
 	}
 
 	/**
-	 * Remove rows recorded for SureRank's fields before they were excluded.
-	 *
-	 * SureRank rewrites its page checks on every scan, so the log filled with
-	 * its scores rather than product changes.
+	 * Hooks that run whether logging is on or off.
 	 *
 	 * @return void
 	 */
-	private static function delete_seo_plugin_rows() {
-		global $wpdb;
-
-		$table = self::get_table_name();
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- One-off cleanup of the plugin's own change-log table; table name is built from $wpdb->prefix.
-		$wpdb->query(
-			$wpdb->prepare(
-				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name derived from $wpdb->prefix; the patterns are bound via prepare().
-				"DELETE FROM {$table} WHERE field_type = 'meta' AND ( field_name LIKE %s OR field_name LIKE %s )",
-				$wpdb->esc_like( 'surerank_' ) . '%',
-				$wpdb->esc_like( '_surerank_' ) . '%'
-			)
-		);
+	public static function register_always() {
+		add_action( 'deleted_post', array( __CLASS__, 'forget' ), 10, 2 );
+		add_action( 'update_option_' . EPI_Feature_Registry::OPTION, array( __CLASS__, 'note_flags_saved' ), 10, 2 );
 	}
 
 	/**
-	 * Register change tracking and admin display hooks.
+	 * Register change tracking and the edit-screen box.
 	 *
 	 * @return void
 	 */
 	public static function init() {
-		add_filter( 'add_post_metadata', array( __CLASS__, 'capture_meta_before_add' ), 10, 5 );
-		add_filter( 'update_post_metadata', array( __CLASS__, 'capture_meta_before_update' ), 10, 5 );
-		add_filter( 'delete_post_metadata', array( __CLASS__, 'capture_meta_before_delete' ), 10, 5 );
-		add_action( 'added_post_meta', array( __CLASS__, 'log_meta_added' ), 10, 4 );
-		add_action( 'updated_post_meta', array( __CLASS__, 'log_meta_updated' ), 10, 4 );
-		add_action( 'deleted_post_meta', array( __CLASS__, 'log_meta_deleted' ), 10, 4 );
-		add_action( 'post_updated', array( __CLASS__, 'log_post_updated' ), 10, 3 );
-		add_action( 'wp_after_insert_post', array( __CLASS__, 'log_post_created' ), 10, 4 );
-		add_action( 'set_object_terms', array( __CLASS__, 'log_terms_updated' ), 10, 6 );
+		add_filter( 'add_post_metadata', array( __CLASS__, 'before_meta_write' ), 10, 3 );
+		add_filter( 'update_post_metadata', array( __CLASS__, 'before_meta_write' ), 10, 3 );
+		add_filter( 'delete_post_metadata', array( __CLASS__, 'before_meta_write' ), 10, 3 );
+		add_action( 'pre_post_update', array( __CLASS__, 'before_post_write' ) );
+		add_action( 'wp_insert_post', array( __CLASS__, 'after_post_insert' ), 10, 3 );
+		add_action( 'set_object_terms', array( __CLASS__, 'after_terms_set' ), 10, 6 );
+		add_action( 'woocommerce_product_set_stock', array( __CLASS__, 'after_stock_set' ) );
+		add_action( 'woocommerce_variation_set_stock', array( __CLASS__, 'after_stock_set' ) );
+		add_action( 'shutdown', array( __CLASS__, 'flush' ), 1 );
 		add_action( 'add_meta_boxes_product', array( __CLASS__, 'add_meta_box' ) );
+	}
+
+	/**
+	 * A product's recorded updates, newest first.
+	 *
+	 * @param int $product_id Product ID.
+	 * @return array Each: request_id, changed_at, actor, source, gap, fields
+	 *               (object_id, object_type, field_type, field_name, label, before, after).
+	 */
+	public static function get_updates( $product_id ) {
+		return EPI_Change_Store::get_updates( absint( $product_id ) );
+	}
+
+	/**
+	 * Mark a product touched before a tracked field is written.
+	 *
+	 * @param mixed  $check     Short-circuit value, returned untouched.
+	 * @param int    $object_id Object ID.
+	 * @param string $meta_key  Meta key.
+	 * @return mixed
+	 */
+	public static function before_meta_write( $check, $object_id, $meta_key ) {
+		if ( EPI_Change_Fields::is_tracked_meta( $meta_key ) ) {
+			self::touch( $object_id );
+		}
+
+		return $check;
+	}
+
+	/**
+	 * Mark a product touched before its post fields are written.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return void
+	 */
+	public static function before_post_write( $post_id ) {
+		self::touch( $post_id );
+	}
+
+	/**
+	 * A brand-new product starts from nothing, whatever was read while it was
+	 * being inserted.
+	 *
+	 * @param int     $post_id Post ID.
+	 * @param WP_Post $post    Post.
+	 * @param bool    $update  Whether this was an update.
+	 * @return void
+	 */
+	public static function after_post_insert( $post_id, $post, $update ) {
+		if ( ! $update && EPI_Change_Fields::product_id( $post_id ) ) {
+			self::$touched[ absint( $post_id ) ] = array(
+				'before'   => array(),
+				'taken_at' => 0,
+			);
+		}
+	}
+
+	/**
+	 * Mark a product touched when its terms change. Terms have no "before"
+	 * hook, so with no stored copy the old terms WordPress passes in stand in.
+	 *
+	 * @param int    $object_id  Object ID.
+	 * @param array  $terms      Submitted terms.
+	 * @param array  $tt_ids     New term taxonomy IDs.
+	 * @param string $taxonomy   Taxonomy.
+	 * @param bool   $append     Whether terms were appended.
+	 * @param array  $old_tt_ids Previous term taxonomy IDs.
+	 * @return void
+	 */
+	public static function after_terms_set( $object_id, $terms, $tt_ids, $taxonomy, $append, $old_tt_ids ) {
+		$object_id = absint( $object_id );
+
+		if ( isset( self::$touched[ $object_id ] ) || ! EPI_Change_Fields::is_tracked_taxonomy( $taxonomy ) ) {
+			return;
+		}
+
+		self::touch( $object_id );
+
+		if ( ! isset( self::$touched[ $object_id ] ) || self::$touched[ $object_id ]['taken_at'] ) {
+			return;
+		}
+
+		$old_terms = self::term_names( $old_tt_ids );
+
+		if ( $old_terms ) {
+			self::$touched[ $object_id ]['before'][ 'taxonomy:' . $taxonomy ] = $old_terms;
+		} else {
+			unset( self::$touched[ $object_id ]['before'][ 'taxonomy:' . $taxonomy ] );
+		}
+	}
+
+	/**
+	 * WooCommerce writes stock with plain SQL, past the meta hooks.
+	 *
+	 * @param WC_Product $product Product or variation.
+	 * @return void
+	 */
+	public static function after_stock_set( $product ) {
+		if ( is_object( $product ) && method_exists( $product, 'get_id' ) ) {
+			self::touch( $product->get_id() );
+		}
+	}
+
+	/**
+	 * Remove a deleted product's copy and log.
+	 *
+	 * @param int          $post_id Post ID.
+	 * @param WP_Post|null $post    Post.
+	 * @return void
+	 */
+	public static function forget( $post_id, $post = null ) {
+		if ( $post instanceof WP_Post && in_array( $post->post_type, array( 'product', 'product_variation' ), true ) ) {
+			EPI_Change_Store::delete_object( $post_id );
+		}
+	}
+
+	/**
+	 * Note when logging is switched back on, so copies taken before then are
+	 * known to be possibly out of date.
+	 *
+	 * @param mixed $old_value Flags before.
+	 * @param mixed $value     Flags after.
+	 * @return void
+	 */
+	public static function note_flags_saved( $old_value, $value ) {
+		$was_on = ! is_array( $old_value ) || ! array_key_exists( 'change-log', $old_value ) || ! empty( $old_value['change-log'] );
+		$is_on  = ! is_array( $value ) || ! array_key_exists( 'change-log', $value ) || ! empty( $value['change-log'] );
+
+		if ( ! $was_on && $is_on ) {
+			update_option( self::RESUMED_OPTION, EPI_Change_Store::now_ms(), false );
+		}
+	}
+
+	/**
+	 * Compare every touched product with its stored copy and record what
+	 * ePim or staff changed. Runs once, at the end of the request.
+	 *
+	 * @return void
+	 */
+	public static function flush() {
+		if ( empty( self::$touched ) ) {
+			return;
+		}
+
+		$touched       = self::$touched;
+		self::$touched = array();
+		$in_order      = self::in_order_request();
+		$resumed_at    = (int) get_option( self::RESUMED_OPTION, 0 );
+		$updates       = array();
+
+		foreach ( $touched as $object_id => $state ) {
+			$product_id = EPI_Change_Fields::product_id( $object_id );
+			$after      = EPI_Change_Fields::read( $object_id );
+
+			if ( ! $product_id || empty( $after ) ) {
+				EPI_Change_Store::delete_object( $object_id );
+				continue;
+			}
+
+			EPI_Change_Store::put_snapshot( $object_id, $product_id, $after );
+
+			// "Add New" saves an empty draft first; the real save comes next.
+			if ( 'auto-draft' === $after['post:post_status'] ) {
+				continue;
+			}
+
+			$source = EPI_Change_Source::current( $object_id );
+
+			if ( EPI_Change_Source::IGNORED === $source ) {
+				continue;
+			}
+
+			$changes = EPI_Change_Fields::diff( $state['before'], $after );
+
+			if ( $in_order ) {
+				foreach ( EPI_Change_Fields::stock_fields() as $field_id ) {
+					unset( $changes[ $field_id ] );
+				}
+			}
+
+			if ( empty( $changes ) ) {
+				continue;
+			}
+
+			if ( ! isset( $updates[ $product_id ] ) ) {
+				$updates[ $product_id ] = array(
+					'source' => $source,
+					'gap'    => false,
+					'rows'   => array(),
+				);
+			}
+
+			if ( $state['taken_at'] && $state['taken_at'] < $resumed_at ) {
+				$updates[ $product_id ]['gap'] = true;
+			}
+
+			foreach ( $changes as $field_id => $pair ) {
+				list( $field_type, $field_name ) = explode( ':', $field_id, 2 );
+
+				$updates[ $product_id ]['rows'][] = array(
+					'object_id'   => $object_id,
+					'object_type' => get_post_type( $object_id ),
+					'field_type'  => $field_type,
+					'field_name'  => $field_name,
+					'before'      => $pair[0],
+					'after'       => $pair[1],
+				);
+			}
+		}
+
+		foreach ( $updates as $product_id => $update ) {
+			EPI_Change_Store::insert_update(
+				$product_id,
+				$update['rows'],
+				self::get_request_id(),
+				$update['source'],
+				EPI_Change_Source::actor( $update['source'] ),
+				get_current_user_id(),
+				$update['gap']
+			);
+			EPI_Change_Store::prune( $product_id );
+		}
 	}
 
 	/**
@@ -146,7 +345,7 @@ final class EPI_Product_Change_Log {
 	}
 
 	/**
-	 * Render recent product changes in the editor.
+	 * Render the product's last updates in the editor.
 	 *
 	 * @param WP_Post $post Product post.
 	 * @return void
@@ -159,18 +358,16 @@ final class EPI_Product_Change_Log {
 		?>
 		<div class="bw-admin">
 			<p class="bw-card__note">
-				<?php esc_html_e( 'Records changes made by users, imports, scheduled tasks, and API requests from version 1.0.6 onward.', 'blueworx_client_forum' ); ?>
+				<?php esc_html_e( 'The last two updates to this product from ePim or from staff.', 'blueworx_client_forum' ); ?>
 			</p>
 
-			<div class="bw-tablescroll">
-				<?php self::render_table( $post->ID, 1, 10, false ); ?>
-			</div>
+			<?php self::render_updates( $post->ID ); ?>
 
 			<div class="bw-tablefoot">
 				<span class="bw-toolbar__spacer"></span>
 				<a class="bw-btn bw-btn--sm" href="<?php echo esc_url( EPI_Product_Meta::get_full_page_url( $post->ID ) . '#epi-change-log' ); ?>" target="_blank" rel="noopener noreferrer">
 					<i class="bw-icon bw-icon--14" data-lucide="external-link" aria-hidden="true"></i>
-					<?php esc_html_e( 'View full change log', 'blueworx_client_forum' ); ?>
+					<?php esc_html_e( 'View product data', 'blueworx_client_forum' ); ?>
 				</a>
 			</div>
 		</div>
@@ -178,14 +375,12 @@ final class EPI_Product_Change_Log {
 	}
 
 	/**
-	 * Render the complete paginated product change log.
+	 * Render the change log section on the full product data page.
 	 *
 	 * @param int $product_id Product ID.
 	 * @return void
 	 */
 	public static function render_full_log( $product_id ) {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only pagination value; no state change, sanitised with absint().
-		$page = isset( $_GET['history_page'] ) ? max( 1, absint( wp_unslash( $_GET['history_page'] ) ) ) : 1;
 		?>
 		<section class="bw-card bw-card--flush" id="epi-change-log">
 			<div class="bw-card__head">
@@ -194,239 +389,26 @@ final class EPI_Product_Change_Log {
 					<h2 class="bw-card__title"><?php esc_html_e( 'Product change log', 'blueworx_client_forum' ); ?></h2>
 				</div>
 			</div>
-			<?php self::render_table( $product_id, $page, 50, true ); ?>
+			<?php self::render_updates( $product_id ); ?>
 		</section>
 		<?php
 	}
 
 	/**
-	 * Capture metadata immediately before it is added.
+	 * Render the updates table: one grouped row per update, then its fields.
 	 *
-	 * @param mixed  $check      Existing short-circuit value.
-	 * @param int    $object_id  Object ID.
-	 * @param string $meta_key   Metadata key.
-	 * @param mixed  $meta_value New metadata value.
-	 * @param bool   $unique     Whether the key must be unique.
-	 * @return mixed
-	 */
-	public static function capture_meta_before_add( $check, $object_id, $meta_key, $meta_value, $unique ) {
-		unset( $meta_value, $unique );
-		self::capture_meta_state( 'add', $object_id, $meta_key );
-
-		return $check;
-	}
-
-	/**
-	 * Capture metadata immediately before it is updated.
-	 *
-	 * @param mixed  $check      Existing short-circuit value.
-	 * @param int    $object_id  Object ID.
-	 * @param string $meta_key   Metadata key.
-	 * @param mixed  $meta_value New metadata value.
-	 * @param mixed  $prev_value Previous value filter.
-	 * @return mixed
-	 */
-	public static function capture_meta_before_update( $check, $object_id, $meta_key, $meta_value, $prev_value ) {
-		unset( $meta_value, $prev_value );
-		self::capture_meta_state( 'update', $object_id, $meta_key );
-
-		return $check;
-	}
-
-	/**
-	 * Capture metadata immediately before it is deleted.
-	 *
-	 * @param mixed  $delete     Existing short-circuit value.
-	 * @param int    $object_id  Object ID.
-	 * @param string $meta_key   Metadata key.
-	 * @param mixed  $meta_value Metadata value filter.
-	 * @param bool   $delete_all Whether matching keys on all objects are deleted.
-	 * @return mixed
-	 */
-	public static function capture_meta_before_delete( $delete, $object_id, $meta_key, $meta_value, $delete_all ) {
-		unset( $meta_value, $delete_all );
-		self::capture_meta_state( 'delete', $object_id, $meta_key );
-
-		return $delete;
-	}
-
-	/**
-	 * Record an added metadata value.
-	 *
-	 * @param int    $meta_id    Metadata row ID.
-	 * @param int    $object_id  Object ID.
-	 * @param string $meta_key   Metadata key.
-	 * @param mixed  $meta_value Added value.
+	 * @param int $product_id Product ID.
 	 * @return void
 	 */
-	public static function log_meta_added( $meta_id, $object_id, $meta_key, $meta_value ) {
-		unset( $meta_id, $meta_value );
-		self::log_meta_state_change( 'add', 'added', $object_id, $meta_key );
-	}
+	private static function render_updates( $product_id ) {
+		$updates = self::get_updates( $product_id );
 
-	/**
-	 * Record an updated metadata value.
-	 *
-	 * @param int    $meta_id    Metadata row ID.
-	 * @param int    $object_id  Object ID.
-	 * @param string $meta_key   Metadata key.
-	 * @param mixed  $meta_value Updated value.
-	 * @return void
-	 */
-	public static function log_meta_updated( $meta_id, $object_id, $meta_key, $meta_value ) {
-		unset( $meta_id, $meta_value );
-		self::log_meta_state_change( 'update', 'updated', $object_id, $meta_key );
-	}
-
-	/**
-	 * Record a deleted metadata value.
-	 *
-	 * @param array  $meta_ids   Deleted metadata row IDs.
-	 * @param int    $object_id  Object ID.
-	 * @param string $meta_key   Metadata key.
-	 * @param mixed  $meta_value Deleted value filter.
-	 * @return void
-	 */
-	public static function log_meta_deleted( $meta_ids, $object_id, $meta_key, $meta_value ) {
-		unset( $meta_ids, $meta_value );
-		self::log_meta_state_change( 'delete', 'deleted', $object_id, $meta_key );
-	}
-
-	/**
-	 * Record changed product post fields.
-	 *
-	 * @param int     $post_id     Post ID.
-	 * @param WP_Post $post_after  Post after the update.
-	 * @param WP_Post $post_before Post before the update.
-	 * @return void
-	 */
-	public static function log_post_updated( $post_id, $post_after, $post_before ) {
-		$product_id = self::resolve_product_id( $post_id );
-
-		if ( ! $product_id ) {
-			return;
-		}
-
-		$fields = array(
-			'post_title'   => 'Product name',
-			'post_content' => 'Description',
-			'post_excerpt' => 'Short description',
-			'post_status'  => 'Status',
-			'post_name'    => 'Slug',
-			'menu_order'   => 'Menu order',
-			'post_parent'  => 'Parent product',
-		);
-
-		foreach ( $fields as $field => $label ) {
-			if ( $post_before->$field === $post_after->$field ) {
-				continue;
-			}
-
-			self::insert_change(
-				$product_id,
-				$post_id,
-				$post_after->post_type,
-				'product',
-				$label,
-				'updated',
-				$post_before->$field,
-				$post_after->$field
-			);
-		}
-	}
-
-	/**
-	 * Record the creation of a product or variation.
-	 *
-	 * @param int          $post_id     Post ID.
-	 * @param WP_Post      $post        Inserted post.
-	 * @param bool         $update      Whether this was an update.
-	 * @param WP_Post|null $post_before Post before the update.
-	 * @return void
-	 */
-	public static function log_post_created( $post_id, $post, $update, $post_before ) {
-		unset( $post_before );
-
-		if ( $update || ! $post instanceof WP_Post ) {
-			return;
-		}
-
-		$product_id = self::resolve_product_id( $post_id );
-
-		if ( ! $product_id ) {
-			return;
-		}
-
-		self::insert_change(
-			$product_id,
-			$post_id,
-			$post->post_type,
-			'product',
-			'Product',
-			'created',
-			null,
-			$post->post_title
-		);
-	}
-
-	/**
-	 * Record changes to categories, tags, types, and product attributes.
-	 *
-	 * @param int    $object_id   Object ID.
-	 * @param array  $terms       Submitted terms.
-	 * @param array  $tt_ids      New term taxonomy IDs.
-	 * @param string $taxonomy    Taxonomy name.
-	 * @param bool   $append      Whether terms were appended.
-	 * @param array  $old_tt_ids  Previous term taxonomy IDs.
-	 * @return void
-	 */
-	public static function log_terms_updated( $object_id, $terms, $tt_ids, $taxonomy, $append, $old_tt_ids ) {
-		unset( $terms, $append );
-
-		$product_id = self::resolve_product_id( $object_id );
-
-		if ( ! $product_id || ! self::is_product_taxonomy( $taxonomy ) ) {
-			return;
-		}
-
-		$old_terms = self::get_term_names( $old_tt_ids );
-		$new_terms = self::get_term_names( $tt_ids );
-
-		if ( $old_terms === $new_terms ) {
-			return;
-		}
-
-		self::insert_change(
-			$product_id,
-			$object_id,
-			get_post_type( $object_id ),
-			'taxonomy',
-			$taxonomy,
-			'updated',
-			$old_terms,
-			$new_terms
-		);
-	}
-
-	/**
-	 * Render change rows and optional pagination.
-	 *
-	 * @param int  $product_id Product ID.
-	 * @param int  $page       Current page.
-	 * @param int  $per_page   Rows per page.
-	 * @param bool $paginate   Whether to show pagination.
-	 * @return void
-	 */
-	private static function render_table( $product_id, $page, $per_page, $paginate ) {
-		$total   = self::count_changes( $product_id );
-		$changes = self::get_changes( $product_id, $page, $per_page );
-
-		if ( empty( $changes ) ) {
+		if ( empty( $updates ) ) {
 			?>
 			<div class="bw-empty">
 				<i class="bw-icon bw-icon--28 bw-empty__icon" data-lucide="archive" aria-hidden="true"></i>
 				<h3 class="bw-empty__title"><?php esc_html_e( 'Nothing recorded yet', 'blueworx_client_forum' ); ?></h3>
-				<p class="bw-empty__text"><?php esc_html_e( 'Changes to this product will appear here as they are made.', 'blueworx_client_forum' ); ?></p>
+				<p class="bw-empty__text"><?php esc_html_e( 'Updates from ePim and from staff will appear here.', 'blueworx_client_forum' ); ?></p>
 			</div>
 			<?php
 			return;
@@ -437,414 +419,60 @@ final class EPI_Product_Change_Log {
 			<table class="bw-table">
 				<thead>
 					<tr>
-						<th scope="col"><?php esc_html_e( 'Date', 'blueworx_client_forum' ); ?></th>
-						<th scope="col"><?php esc_html_e( 'Changed by', 'blueworx_client_forum' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'Field', 'blueworx_client_forum' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'Before', 'blueworx_client_forum' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'After', 'blueworx_client_forum' ); ?></th>
 					</tr>
 				</thead>
 				<tbody>
-					<?php foreach ( $changes as $change ) : ?>
-						<tr>
-							<td>
-								<span class="bw-table__primary"><?php echo esc_html( self::format_date( $change->changed_at ) ); ?></span>
-								<span class="bw-table__sub"><?php echo esc_html( ucfirst( $change->action ) ); ?></span>
-							</td>
-							<td>
-								<span class="bw-table__primary"><?php echo esc_html( $change->actor ); ?></span>
-								<span class="bw-table__sub"><?php echo esc_html( $change->source ); ?></span>
-							</td>
-							<td>
-								<?php if ( 'product_variation' === $change->object_type ) : ?>
-									<span class="bw-badge bw-badge--info"><?php echo esc_html( sprintf( /* translators: %d: variation ID. */ __( 'Variation #%d', 'blueworx_client_forum' ), $change->object_id ) ); ?></span>
+					<?php foreach ( $updates as $update ) : ?>
+						<tr class="bw-table__group">
+							<td colspan="3">
+								<span class="bw-table__group-title">
+									<?php echo esc_html( self::format_date( $update['changed_at'] ) . ' · ' . $update['actor'] ); ?>
+								</span>
+								<?php if ( $update['gap'] ) : ?>
+									<span class="bw-badge bw-badge--warning"><?php esc_html_e( 'May include changes made while logging was off', 'blueworx_client_forum' ); ?></span>
 								<?php endif; ?>
-								<code><?php echo esc_html( self::get_field_label( $change ) ); ?></code>
 							</td>
-							<td><?php self::render_logged_value( $change->old_value ); ?></td>
-							<td><?php self::render_logged_value( $change->new_value ); ?></td>
 						</tr>
+						<?php foreach ( $update['fields'] as $field ) : ?>
+							<tr>
+								<td>
+									<?php if ( 'product_variation' === $field['object_type'] ) : ?>
+										<span class="bw-badge bw-badge--info"><?php echo esc_html( sprintf( /* translators: %d: variation ID. */ __( 'Variation #%d', 'blueworx_client_forum' ), $field['object_id'] ) ); ?></span>
+									<?php endif; ?>
+									<span class="bw-table__primary"><?php echo esc_html( $field['label'] ); ?></span>
+								</td>
+								<td><?php self::render_value( $field['before'] ); ?></td>
+								<td><?php self::render_value( $field['after'] ); ?></td>
+							</tr>
+						<?php endforeach; ?>
 					<?php endforeach; ?>
 				</tbody>
 			</table>
 		</div>
 		<?php
-
-		if ( $paginate && $total > $per_page ) {
-			self::render_pager( $product_id, $page, (int) ceil( $total / $per_page ), $total );
-		}
 	}
 
 	/**
-	 * Render the change log's pager.
+	 * Render one stored value.
 	 *
-	 * Built by hand rather than with paginate_links(), which returns WordPress's
-	 * own page-numbers markup. The design system has a pager of its own, and a
-	 * screen carries one set of controls, not two.
-	 *
-	 * @param int $product_id  Product ID.
-	 * @param int $page        Current page.
-	 * @param int $total_pages Number of pages.
-	 * @param int $total_items Number of recorded changes.
+	 * @param mixed $value Decoded value.
 	 * @return void
 	 */
-	private static function render_pager( $product_id, $page, $total_pages, $total_items ) {
-		$base = EPI_Product_Meta::get_full_page_url( $product_id );
-
-		$page_url = static function ( $number ) use ( $base ) {
-			return add_query_arg( 'history_page', absint( $number ), $base ) . '#epi-change-log';
-		};
-		?>
-		<div class="bw-tablefoot">
-			<div class="bw-pager">
-				<span class="bw-pager__count">
-					<?php
-					printf(
-						/* translators: %s: number of recorded changes. */
-						esc_html( _n( '%s change', '%s changes', $total_items, 'blueworx_client_forum' ) ),
-						esc_html( number_format_i18n( $total_items ) )
-					);
-					?>
-				</span>
-				<div class="bw-pager__btns">
-					<?php if ( $page > 1 ) : ?>
-						<a class="bw-pager__btn" href="<?php echo esc_url( $page_url( $page - 1 ) ); ?>" aria-label="<?php esc_attr_e( 'Previous page', 'blueworx_client_forum' ); ?>">
-							<i class="bw-icon bw-icon--14" data-lucide="arrow-left" aria-hidden="true"></i>
-						</a>
-					<?php endif; ?>
-
-					<span class="bw-pager__of">
-						<?php
-						printf(
-							/* translators: 1: current page number, 2: total number of pages. */
-							esc_html__( 'Page %1$s of %2$s', 'blueworx_client_forum' ),
-							esc_html( number_format_i18n( $page ) ),
-							esc_html( number_format_i18n( $total_pages ) )
-						);
-						?>
-					</span>
-
-					<?php if ( $page < $total_pages ) : ?>
-						<a class="bw-pager__btn" href="<?php echo esc_url( $page_url( $page + 1 ) ); ?>" aria-label="<?php esc_attr_e( 'Next page', 'blueworx_client_forum' ); ?>">
-							<i class="bw-icon bw-icon--14" data-lucide="arrow-right" aria-hidden="true"></i>
-						</a>
-					<?php endif; ?>
-				</div>
-			</div>
-		</div>
-		<?php
-	}
-
-	/**
-	 * Save metadata before a change.
-	 *
-	 * @param string $operation  Add, update, or delete.
-	 * @param int    $object_id  Object ID.
-	 * @param string $meta_key   Metadata key.
-	 * @return void
-	 */
-	private static function capture_meta_state( $operation, $object_id, $meta_key ) {
-		if ( ! self::should_track_meta( $object_id, $meta_key ) ) {
-			return;
-		}
-
-		self::$pending_meta[ self::get_pending_key( $operation, $object_id, $meta_key ) ] = get_post_meta( $object_id, $meta_key, false );
-	}
-
-	/**
-	 * Save one metadata state change.
-	 *
-	 * @param string $operation  Add, update, or delete.
-	 * @param string $action     Display action.
-	 * @param int    $object_id  Object ID.
-	 * @param string $meta_key   Metadata key.
-	 * @return void
-	 */
-	private static function log_meta_state_change( $operation, $action, $object_id, $meta_key ) {
-		if ( ! self::should_track_meta( $object_id, $meta_key ) ) {
-			return;
-		}
-
-		$pending_key = self::get_pending_key( $operation, $object_id, $meta_key );
-		$old_value   = isset( self::$pending_meta[ $pending_key ] ) ? self::$pending_meta[ $pending_key ] : array();
-		$new_value   = get_post_meta( $object_id, $meta_key, false );
-
-		unset( self::$pending_meta[ $pending_key ] );
-
-		$product_id = self::resolve_product_id( $object_id );
-
-		if ( ! $product_id ) {
-			return;
-		}
-
-		self::insert_change(
-			$product_id,
-			$object_id,
-			get_post_type( $object_id ),
-			'meta',
-			$meta_key,
-			$action,
-			self::normalise_meta_values( $old_value ),
-			self::normalise_meta_values( $new_value )
-		);
-	}
-
-	/**
-	 * Check whether a metadata field belongs to a product.
-	 *
-	 * @param int    $object_id Object ID.
-	 * @param string $meta_key  Metadata key.
-	 * @return bool
-	 */
-	private static function should_track_meta( $object_id, $meta_key ) {
-		return self::resolve_product_id( $object_id )
-			&& EPI_Product_Meta::is_product_meta_key( $meta_key, $object_id );
-	}
-
-	/**
-	 * Insert one audit row.
-	 *
-	 * @param int    $product_id Product ID.
-	 * @param int    $object_id  Changed object ID.
-	 * @param string $object_type Object type.
-	 * @param string $field_type Field type.
-	 * @param string $field_name Field name.
-	 * @param string $action     Change action.
-	 * @param mixed  $old_value  Previous value.
-	 * @param mixed  $new_value  New value.
-	 * @return void
-	 */
-	private static function insert_change( $product_id, $object_id, $object_type, $field_type, $field_name, $action, $old_value, $new_value ) {
-		global $wpdb;
-
-		$old_json = self::encode_value( $old_value );
-		$new_json = self::encode_value( $new_value );
-
-		if ( $old_json === $new_json ) {
-			return;
-		}
-
-		$actor = self::get_actor();
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Writing to the plugin's own change-log table via the $wpdb->insert() API with a bound format map.
-		$wpdb->insert(
-			self::get_table_name(),
-			array(
-				'product_id'  => absint( $product_id ),
-				'object_id'   => absint( $object_id ),
-				'object_type' => sanitize_key( $object_type ),
-				'changed_at'  => current_time( 'mysql', true ),
-				'user_id'     => absint( $actor['user_id'] ),
-				'actor'       => sanitize_text_field( $actor['actor'] ),
-				'source'      => sanitize_text_field( $actor['source'] ),
-				'field_type'  => sanitize_key( $field_type ),
-				'field_name'  => sanitize_text_field( $field_name ),
-				'action'      => sanitize_key( $action ),
-				'old_value'   => $old_json,
-				'new_value'   => $new_json,
-				'request_id'  => self::get_request_id(),
-			),
-			array( '%d', '%d', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
-		);
-	}
-
-	/**
-	 * Fetch product changes.
-	 *
-	 * @param int $product_id Product ID.
-	 * @param int $page       Current page.
-	 * @param int $per_page   Rows per page.
-	 * @return array
-	 */
-	private static function get_changes( $product_id, $page, $per_page ) {
-		global $wpdb;
-
-		$offset = ( max( 1, $page ) - 1 ) * $per_page;
-		$table  = self::get_table_name();
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Reading the plugin's own change-log table for an admin-only display; table name is built from $wpdb->prefix.
-		return $wpdb->get_results(
-			$wpdb->prepare(
-				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name derived from $wpdb->prefix; all user-supplied values are bound via prepare().
-				"SELECT * FROM {$table} WHERE product_id = %d ORDER BY changed_at DESC, id DESC LIMIT %d OFFSET %d",
-				$product_id,
-				$per_page,
-				$offset
-			)
-		);
-	}
-
-	/**
-	 * Count product changes.
-	 *
-	 * @param int $product_id Product ID.
-	 * @return int
-	 */
-	private static function count_changes( $product_id ) {
-		global $wpdb;
-
-		$table = self::get_table_name();
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Counting rows in the plugin's own change-log table for an admin-only display; table name is built from $wpdb->prefix.
-		return (int) $wpdb->get_var(
-			$wpdb->prepare(
-				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name derived from $wpdb->prefix; the product ID is bound via prepare().
-				"SELECT COUNT(*) FROM {$table} WHERE product_id = %d",
-				$product_id
-			)
-		);
-	}
-
-	/**
-	 * Resolve a product or variation to its parent product.
-	 *
-	 * @param int $object_id Object ID.
-	 * @return int
-	 */
-	private static function resolve_product_id( $object_id ) {
-		$post_type = get_post_type( $object_id );
-
-		if ( 'product' === $post_type ) {
-			return absint( $object_id );
-		}
-
-		if ( 'product_variation' === $post_type ) {
-			return absint( wp_get_post_parent_id( $object_id ) );
-		}
-
-		return 0;
-	}
-
-	/**
-	 * Identify product-related taxonomies.
-	 *
-	 * @param string $taxonomy Taxonomy name.
-	 * @return bool
-	 */
-	private static function is_product_taxonomy( $taxonomy ) {
-		return in_array(
-			$taxonomy,
-			array( 'product_cat', 'product_tag', 'product_type', 'product_visibility', 'product_shipping_class' ),
-			true
-		) || 0 === strpos( $taxonomy, 'pa_' );
-	}
-
-	/**
-	 * Convert term taxonomy IDs to sorted names.
-	 *
-	 * @param array $tt_ids Term taxonomy IDs.
-	 * @return array
-	 */
-	private static function get_term_names( $tt_ids ) {
-		$names = array();
-
-		foreach ( (array) $tt_ids as $tt_id ) {
-			$term = get_term_by( 'term_taxonomy_id', absint( $tt_id ) );
-
-			if ( $term instanceof WP_Term ) {
-				$names[] = $term->name;
-			}
-		}
-
-		natcasesort( $names );
-
-		return array_values( $names );
-	}
-
-	/**
-	 * Get the current user and request source.
-	 *
-	 * @return array
-	 */
-	private static function get_actor() {
-		$user      = wp_get_current_user();
-		$user_id   = $user instanceof WP_User ? $user->ID : 0;
-		$user_name = $user_id ? $user->display_name : '';
-		$source    = __( 'WordPress admin', 'blueworx_client_forum' );
-
-		if ( ( defined( 'REST_REQUEST' ) && REST_REQUEST ) || ( defined( 'WC_API_REQUEST' ) && WC_API_REQUEST ) ) {
-			$source = __( 'External API', 'blueworx_client_forum' );
-		} elseif ( defined( 'XMLRPC_REQUEST' ) && XMLRPC_REQUEST ) {
-			$source = __( 'External API', 'blueworx_client_forum' );
-		} elseif ( function_exists( 'wp_doing_cron' ) && wp_doing_cron() ) {
-			$source = __( 'Scheduled task', 'blueworx_client_forum' );
-		} elseif ( defined( 'WP_CLI' ) && WP_CLI ) {
-			$source = __( 'Command line', 'blueworx_client_forum' );
-		} elseif ( ! is_admin() ) {
-			$source = __( 'Website / import', 'blueworx_client_forum' );
-		}
-
-		if ( ! $user_name ) {
-			$user_name = __( 'System', 'blueworx_client_forum' );
-		}
-
-		return array(
-			'user_id' => $user_id,
-			'actor'   => $user_name,
-			'source'  => $source,
-		);
-	}
-
-	/**
-	 * Normalise metadata values for storage.
-	 *
-	 * @param array $values Raw values.
-	 * @return mixed
-	 */
-	private static function normalise_meta_values( $values ) {
-		$values = array_map( 'maybe_unserialize', (array) $values );
-
-		if ( empty( $values ) ) {
-			return null;
-		}
-
-		if ( 1 === count( $values ) ) {
-			return reset( $values );
-		}
-
-		return array_values( $values );
-	}
-
-	/**
-	 * Encode a value for the database.
-	 *
-	 * @param mixed $value Value to encode.
-	 * @return string
-	 */
-	private static function encode_value( $value ) {
-		$json = wp_json_encode(
-			$value,
-			JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE
-		);
-
-		return false === $json ? wp_json_encode( (string) $value ) : $json;
-	}
-
-	/**
-	 * Render a stored value.
-	 *
-	 * @param string $json Stored JSON.
-	 * @return void
-	 */
-	private static function render_logged_value( $json ) {
-		$value = json_decode( $json, true );
-
-		if ( null === $value && 'null' === $json ) {
+	private static function render_value( $value ) {
+		if ( null === $value || '' === $value || array() === $value ) {
 			echo '<span class="bw-badge bw-badge--neutral">' . esc_html__( 'Empty', 'blueworx_client_forum' ) . '</span>';
 			return;
 		}
 
-		if ( is_array( $value ) || is_object( $value ) ) {
-			$display = wp_json_encode( $value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+		if ( is_array( $value ) ) {
+			$display = (string) wp_json_encode( $value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
 		} elseif ( is_bool( $value ) ) {
 			$display = $value ? 'true' : 'false';
 		} else {
 			$display = (string) $value;
-		}
-
-		if ( '' === $display ) {
-			echo '<span class="bw-badge bw-badge--neutral">' . esc_html__( 'Empty', 'blueworx_client_forum' ) . '</span>';
-			return;
 		}
 
 		if ( strlen( $display ) > 180 || false !== strpos( $display, "\n" ) ) {
@@ -861,21 +489,78 @@ final class EPI_Product_Change_Log {
 	}
 
 	/**
-	 * Get a readable field label.
+	 * Mark an object touched, keeping the first "before" seen this request.
 	 *
-	 * @param object $change Change row.
-	 * @return string
+	 * @param int $object_id Post ID.
+	 * @return void
 	 */
-	private static function get_field_label( $change ) {
-		if ( 'taxonomy' === $change->field_type ) {
-			$taxonomy = get_taxonomy( $change->field_name );
+	private static function touch( $object_id ) {
+		$object_id = absint( $object_id );
 
-			if ( $taxonomy && isset( $taxonomy->labels->singular_name ) ) {
-				return $taxonomy->labels->singular_name;
+		if ( ! $object_id || isset( self::$touched[ $object_id ] ) || ! EPI_Change_Fields::product_id( $object_id ) ) {
+			return;
+		}
+
+		$copy = EPI_Change_Store::get_snapshot( $object_id );
+
+		self::$touched[ $object_id ] = $copy
+			? array(
+				'before'   => $copy['data'],
+				'taken_at' => $copy['taken_at'],
+			)
+			: array(
+				'before'   => EPI_Change_Fields::read( $object_id ),
+				'taken_at' => 0,
+			);
+	}
+
+	/**
+	 * Whether WooCommerce handled an order in this request. Stock changes made
+	 * then are the order's, not an update.
+	 *
+	 * @return bool
+	 */
+	private static function in_order_request() {
+		$hooks = array(
+			'woocommerce_reduce_order_stock',
+			'woocommerce_restore_order_stock',
+			'woocommerce_reduce_order_item_stock',
+			'woocommerce_restore_order_item_stock',
+			'woocommerce_checkout_order_processed',
+			'woocommerce_new_order',
+			'woocommerce_update_order',
+			'woocommerce_order_status_changed',
+		);
+
+		foreach ( $hooks as $hook ) {
+			if ( did_action( $hook ) ) {
+				return true;
 			}
 		}
 
-		return $change->field_name;
+		return false;
+	}
+
+	/**
+	 * Convert term taxonomy IDs to sorted names.
+	 *
+	 * @param array $tt_ids Term taxonomy IDs.
+	 * @return array
+	 */
+	private static function term_names( $tt_ids ) {
+		$names = array();
+
+		foreach ( (array) $tt_ids as $tt_id ) {
+			$term = get_term_by( 'term_taxonomy_id', absint( $tt_id ) );
+
+			if ( $term instanceof WP_Term ) {
+				$names[] = $term->name;
+			}
+		}
+
+		natcasesort( $names );
+
+		return array_values( $names );
 	}
 
 	/**
@@ -885,22 +570,7 @@ final class EPI_Product_Change_Log {
 	 * @return string
 	 */
 	private static function format_date( $date_gmt ) {
-		return get_date_from_gmt(
-			$date_gmt,
-			get_option( 'date_format' ) . ' ' . get_option( 'time_format' )
-		);
-	}
-
-	/**
-	 * Build a pending metadata key.
-	 *
-	 * @param string $operation Operation.
-	 * @param int    $object_id Object ID.
-	 * @param string $meta_key  Metadata key.
-	 * @return string
-	 */
-	private static function get_pending_key( $operation, $object_id, $meta_key ) {
-		return $operation . ':' . absint( $object_id ) . ':' . $meta_key;
+		return get_date_from_gmt( $date_gmt, get_option( 'date_format' ) . ' ' . get_option( 'time_format' ) );
 	}
 
 	/**
@@ -914,16 +584,5 @@ final class EPI_Product_Change_Log {
 		}
 
 		return self::$request_id;
-	}
-
-	/**
-	 * Return the audit table name.
-	 *
-	 * @return string
-	 */
-	private static function get_table_name() {
-		global $wpdb;
-
-		return $wpdb->prefix . 'epi_product_changes';
 	}
 }
