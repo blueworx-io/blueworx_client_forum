@@ -529,3 +529,62 @@ test('the detail view lists each product with what changed and the raw record', 
   await page.goto(`${SCREEN}&run=999999`);
   await expect(page.locator('.bw-notice--warning')).toContainText('That pull could not be found.');
 });
+
+test('test mode is on by default after install', async ({ page }) => {
+  const defaults = await api(page, 'GET', '/settings-default');
+  expect(defaults.test).toBe(true);
+  expect(defaults.images).toBe(false);
+});
+
+test('a test pull records what it would add and creates nothing', async ({ page }) => {
+  await api(page, 'POST', '/settings', { key: 'epim-test-key', test: true, images: true });
+  const run = await pull(page);
+  expect(run).toMatchObject({ status: 'done', is_test: '1', added: '2', skipped: '1' });
+  expect((await api(page, 'GET', '/product/TEST-1001')).id).toBe(0);
+  expect((await api(page, 'GET', '/product/TEST-1002')).id).toBe(0);
+
+  const items = await api(page, 'GET', `/runs/${run.id}/items`);
+  expect(items.map((i) => i.action)).toEqual(['added', 'added']);
+  expect(items[0].changes.map((c) => c.field)).toEqual(expect.arrayContaining(['name', 'price', 'image']));
+
+  // The test run is not a baseline: switching test mode off, the next pull is the real full import.
+  await api(page, 'POST', '/settings', { key: 'epim-test-key', test: false });
+  const real = await pull(page);
+  expect(real).toMatchObject({ status: 'done', is_test: '0', is_full: '1', since_utc: '', added: '2' });
+  expect((await api(page, 'GET', '/product/TEST-1001')).id).toBeGreaterThan(0);
+});
+
+test('a test pull against existing products reports updates without applying them', async ({ page }) => {
+  await pull(page);
+  await api(page, 'POST', '/settings', { key: 'epim-test-key', test: true });
+  const run = await pull(page, { scenario: 'changed' });
+  expect(run).toMatchObject({ status: 'done', is_test: '1', updated: '1', hidden: '1' });
+
+  const product = await api(page, 'GET', '/product/TEST-1001');
+  expect(product.title).toBe('Single Kinetic Switch - White');
+  expect(product.price).toBe('51.25');
+  expect((await api(page, 'GET', '/product/TEST-1002')).status).toBe('publish');
+
+  const deleted = await pull(page, { scenario: 'deleted' });
+  expect(deleted).toMatchObject({ is_test: '1', hidden: '2' });
+  expect((await api(page, 'GET', '/product/TEST-1001')).status).toBe('publish');
+});
+
+test('the page shows test mode and marks test runs', async ({ page }) => {
+  await api(page, 'POST', '/settings', { key: 'epim-test-key', test: true });
+  const run = await pull(page);
+
+  await page.goto(SCREEN);
+  await expect(page.locator('.bw-notice--info')).toContainText('Test mode is on');
+  await expect(page.locator('input[name="epi_pull_test"]')).toBeChecked();
+  await expect(page.locator('.bw-table tbody tr').first()).toContainText('Test');
+
+  await page.goto(`${SCREEN}&run=${run.id}`);
+  await expect(page.locator('.bw-notice--info')).toContainText('nothing on the site was changed');
+  await expect(page.locator('.bw-dl:not(.bw-dl--stack)')).toContainText('Test');
+
+  await page.goto(SCREEN);
+  await page.locator('input[name="epi_pull_test"]').uncheck();
+  await page.getByRole('button', { name: 'Save settings' }).click();
+  await expect(page.locator('.bw-notice--info')).toHaveCount(0);
+});

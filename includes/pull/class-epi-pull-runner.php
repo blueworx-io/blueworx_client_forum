@@ -101,9 +101,10 @@ final class EPI_Pull_Runner {
 	 *
 	 * @param string $trigger 'auto' or 'manual'.
 	 * @param bool   $full    Ask ePim for everything rather than changes since the last pull.
+	 * @param array  $options Optional: category_id (int), pull only that ePim category.
 	 * @return int|WP_Error Run ID.
 	 */
-	public static function start( $trigger, $full = false ) {
+	public static function start( $trigger, $full = false, array $options = array() ) {
 		/**
 		 * Filter whether a pull may run without WooCommerce, writing plain posts
 		 * and meta instead. Only the test harness should ever set this: on a live
@@ -151,10 +152,27 @@ final class EPI_Pull_Runner {
 			return new WP_Error( 'epi_pull_running', __( 'A pull is already running.', 'blueworx_client_forum' ) );
 		}
 
+		$category_id = isset( $options['category_id'] ) ? absint( $options['category_id'] ) : 0;
+		$is_test     = EPI_Pull_Settings::test_mode();
+
+		// A category pull always reads the whole list, then keeps only its category.
+		if ( $category_id ) {
+			$full = true;
+		}
+
 		$last  = $full ? null : EPI_Pull_Store::last_successful_run();
 		$since = $last ? gmdate( 'Y-m-d\TH:i:s\Z', strtotime( $last->started_at . ' UTC' ) - 5 * MINUTE_IN_SECONDS ) : '';
 
-		$run_id = EPI_Pull_Store::create_run( $trigger, $since, ! $last );
+		$run_id = EPI_Pull_Store::create_run(
+			$trigger,
+			$since,
+			! $last,
+			array(
+				'is_test'       => $is_test,
+				'category_id'   => $category_id,
+				'category_name' => $category_id ? self::category_name( $category_id ) : '',
+			)
+		);
 
 		if ( ! $run_id ) {
 			delete_option( self::LOCK );
@@ -165,6 +183,18 @@ final class EPI_Pull_Runner {
 		self::schedule_batch( $run_id, 1 );
 
 		return $run_id;
+	}
+
+	/**
+	 * The site's name for an ePim category, for the runs table.
+	 *
+	 * @param int $epim_id ePim category ID.
+	 * @return string
+	 */
+	public static function category_name( $epim_id ) {
+		$term = EPI_Pull_Categories::term_for( $epim_id );
+
+		return $term instanceof WP_Term ? $term->name : '#' . absint( $epim_id );
 	}
 
 	/**
@@ -323,7 +353,7 @@ final class EPI_Pull_Runner {
 					return $categories;
 				}
 
-				update_option( self::MAP_OPTION, EPI_Pull_Categories::sync( $categories ), false );
+				update_option( self::MAP_OPTION, EPI_Pull_Categories::sync( $categories, (bool) $run->is_test ), false );
 				EPI_Pull_Store::update_run(
 					(int) $run->id,
 					array(
@@ -345,7 +375,7 @@ final class EPI_Pull_Runner {
 				}
 
 				foreach ( $page['results'] as $raw ) {
-					self::apply( (int) $run->id, is_array( $raw ) ? $raw : array() );
+					self::apply( (int) $run->id, is_array( $raw ) ? $raw : array(), (bool) $run->is_test );
 				}
 
 				$next = (int) $run->cursor_start + EPI_Pull_Settings::page_size();
@@ -382,7 +412,7 @@ final class EPI_Pull_Runner {
 				}
 
 				foreach ( $page['results'] as $entry ) {
-					foreach ( EPI_Pull_Writer::hide_deleted( is_array( $entry ) ? $entry : array() ) as $result ) {
+					foreach ( EPI_Pull_Writer::hide_deleted( is_array( $entry ) ? $entry : array(), (bool) $run->is_test ) as $result ) {
 						self::record( (int) $run->id, $result, $result['sku'], $result['name'], 0, $entry );
 					}
 				}
@@ -419,11 +449,12 @@ final class EPI_Pull_Runner {
 	/**
 	 * Map and write one record, and record what happened.
 	 *
-	 * @param int   $run_id Run ID.
-	 * @param array $raw    The ePim record.
+	 * @param int   $run_id  Run ID.
+	 * @param array $raw     The ePim record.
+	 * @param bool  $dry_run Report what would change; write nothing.
 	 * @return void
 	 */
-	private static function apply( $run_id, array $raw ) {
+	private static function apply( $run_id, array $raw, $dry_run = false ) {
 		$product = EPI_Pull_Mapper::map( $raw );
 
 		if ( '' === $product['sku'] ) {
@@ -435,7 +466,7 @@ final class EPI_Pull_Runner {
 			);
 		} else {
 			$map    = get_option( self::MAP_OPTION, array() );
-			$result = EPI_Pull_Writer::apply( $product, is_array( $map ) ? $map : array(), EPI_Pull_Settings::images_from_epim() );
+			$result = EPI_Pull_Writer::apply( $product, is_array( $map ) ? $map : array(), EPI_Pull_Settings::images_from_epim(), $dry_run );
 		}
 
 		self::record( $run_id, $result, $product['sku'], $product['name'], $product['epim_id'], $raw );

@@ -25,9 +25,10 @@ final class EPI_Pull_Categories {
 	 * Create or update a term for every category, parents before children.
 	 *
 	 * @param array $categories Entries with Id, Name, ParentId.
+	 * @param bool  $dry_run    Only match existing terms; change nothing.
 	 * @return array ePim category ID => term ID.
 	 */
-	public static function sync( array $categories ) {
+	public static function sync( array $categories, $dry_run = false ) {
 		$by_id = array();
 
 		foreach ( $categories as $category ) {
@@ -52,7 +53,7 @@ final class EPI_Pull_Categories {
 				}
 
 				$parent_term = $parent_epim && isset( $map[ $parent_epim ] ) ? (int) $map[ $parent_epim ] : 0;
-				$term_id     = self::ensure_term( isset( $category['Name'] ) ? (string) $category['Name'] : '', $parent_term, $epim_id );
+				$term_id     = self::ensure_term( isset( $category['Name'] ) ? (string) $category['Name'] : '', $parent_term, $epim_id, $dry_run );
 
 				if ( $term_id ) {
 					$map[ $epim_id ] = $term_id;
@@ -66,39 +67,56 @@ final class EPI_Pull_Categories {
 	}
 
 	/**
+	 * The term for an ePim category ID, or null.
+	 *
+	 * @param int $epim_id ePim category ID.
+	 * @return WP_Term|null
+	 */
+	public static function term_for( $epim_id ) {
+		$found = get_terms(
+			array(
+				'taxonomy'   => 'product_cat',
+				'hide_empty' => false,
+				'number'     => 1,
+				// WooCommerce sorts product_cat by its own meta by default, which would replace the lookup below.
+				'orderby'    => 'name',
+				'meta_key'   => self::META, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- One term per ePim ID.
+				'meta_value' => (string) absint( $epim_id ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+			)
+		);
+
+		if ( is_wp_error( $found ) || ! $found ) {
+			return null;
+		}
+
+		return $found[0] instanceof WP_Term ? $found[0] : null;
+	}
+
+	/**
 	 * The term for one ePim category: found by ePim ID, else by name under the
 	 * same parent (the site's existing categories, on first contact), else made.
+	 * In a dry run only terms that already exist are matched; nothing is
+	 * created, renamed or tagged.
 	 *
 	 * @param string $name    Category name.
 	 * @param int    $parent  Parent term ID, 0 for top level.
 	 * @param int    $epim_id ePim category ID.
+	 * @param bool   $dry_run Match only; change nothing.
 	 * @return int Term ID, or 0 if it could not be made.
 	 */
-	private static function ensure_term( $name, $parent, $epim_id ) {
+	private static function ensure_term( $name, $parent, $epim_id, $dry_run = false ) {
 		$name = trim( $name );
 
 		if ( '' === $name ) {
 			return 0;
 		}
 
-		$found = get_terms(
-			array(
-				'taxonomy'   => 'product_cat',
-				'hide_empty' => false,
-				'number'     => 1,
-				'fields'     => 'ids',
-				// WooCommerce sorts product_cat by its own meta by default, which would replace the lookup below.
-				'orderby'    => 'name',
-				'meta_key'   => self::META, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- One term per ePim ID; the list is tiny.
-				'meta_value' => (string) $epim_id, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-			)
-		);
+		$term = self::term_for( $epim_id );
 
-		if ( ! is_wp_error( $found ) && $found ) {
-			$term_id = (int) $found[0];
-			$term    = get_term( $term_id, 'product_cat' );
+		if ( $term ) {
+			$term_id = (int) $term->term_id;
 
-			if ( $term instanceof WP_Term && ( $term->name !== $name || (int) $term->parent !== $parent ) ) {
+			if ( ! $dry_run && ( $term->name !== $name || (int) $term->parent !== $parent ) ) {
 				wp_update_term(
 					$term_id,
 					'product_cat',
@@ -113,6 +131,10 @@ final class EPI_Pull_Categories {
 		}
 
 		$existing = term_exists( $name, 'product_cat', $parent );
+
+		if ( $dry_run ) {
+			return $existing ? (int) ( is_array( $existing ) ? $existing['term_id'] : $existing ) : 0;
+		}
 
 		if ( $existing ) {
 			$term_id = (int) ( is_array( $existing ) ? $existing['term_id'] : $existing );

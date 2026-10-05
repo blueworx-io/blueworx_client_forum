@@ -28,7 +28,7 @@ final class EPI_Pull_Settings {
 	/**
 	 * The saved settings, with defaults filled in.
 	 *
-	 * @return array{key: string, images: bool}
+	 * @return array{key: string, images: bool, test: bool}
 	 */
 	public static function get() {
 		$saved = get_option( self::OPTION, array() );
@@ -37,13 +37,14 @@ final class EPI_Pull_Settings {
 		return array(
 			'key'    => isset( $saved['key'] ) ? (string) $saved['key'] : '',
 			'images' => ! empty( $saved['images'] ),
+			'test'   => ! array_key_exists( 'test', $saved ) || ! empty( $saved['test'] ),
 		);
 	}
 
 	/**
 	 * Save some or all of the settings.
 	 *
-	 * @param array $values Any of: key (string), images (bool).
+	 * @param array $values Any of: key (string), images (bool), test (bool).
 	 * @return void
 	 */
 	public static function save( array $values ) {
@@ -55,6 +56,10 @@ final class EPI_Pull_Settings {
 
 		if ( array_key_exists( 'images', $values ) ) {
 			$current['images'] = ! empty( $values['images'] );
+		}
+
+		if ( array_key_exists( 'test', $values ) ) {
+			$current['test'] = ! empty( $values['test'] );
 		}
 
 		update_option( self::OPTION, $current, false );
@@ -84,6 +89,17 @@ final class EPI_Pull_Settings {
 		$settings = self::get();
 
 		return $settings['images'];
+	}
+
+	/**
+	 * Whether pulls only report what they would change. On until switched off.
+	 *
+	 * @return bool
+	 */
+	public static function test_mode() {
+		$settings = self::get();
+
+		return $settings['test'];
 	}
 
 	/**

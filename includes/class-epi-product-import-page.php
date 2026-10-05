@@ -121,6 +121,7 @@ final class EPI_Product_Import_Page {
 				array(
 					'key'    => isset( $_POST['epi_pull_key'] ) ? sanitize_text_field( wp_unslash( $_POST['epi_pull_key'] ) ) : '',
 					'images' => ! empty( $_POST['epi_pull_images'] ),
+					'test'   => ! empty( $_POST['epi_pull_test'] ),
 				)
 			);
 		} elseif ( 'pull' === $action || 'full' === $action ) {
@@ -212,6 +213,16 @@ final class EPI_Product_Import_Page {
 					<div class="bw-panels">
 						<?php self::render_notice( $notice ); ?>
 
+						<?php if ( $settings['test'] ) : ?>
+							<div class="bw-notice bw-notice--info" role="status">
+								<i class="bw-icon bw-icon--18 bw-notice__icon" data-lucide="info" aria-hidden="true"></i>
+								<div class="bw-notice__body">
+									<p class="bw-notice__title"><?php esc_html_e( 'Test mode is on', 'blueworx_client_forum' ); ?></p>
+									<p class="bw-notice__text"><?php esc_html_e( 'Pulls record what they would add, update or hide, and change nothing. Switch it off in Settings when you are happy with what you see.', 'blueworx_client_forum' ); ?></p>
+								</div>
+							</div>
+						<?php endif; ?>
+
 						<form method="post" action="">
 							<?php wp_nonce_field( 'epi_pull_settings', 'epi_pull_nonce' ); ?>
 							<input type="hidden" name="epi_pull_action" value="settings" />
@@ -227,6 +238,16 @@ final class EPI_Product_Import_Page {
 											<label class="bw-field__label" for="epi_pull_key"><?php esc_html_e( 'Subscription key', 'blueworx_client_forum' ); ?></label>
 											<input class="bw-input bw-input--mono" id="epi_pull_key" name="epi_pull_key" type="text" value="<?php echo esc_attr( $settings['key'] ); ?>" autocomplete="off" spellcheck="false" />
 											<p class="bw-field__help"><?php esc_html_e( 'From the ePim team. It is sent with every request and stored only on this site.', 'blueworx_client_forum' ); ?></p>
+										</div>
+										<div>
+											<label class="bw-switch bw-switch--bare">
+												<input type="checkbox" role="switch" name="epi_pull_test" value="1" <?php checked( $settings['test'] ); ?> />
+												<span class="bw-switch__track"><span class="bw-switch__thumb"></span></span>
+												<span class="bw-switch__label">
+													<?php esc_html_e( 'Test mode', 'blueworx_client_forum' ); ?>
+													<small><?php esc_html_e( 'Pulls report what they would change and change nothing. Start here, then switch off once a test pull looks right.', 'blueworx_client_forum' ); ?></small>
+												</span>
+											</label>
 										</div>
 										<div>
 											<label class="bw-switch bw-switch--bare">
@@ -325,7 +346,12 @@ final class EPI_Product_Import_Page {
 													<td class="bw-table__num"><?php echo esc_html( (string) (int) $run->updated ); ?></td>
 													<td class="bw-table__num"><?php echo esc_html( (string) (int) $run->hidden ); ?></td>
 													<td class="bw-table__num"><?php echo esc_html( (string) (int) $run->errors ); ?></td>
-													<td><?php self::render_status_badge( $run->status ); ?></td>
+													<td>
+														<?php self::render_status_badge( $run->status ); ?>
+														<?php if ( $run->is_test ) : ?>
+															<span class="bw-badge bw-badge--neutral"><?php esc_html_e( 'Test', 'blueworx_client_forum' ); ?></span>
+														<?php endif; ?>
+													</td>
 													<td class="bw-table__actions">
 														<a class="bw-btn bw-btn--sm" href="<?php echo esc_url( self::url( array( 'run' => (int) $run->id ) ) ); ?>"><?php esc_html_e( 'View', 'blueworx_client_forum' ); ?></a>
 													</td>
@@ -519,6 +545,15 @@ final class EPI_Product_Import_Page {
 
 				<div class="bw-page__body bw-page__body--single">
 					<div class="bw-panels">
+						<?php if ( $run->is_test ) : ?>
+							<div class="bw-notice bw-notice--info" role="status">
+								<i class="bw-icon bw-icon--18 bw-notice__icon" data-lucide="info" aria-hidden="true"></i>
+								<div class="bw-notice__body">
+									<p class="bw-notice__title"><?php esc_html_e( 'Test pull', 'blueworx_client_forum' ); ?></p>
+									<p class="bw-notice__text"><?php esc_html_e( 'This was a test pull: nothing on the site was changed. Each row shows what a real pull would do.', 'blueworx_client_forum' ); ?></p>
+								</div>
+							</div>
+						<?php endif; ?>
 						<section class="bw-card">
 							<div class="bw-card__head">
 								<div class="bw-card__titles">
@@ -531,6 +566,8 @@ final class EPI_Product_Import_Page {
 									<dd><?php echo esc_html( self::trigger_label( $run->trigger_type ) ); ?></dd>
 									<dt><?php esc_html_e( 'Status', 'blueworx_client_forum' ); ?></dt>
 									<dd><?php echo esc_html( self::status_label( $run->status ) ); ?></dd>
+									<dt><?php esc_html_e( 'Mode', 'blueworx_client_forum' ); ?></dt>
+									<dd><?php echo $run->is_test ? esc_html__( 'Test (nothing changed)', 'blueworx_client_forum' ) : esc_html__( 'Live', 'blueworx_client_forum' ); ?></dd>
 									<dt><?php esc_html_e( 'Started', 'blueworx_client_forum' ); ?></dt>
 									<dd><?php echo esc_html( self::when( $run->started_at ) ); ?></dd>
 									<dt><?php esc_html_e( 'Finished', 'blueworx_client_forum' ); ?></dt>

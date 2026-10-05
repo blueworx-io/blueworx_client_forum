@@ -319,7 +319,8 @@ add_action(
 						delete_option( $option );
 					}
 
-					update_option( 'epi_pull_settings', array( 'key' => EPI_TEST_EPIM_KEY, 'images' => false ), false );
+					// Existing tests are real pulls, so test mode starts off.
+					update_option( 'epi_pull_settings', array( 'key' => EPI_TEST_EPIM_KEY, 'images' => false, 'test' => false ), false );
 
 					return array( 'ok' => true );
 				},
@@ -593,8 +594,33 @@ add_action(
 				'methods'             => 'POST',
 				'permission_callback' => $admin_only,
 				'callback'            => static function ( WP_REST_Request $request ) {
-					EPI_Pull_Settings::save( array( 'key' => (string) $request['key'], 'images' => ! empty( $request['images'] ) ) );
+					// Only what the request names is changed, so a call with just a key keeps the rest.
+					$values = array( 'key' => (string) $request['key'] );
+
+					foreach ( array( 'images', 'test' ) as $flag ) {
+						if ( $request->has_param( $flag ) ) {
+							$values[ $flag ] = ! empty( $request[ $flag ] );
+						}
+					}
+
+					EPI_Pull_Settings::save( $values );
 					return EPI_Pull_Settings::get();
+				},
+			)
+		);
+
+		// What a fresh install gets: the option deleted, then read back.
+		register_rest_route(
+			'epi-test/v1',
+			'/pull/settings-default',
+			array(
+				'methods'             => 'GET',
+				'permission_callback' => $admin_only,
+				'callback'            => static function () {
+					delete_option( 'epi_pull_settings' );
+					$settings = EPI_Pull_Settings::get();
+					update_option( 'epi_pull_settings', array( 'key' => EPI_TEST_EPIM_KEY, 'images' => false, 'test' => false ), false );
+					return $settings;
 				},
 			)
 		);
@@ -610,7 +636,7 @@ add_action(
 				'methods'             => 'POST',
 				'permission_callback' => $admin_only,
 				'callback'            => static function ( WP_REST_Request $request ) {
-					$started = EPI_Pull_Runner::start( 'manual', ! empty( $request['full'] ) );
+					$started = EPI_Pull_Runner::start( 'manual', ! empty( $request['full'] ), array( 'category_id' => (int) $request['category_id'] ) );
 					return is_wp_error( $started ) ? array( 'error' => $started->get_error_code() ) : array( 'run_id' => $started );
 				},
 			)
@@ -638,7 +664,7 @@ add_action(
 				'permission_callback' => $admin_only,
 				'callback'            => static function ( WP_REST_Request $request ) use ( $run_to_array ) {
 					delete_option( 'epi_test_epim_calls' );
-					$started = EPI_Pull_Runner::start( 'manual', ! empty( $request['full'] ) );
+					$started = EPI_Pull_Runner::start( 'manual', ! empty( $request['full'] ), array( 'category_id' => (int) $request['category_id'] ) );
 
 					if ( is_wp_error( $started ) ) {
 						return array( 'error' => $started->get_error_code(), 'message' => $started->get_error_message() );

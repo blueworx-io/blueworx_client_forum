@@ -75,6 +75,9 @@ final class EPI_Pull_Store {
 			status varchar(12) NOT NULL DEFAULT 'queued',
 			is_full tinyint(1) NOT NULL DEFAULT 0,
 			since_utc varchar(25) NOT NULL DEFAULT '',
+			is_test tinyint(1) NOT NULL DEFAULT 0,
+			category_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			category_name varchar(191) NOT NULL DEFAULT '',
 			started_at datetime NOT NULL,
 			finished_at datetime NULL,
 			stage varchar(20) NOT NULL DEFAULT 'categories',
@@ -119,23 +122,27 @@ final class EPI_Pull_Store {
 	 * @param string $trigger   'auto' or 'manual'.
 	 * @param string $since_utc ISO time the pull asks for changes since, or '' for everything.
 	 * @param bool   $is_full   Whether this is a full import.
+	 * @param array  $options   Optional: is_test (bool), category_id (int), category_name (string).
 	 * @return int Run ID, or 0 when the insert failed.
 	 */
-	public static function create_run( $trigger, $since_utc, $is_full ) {
+	public static function create_run( $trigger, $since_utc, $is_full, array $options = array() ) {
 		global $wpdb;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- The plugin's own table.
 		$result = $wpdb->insert(
 			self::runs_table(),
 			array(
-				'trigger_type' => 'manual' === $trigger ? 'manual' : 'auto',
-				'status'       => 'queued',
-				'is_full'      => $is_full ? 1 : 0,
-				'since_utc'    => (string) $since_utc,
-				'started_at'   => current_time( 'mysql', true ),
-				'stage'        => 'categories',
+				'trigger_type'  => 'manual' === $trigger ? 'manual' : 'auto',
+				'status'        => 'queued',
+				'is_full'       => $is_full ? 1 : 0,
+				'since_utc'     => (string) $since_utc,
+				'is_test'       => empty( $options['is_test'] ) ? 0 : 1,
+				'category_id'   => isset( $options['category_id'] ) ? absint( $options['category_id'] ) : 0,
+				'category_name' => isset( $options['category_name'] ) ? sanitize_text_field( $options['category_name'] ) : '',
+				'started_at'    => current_time( 'mysql', true ),
+				'stage'         => 'categories',
 			),
-			array( '%s', '%s', '%d', '%s', '%s', '%s' )
+			array( '%s', '%s', '%d', '%s', '%d', '%d', '%s', '%s', '%s' )
 		);
 
 		if ( false === $result ) {
@@ -376,7 +383,8 @@ final class EPI_Pull_Store {
 	}
 
 	/**
-	 * The newest run that finished properly.
+	 * The newest run that finished properly. Test runs and category pulls are
+	 * not a baseline: they leave the site as it was, or only partly updated.
 	 *
 	 * @return object|null
 	 */
@@ -386,7 +394,7 @@ final class EPI_Pull_Store {
 		$table = self::runs_table();
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- The plugin's own table; name from $wpdb->prefix.
-		$row = $wpdb->get_row( "SELECT * FROM {$table} WHERE status = 'done' ORDER BY id DESC LIMIT 1" );
+		$row = $wpdb->get_row( "SELECT * FROM {$table} WHERE status = 'done' AND is_test = 0 AND category_id = 0 ORDER BY id DESC LIMIT 1" );
 
 		return $row ? $row : null;
 	}

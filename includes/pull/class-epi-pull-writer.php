@@ -30,9 +30,10 @@ final class EPI_Pull_Writer {
 	 * @param array $product      From EPI_Pull_Mapper::map().
 	 * @param array $category_map ePim category ID => term ID.
 	 * @param bool  $images       Whether to set the pictures.
+	 * @param bool  $dry_run      Report what would change; write nothing.
 	 * @return array action, product_id, changes, message.
 	 */
-	public static function apply( array $product, array $category_map, $images ) {
+	public static function apply( array $product, array $category_map, $images, $dry_run = false ) {
 		$id = self::find( $product );
 
 		if ( ! $id && $product['hidden'] ) {
@@ -44,7 +45,10 @@ final class EPI_Pull_Writer {
 		// An archived or unapproved record leaves a hidden or binned product
 		// where it is. Only a live record brings one out of the bin.
 		if ( $id && $product['hidden'] && in_array( $before['status'], array( 'draft', 'trash' ), true ) ) {
-			self::stamp( $id, $product );
+			if ( ! $dry_run ) {
+				self::stamp( $id, $product );
+			}
+
 			return self::result( 'unchanged', $id, array(), '' );
 		}
 
@@ -52,8 +56,18 @@ final class EPI_Pull_Writer {
 		$changes = self::diff( $before, $wanted );
 
 		if ( $id && empty( $changes ) ) {
-			self::stamp( $id, $product );
+			if ( ! $dry_run ) {
+				self::stamp( $id, $product );
+			}
+
 			return self::result( 'unchanged', $id, array(), '' );
+		}
+
+		$action = ! $id ? 'added' : ( $product['hidden'] ? 'hidden' : 'updated' );
+
+		// A test pull reports what it would do and stops here.
+		if ( $dry_run ) {
+			return self::result( $action, (int) $id, $changes, '' );
 		}
 
 		$saved = self::write( $id, $wanted, $product );
@@ -62,18 +76,17 @@ final class EPI_Pull_Writer {
 			return self::result( 'error', (int) $id, $changes, $saved->get_error_message() );
 		}
 
-		$action = ! $id ? 'added' : ( $product['hidden'] ? 'hidden' : 'updated' );
-
 		return self::result( $action, (int) $saved, $changes, '' );
 	}
 
 	/**
 	 * Hide every product an ePim deletion names.
 	 *
-	 * @param array $entry One DeletedEntities record: EntityType, EntityId.
+	 * @param array $entry   One DeletedEntities record: EntityType, EntityId.
+	 * @param bool  $dry_run Report what would be hidden; change nothing.
 	 * @return array One result per product hidden, each with sku and name added.
 	 */
-	public static function hide_deleted( array $entry ) {
+	public static function hide_deleted( array $entry, $dry_run = false ) {
 		$type   = isset( $entry['EntityType'] ) ? (string) $entry['EntityType'] : '';
 		$entity = isset( $entry['EntityId'] ) ? absint( $entry['EntityId'] ) : 0;
 
@@ -101,13 +114,18 @@ final class EPI_Pull_Writer {
 
 			$wanted  = array( 'status' => 'draft' );
 			$changes = self::diff( $before, $wanted );
-			$saved   = self::write( $id, $wanted, null );
-			$result  = is_wp_error( $saved )
-				? self::result( 'error', $id, $changes, $saved->get_error_message() )
-				: self::result( 'hidden', $id, $changes, '' );
 
-			if ( ! is_wp_error( $saved ) ) {
-				update_post_meta( $id, self::META_SYNCED, gmdate( 'Y-m-d H:i:s' ) );
+			if ( $dry_run ) {
+				$result = self::result( 'hidden', $id, $changes, '' );
+			} else {
+				$saved  = self::write( $id, $wanted, null );
+				$result = is_wp_error( $saved )
+					? self::result( 'error', $id, $changes, $saved->get_error_message() )
+					: self::result( 'hidden', $id, $changes, '' );
+
+				if ( ! is_wp_error( $saved ) ) {
+					update_post_meta( $id, self::META_SYNCED, gmdate( 'Y-m-d H:i:s' ) );
+				}
 			}
 
 			$result['sku']  = $before['sku'];

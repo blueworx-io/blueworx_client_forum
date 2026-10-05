@@ -18,7 +18,7 @@ final class EPI_Pull {
 	/**
 	 * Database schema version.
 	 */
-	const DB_VERSION = '1.0';
+	const DB_VERSION = '1.1';
 
 	/**
 	 * Option holding the installed schema version.
