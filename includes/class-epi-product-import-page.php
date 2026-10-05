@@ -356,6 +356,7 @@ final class EPI_Product_Import_Page {
 			'started'          => array( 'success', __( 'Pull started. It runs in the background; refresh this page to follow it.', 'blueworx_client_forum' ) ),
 			'epi_pull_running' => array( 'warning', __( 'A pull is already running. Wait for it to finish, then try again.', 'blueworx_client_forum' ) ),
 			'epi_pull_no_key'  => array( 'warning', __( 'No ePim subscription key is saved. Add it in Settings, save, then pull.', 'blueworx_client_forum' ) ),
+			'missing'          => array( 'warning', __( 'That pull could not be found. It may have been older than 90 days and removed.', 'blueworx_client_forum' ) ),
 			'epi_pull_store'   => array( 'danger', __( 'The pull could not be recorded. Check the PHP error log.', 'blueworx_client_forum' ) ),
 		);
 
@@ -473,12 +474,212 @@ final class EPI_Product_Import_Page {
 	}
 
 	/**
-	 * The detail view. Filled in by Task 8.
+	 * The detail view: one run, product by product.
 	 *
 	 * @param int $run_id Run ID.
 	 * @return void
 	 */
 	private static function render_detail( $run_id ) {
-		self::render_list( 'missing' );
+		$run = EPI_Pull_Store::get_run( $run_id );
+
+		if ( ! $run ) {
+			self::render_list( 'missing' );
+			return;
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only paging for an admin screen; sanitised with absint().
+		$page_no = isset( $_GET['paged'] ) ? max( 1, absint( wp_unslash( $_GET['paged'] ) ) ) : 1;
+		$total   = EPI_Pull_Store::count_items( $run_id );
+		$pages   = max( 1, (int) ceil( $total / self::ITEMS_PER_PAGE ) );
+		$page_no = min( $page_no, $pages );
+		$items   = EPI_Pull_Store::get_items( $run_id, $page_no, self::ITEMS_PER_PAGE );
+		$json    = JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
+		?>
+		<div class="wrap bw-wrap">
+			<div class="bw-admin bw-page">
+				<header class="bw-pagehead">
+					<div class="bw-pagehead__titles">
+						<p class="bw-pagehead__eyebrow"><?php esc_html_e( 'Product import', 'blueworx_client_forum' ); ?></p>
+						<h1 class="bw-pagehead__h1">
+							<?php
+							/* translators: %s: date and time. */
+							printf( esc_html__( 'Pull on %s', 'blueworx_client_forum' ), esc_html( self::when( $run->started_at ) ) );
+							?>
+						</h1>
+						<p class="bw-pagehead__lede"><?php esc_html_e( 'Every product this pull added, updated or hid, with each changed field before and after, and the record exactly as ePim sent it.', 'blueworx_client_forum' ); ?></p>
+					</div>
+					<div class="bw-pagehead__actions">
+						<a class="bw-btn" href="<?php echo esc_url( self::url() ); ?>">
+							<i class="bw-icon" data-lucide="arrow-left" aria-hidden="true"></i>
+							<?php esc_html_e( 'Back to pulls', 'blueworx_client_forum' ); ?>
+						</a>
+					</div>
+				</header>
+
+				<div class="bw-page__body bw-page__body--single">
+					<div class="bw-panels">
+						<section class="bw-card">
+							<div class="bw-card__head">
+								<div class="bw-card__titles">
+									<h2 class="bw-card__title"><?php esc_html_e( 'Summary', 'blueworx_client_forum' ); ?></h2>
+								</div>
+							</div>
+							<div class="bw-card__body">
+								<dl class="bw-dl">
+									<dt><?php esc_html_e( 'Trigger', 'blueworx_client_forum' ); ?></dt>
+									<dd><?php echo esc_html( self::trigger_label( $run->trigger_type ) ); ?></dd>
+									<dt><?php esc_html_e( 'Status', 'blueworx_client_forum' ); ?></dt>
+									<dd><?php echo esc_html( self::status_label( $run->status ) ); ?></dd>
+									<dt><?php esc_html_e( 'Started', 'blueworx_client_forum' ); ?></dt>
+									<dd><?php echo esc_html( self::when( $run->started_at ) ); ?></dd>
+									<dt><?php esc_html_e( 'Finished', 'blueworx_client_forum' ); ?></dt>
+									<dd><?php echo $run->finished_at ? esc_html( self::when( $run->finished_at ) ) : esc_html__( 'Not yet', 'blueworx_client_forum' ); ?></dd>
+									<dt><?php esc_html_e( 'Asked ePim for', 'blueworx_client_forum' ); ?></dt>
+									<dd>
+										<?php
+										if ( '' === (string) $run->since_utc ) {
+											esc_html_e( 'Every product', 'blueworx_client_forum' );
+										} else {
+											/* translators: %s: date and time. */
+											printf( esc_html__( 'Changes since %s', 'blueworx_client_forum' ), esc_html( self::when( str_replace( array( 'T', 'Z' ), array( ' ', '' ), $run->since_utc ) ) ) );
+										}
+										?>
+									</dd>
+									<dt><?php esc_html_e( 'Counts', 'blueworx_client_forum' ); ?></dt>
+									<dd>
+										<?php
+										printf(
+											/* translators: 1: added, 2: updated, 3: hidden, 4: unchanged, 5: skipped, 6: errors. */
+											esc_html__( '%1$d added, %2$d updated, %3$d hidden, %4$d unchanged, %5$d skipped, %6$d errors', 'blueworx_client_forum' ),
+											(int) $run->added,
+											(int) $run->updated,
+											(int) $run->hidden,
+											(int) $run->unchanged,
+											(int) $run->skipped,
+											(int) $run->errors
+										);
+										?>
+									</dd>
+									<?php if ( '' !== (string) $run->message ) : ?>
+										<dt><?php esc_html_e( 'Message', 'blueworx_client_forum' ); ?></dt>
+										<dd><?php echo esc_html( $run->message ); ?></dd>
+									<?php endif; ?>
+								</dl>
+							</div>
+						</section>
+
+						<section class="bw-card bw-card--flush">
+							<div class="bw-card__head">
+								<div class="bw-card__titles">
+									<h2 class="bw-card__title"><?php esc_html_e( 'Products', 'blueworx_client_forum' ); ?></h2>
+								</div>
+							</div>
+							<?php if ( ! $items ) : ?>
+								<div class="bw-empty">
+									<i class="bw-icon bw-icon--28 bw-empty__icon" data-lucide="circle-check" aria-hidden="true"></i>
+									<h3 class="bw-empty__title"><?php esc_html_e( 'Nothing changed', 'blueworx_client_forum' ); ?></h3>
+									<p class="bw-empty__text"><?php esc_html_e( 'ePim sent nothing this pull needed to add, update or hide.', 'blueworx_client_forum' ); ?></p>
+								</div>
+							<?php else : ?>
+								<div class="bw-tablescroll">
+									<table class="bw-table">
+										<thead>
+											<tr>
+												<th scope="col"><?php esc_html_e( 'Product', 'blueworx_client_forum' ); ?></th>
+												<th scope="col"><?php esc_html_e( 'Result', 'blueworx_client_forum' ); ?></th>
+												<th scope="col"><?php esc_html_e( 'Changes', 'blueworx_client_forum' ); ?></th>
+												<th scope="col"><?php esc_html_e( 'From ePim', 'blueworx_client_forum' ); ?></th>
+											</tr>
+										</thead>
+										<tbody>
+											<?php foreach ( $items as $item ) : ?>
+												<tr>
+													<td>
+														<span class="bw-table__primary"><?php echo esc_html( '' !== $item['name'] ? $item['name'] : __( '(no name)', 'blueworx_client_forum' ) ); ?></span>
+														<span class="bw-table__sub"><?php echo esc_html( '' !== $item['sku'] ? $item['sku'] : __( 'No SKU', 'blueworx_client_forum' ) ); ?></span>
+														<?php if ( $item['product_id'] ) : ?>
+															<span class="bw-table__sub"><a href="<?php echo esc_url( get_edit_post_link( (int) $item['product_id'], 'raw' ) ); ?>"><?php esc_html_e( 'Open product', 'blueworx_client_forum' ); ?></a></span>
+														<?php endif; ?>
+													</td>
+													<td>
+														<?php self::render_action_badge( $item['action'] ); ?>
+														<?php if ( '' !== (string) $item['message'] ) : ?>
+															<span class="bw-table__sub"><?php echo esc_html( $item['message'] ); ?></span>
+														<?php endif; ?>
+													</td>
+													<td><?php self::render_changes( $item['changes'] ); ?></td>
+													<td>
+														<section class="bw-accordion" data-epi-accordion>
+															<button type="button" class="bw-accordion__head" aria-expanded="false">
+																<span class="bw-accordion__title"><?php esc_html_e( 'Raw ePim data', 'blueworx_client_forum' ); ?></span>
+																<i class="bw-icon bw-accordion__chev" data-lucide="chevron-down" aria-hidden="true"></i>
+															</button>
+															<div class="bw-accordion__body" hidden>
+																<pre><?php echo esc_html( (string) wp_json_encode( $item['raw'], $json ) ); ?></pre>
+															</div>
+														</section>
+													</td>
+												</tr>
+											<?php endforeach; ?>
+										</tbody>
+									</table>
+								</div>
+								<?php self::render_pager( $page_no, $pages, $total, array( 'run' => (int) $run_id ) ); ?>
+							<?php endif; ?>
+						</section>
+					</div>
+				</div>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * An item's action as a badge.
+	 *
+	 * @param string $action added, updated, hidden or error.
+	 * @return void
+	 */
+	private static function render_action_badge( $action ) {
+		$badges = array(
+			'added'   => array( 'success', __( 'Added', 'blueworx_client_forum' ) ),
+			'updated' => array( 'info', __( 'Updated', 'blueworx_client_forum' ) ),
+			'hidden'  => array( 'warning', __( 'Hidden', 'blueworx_client_forum' ) ),
+			'error'   => array( 'danger', __( 'Error', 'blueworx_client_forum' ) ),
+		);
+
+		list( $tone, $label ) = isset( $badges[ $action ] ) ? $badges[ $action ] : array( 'neutral', $action );
+		?>
+		<span class="bw-badge bw-badge--<?php echo esc_attr( $tone ); ?>"><?php echo esc_html( $label ); ?></span>
+		<?php
+	}
+
+	/**
+	 * Field changes as "label: before, arrow, after", one per line.
+	 *
+	 * @param array $changes Each: field, label, before, after.
+	 * @return void
+	 */
+	private static function render_changes( array $changes ) {
+		if ( ! $changes ) {
+			?>
+			<span class="bw-table__sub"><?php esc_html_e( 'None', 'blueworx_client_forum' ); ?></span>
+			<?php
+			return;
+		}
+
+		$empty = __( '(empty)', 'blueworx_client_forum' );
+		?>
+		<dl class="bw-dl bw-dl--stack">
+			<?php foreach ( $changes as $change ) : ?>
+				<dt><?php echo esc_html( isset( $change['label'] ) ? $change['label'] : $change['field'] ); ?></dt>
+				<dd>
+					<?php echo esc_html( isset( $change['before'] ) && '' !== (string) $change['before'] && null !== $change['before'] ? (string) $change['before'] : $empty ); ?>
+					<i class="bw-icon bw-icon--14" data-lucide="arrow-right" aria-hidden="true"></i>
+					<?php echo esc_html( isset( $change['after'] ) && '' !== (string) $change['after'] && null !== $change['after'] ? (string) $change['after'] : $empty ); ?>
+				</dd>
+			<?php endforeach; ?>
+		</dl>
+		<?php
 	}
 }

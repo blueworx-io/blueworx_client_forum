@@ -442,3 +442,47 @@ test('without a key, Pull now says so', async ({ page }) => {
   await page.getByRole('button', { name: 'Pull now' }).click();
   await expect(page.locator('.bw-notice--warning')).toContainText('No ePim subscription key is saved.');
 });
+
+test('the detail view lists each product with what changed and the raw record', async ({ page }) => {
+  await pull(page);
+  const run = await pull(page, { scenario: 'changed' });
+
+  await page.goto(`${SCREEN}&run=${run.id}`);
+  await expect(page.locator('.bw-pagehead__h1')).toContainText('Pull on');
+  await expect(page.locator('.bw-dl:not(.bw-dl--stack)')).toContainText('Manual');
+  await expect(page.locator('.bw-dl:not(.bw-dl--stack)')).toContainText('Done');
+
+  const rows = page.locator('.bw-table tbody tr');
+  await expect(rows).toHaveCount(2);
+
+  const updated = rows.filter({ hasText: 'TEST-1001' });
+  await expect(updated.locator('.bw-badge')).toHaveText('Updated');
+  await expect(updated).toContainText('Product name');
+  await expect(updated).toContainText('Single Kinetic Switch - White');
+  await expect(updated).toContainText('Single Kinetic Switch Kit - White');
+  await expect(updated).toContainText('Regular price');
+  await expect(updated).toContainText('55.00');
+
+  const hidden = rows.filter({ hasText: 'TEST-1002' });
+  await expect(hidden.locator('.bw-badge')).toHaveText('Hidden');
+  await expect(hidden).toContainText('Draft (hidden)');
+
+  // The raw record is there, closed until asked for.
+  const raw = updated.locator('[data-epi-accordion]');
+  await expect(raw.locator('.bw-accordion__body')).toBeHidden();
+  await raw.locator('.bw-accordion__head').click();
+  await expect(raw.locator('.bw-accordion__body')).toBeVisible();
+  await expect(raw.locator('pre')).toContainText('"SKU": "TEST-1001"');
+
+  await page.getByRole('link', { name: 'Back to pulls' }).click();
+  await expect(page.locator('.bw-pagehead__h1')).toHaveText('Product import');
+
+  // A run that touched nothing says so.
+  const quiet = await pull(page, { scenario: 'changed' });
+  await page.goto(`${SCREEN}&run=${quiet.id}`);
+  await expect(page.locator('.bw-empty__title')).toHaveText('Nothing changed');
+
+  // A run that does not exist goes back to the list.
+  await page.goto(`${SCREEN}&run=999999`);
+  await expect(page.locator('.bw-notice--warning')).toContainText('That pull could not be found.');
+});
