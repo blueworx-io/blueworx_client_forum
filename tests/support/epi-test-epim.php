@@ -411,5 +411,109 @@ add_action(
 				},
 			)
 		);
+
+		// Map and apply one raw record, with the fixture categories in place.
+		register_rest_route(
+			'epi-test/v1',
+			'/pull/apply',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => $admin_only,
+				'callback'            => static function ( WP_REST_Request $request ) {
+					$fixtures = epi_test_epim_fixtures( 'initial' );
+					$map      = EPI_Pull_Categories::sync( $fixtures['categories'] );
+
+					return EPI_Pull_Writer::apply( EPI_Pull_Mapper::map( (array) $request['raw'] ), $map, ! empty( $request['images'] ) );
+				},
+			)
+		);
+
+		// A product that existed before the pull: SKU, no ePim id.
+		register_rest_route(
+			'epi-test/v1',
+			'/pull/product',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => $admin_only,
+				'callback'            => static function ( WP_REST_Request $request ) {
+					$id = wp_insert_post(
+						array(
+							'post_type'   => 'product',
+							'post_status' => 'publish',
+							'post_title'  => (string) $request['title'],
+						)
+					);
+					update_post_meta( $id, '_sku', (string) $request['sku'] );
+
+					return array( 'id' => (int) $id );
+				},
+			)
+		);
+
+		// What the site holds for a SKU. `count` says how many products carry it.
+		register_rest_route(
+			'epi-test/v1',
+			'/pull/product/(?P<sku>[^/]+)',
+			array(
+				'methods'             => 'GET',
+				'permission_callback' => $admin_only,
+				'callback'            => static function ( WP_REST_Request $request ) {
+					$ids = get_posts(
+						array(
+							'post_type'      => 'product',
+							'post_status'    => 'any',
+							'posts_per_page' => -1,
+							'fields'         => 'ids',
+							'meta_key'       => '_sku',
+							'meta_value'     => (string) $request['sku'],
+						)
+					);
+
+					if ( ! $ids ) {
+						return array( 'id' => 0, 'count' => 0 );
+					}
+
+					$id         = (int) $ids[0];
+					$post       = get_post( $id );
+					$read       = EPI_Pull_Writer::read( $id );
+					$categories = array();
+
+					foreach ( $read['categories'] as $term_id ) {
+						$term         = get_term( $term_id, 'product_cat' );
+						$categories[] = $term instanceof WP_Term ? $term->name : (string) $term_id;
+					}
+
+					return array(
+						'id'              => $id,
+						'count'           => count( $ids ),
+						'status'          => $post->post_status,
+						'title'           => $post->post_title,
+						'content'         => $post->post_content,
+						'sku'             => $read['sku'],
+						'price'           => $read['price'],
+						'epim_id'         => (int) get_post_meta( $id, '_epim_variation_id', true ),
+						'epim_product_id' => (int) get_post_meta( $id, '_epim_product_id', true ),
+						'categories'      => $categories,
+						'attributes'      => (object) $read['attributes'],
+						'thumbnail'       => (string) get_post_meta( $id, '_thumbnail_id', true ),
+						'gallery'         => (string) get_post_meta( $id, '_product_image_gallery', true ),
+					);
+				},
+			)
+		);
+
+		// Set the pull's settings directly.
+		register_rest_route(
+			'epi-test/v1',
+			'/pull/settings',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => $admin_only,
+				'callback'            => static function ( WP_REST_Request $request ) {
+					EPI_Pull_Settings::save( array( 'key' => (string) $request['key'], 'images' => ! empty( $request['images'] ) ) );
+					return EPI_Pull_Settings::get();
+				},
+			)
+		);
 	}
 );

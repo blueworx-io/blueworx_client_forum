@@ -159,3 +159,100 @@ test('categories arrive as a hierarchy and are not duplicated', async ({ page })
     { name: 'Orphan', parent: '', epim: 4 },
   ]);
 });
+
+// Map a raw record and apply it, with the fixture categories synced first.
+async function applyRaw(page, raw, images = false) {
+  return api(page, 'POST', '/apply', { raw, images });
+}
+
+const RAW_A = {
+  Id: 1001, ProductId: 501, IsArchived: false, IsApprovedForPublishing: true,
+  SKU: 'TEST-1001', Name: 'Single Kinetic Switch - White', Price: 51.25,
+  SKU_Text: 'Kit includes a switch and a receiver.', ProductCategoryIds: [2],
+  PictureIds: [11, 12, 13, 14], PictureIdsGrouped: { Image: [11, 12, 13], Logo: [14] },
+  AttributeValues: [
+    { AttributeHeaderName: 'Colour', Value: 'White' },
+    { AttributeHeaderName: 'Material', Value: 'Plastic' },
+  ],
+};
+
+test('a record is added, then updated, then hidden, then unchanged', async ({ page }) => {
+  const added = await applyRaw(page, RAW_A);
+  expect(added.action).toBe('added');
+  expect(added.changes.map((c) => c.field)).toEqual(
+    expect.arrayContaining(['status', 'name', 'description', 'sku', 'price', 'categories', 'attribute:Colour'])
+  );
+
+  const product = await api(page, 'GET', '/product/TEST-1001');
+  expect(product).toMatchObject({
+    status: 'publish',
+    title: 'Single Kinetic Switch - White',
+    content: 'Kit includes a switch and a receiver.',
+    sku: 'TEST-1001',
+    price: '51.25',
+    epim_id: 1001,
+    epim_product_id: 501,
+    categories: ['Kinetic switches'],
+    attributes: { Colour: 'White', Material: 'Plastic' },
+    thumbnail: '',
+    gallery: '',
+  });
+
+  const updated = await applyRaw(page, { ...RAW_A, Name: 'Kit - White', Price: 55, AttributeValues: [{ AttributeHeaderName: 'Colour', Value: 'Off white' }] });
+  expect(updated.action).toBe('updated');
+  expect(updated.product_id).toBe(product.id);
+  expect(updated.changes).toEqual([
+    { field: 'name', label: 'Product name', before: 'Single Kinetic Switch - White', after: 'Kit - White' },
+    { field: 'price', label: 'Regular price', before: '51.25', after: '55.00' },
+    { field: 'attribute:Colour', label: 'Attribute: Colour', before: 'White', after: 'Off white' },
+  ]);
+  // An attribute ePim stopped sending is left alone.
+  expect((await api(page, 'GET', '/product/TEST-1001')).attributes).toEqual({ Colour: 'Off white', Material: 'Plastic' });
+
+  const hidden = await applyRaw(page, { ...RAW_A, IsArchived: true });
+  expect(hidden.action).toBe('hidden');
+  expect(hidden.changes).toEqual([{ field: 'status', label: 'Status', before: 'Published', after: 'Draft (hidden)' }]);
+  expect((await api(page, 'GET', '/product/TEST-1001')).status).toBe('draft');
+
+  expect((await applyRaw(page, { ...RAW_A, IsArchived: true })).action).toBe('unchanged');
+
+  // Back on sale in ePim: published again.
+  const back = await applyRaw(page, RAW_A);
+  expect(back.action).toBe('updated');
+  expect((await api(page, 'GET', '/product/TEST-1001')).status).toBe('publish');
+});
+
+test('a record that is archived and not on the site is skipped, and a missing SKU is an error', async ({ page }) => {
+  const skipped = await applyRaw(page, { ...RAW_A, IsArchived: true });
+  expect(skipped.action).toBe('skipped');
+  expect((await api(page, 'GET', '/product/TEST-1001')).id).toBe(0);
+
+  const unapproved = await applyRaw(page, { ...RAW_A, IsApprovedForPublishing: false });
+  expect(unapproved.action).toBe('skipped');
+});
+
+test('an existing product with the SKU but no ePim id is updated, not duplicated', async ({ page }) => {
+  const existing = await api(page, 'POST', '/product', { sku: 'TEST-1001', title: 'Old name' });
+
+  const result = await applyRaw(page, RAW_A);
+  expect(result.action).toBe('updated');
+  expect(result.product_id).toBe(existing.id);
+
+  const product = await api(page, 'GET', '/product/TEST-1001');
+  expect(product.count).toBe(1);
+  expect(product.epim_id).toBe(1001);
+  expect(product.title).toBe('Single Kinetic Switch - White');
+});
+
+test('pictures are left alone until the switch is on', async ({ page }) => {
+  await applyRaw(page, RAW_A, false);
+  expect(await api(page, 'GET', '/product/TEST-1001')).toMatchObject({ thumbnail: '', gallery: '' });
+
+  const withImages = await applyRaw(page, RAW_A, true);
+  expect(withImages.action).toBe('updated');
+  expect(withImages.changes).toEqual([
+    { field: 'image', label: 'Main image', before: '', after: '11' },
+    { field: 'gallery', label: 'Gallery', before: '', after: '12, 13' },
+  ]);
+  expect(await api(page, 'GET', '/product/TEST-1001')).toMatchObject({ thumbnail: '11', gallery: '12,13' });
+});

@@ -36,6 +36,7 @@ final class EPI_Pull {
 		require_once __DIR__ . '/class-epi-pull-client.php';
 		require_once __DIR__ . '/class-epi-pull-mapper.php';
 		require_once __DIR__ . '/class-epi-pull-categories.php';
+		require_once __DIR__ . '/class-epi-pull-writer.php';
 	}
 
 	/**
