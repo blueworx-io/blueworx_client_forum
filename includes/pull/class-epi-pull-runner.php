@@ -82,6 +82,10 @@ final class EPI_Pull_Runner {
 	 * @return void
 	 */
 	public static function daily() {
+		// Re-arm at the next real 02:00, so a clock or timezone change is picked up.
+		wp_clear_scheduled_hook( self::DAILY_HOOK );
+		wp_schedule_event( self::next_two_am(), 'daily', self::DAILY_HOOK );
+
 		EPI_Pull_Store::prune( self::KEEP_DAYS );
 
 		$started = self::start( 'auto' );
@@ -104,7 +108,12 @@ final class EPI_Pull_Runner {
 			return new WP_Error( 'epi_pull_no_key', __( 'No ePim subscription key is saved.', 'blueworx_client_forum' ) );
 		}
 
-		if ( self::is_locked() ) {
+		// Clears a stale lock; the answer is not used.
+		self::is_locked();
+
+		// add_option() inserts only when the row does not exist, so two starts
+		// at the same moment cannot both take the lock.
+		if ( ! add_option( self::LOCK, array( 'run_id' => 0, 'time' => time() ), '', false ) ) {
 			return new WP_Error( 'epi_pull_running', __( 'A pull is already running.', 'blueworx_client_forum' ) );
 		}
 
@@ -114,6 +123,7 @@ final class EPI_Pull_Runner {
 		$run_id = EPI_Pull_Store::create_run( $trigger, $since, ! $last );
 
 		if ( ! $run_id ) {
+			delete_option( self::LOCK );
 			return new WP_Error( 'epi_pull_store', __( 'The pull could not be recorded.', 'blueworx_client_forum' ) );
 		}
 
@@ -138,6 +148,12 @@ final class EPI_Pull_Runner {
 			return;
 		}
 
+		$lock = get_option( self::LOCK );
+
+		if ( ! is_array( $lock ) || (int) $lock['run_id'] !== (int) $run_id ) {
+			return;
+		}
+
 		self::lock( $run_id );
 		EPI_Pull_Store::update_run( $run_id, array( 'status' => 'running' ) );
 
@@ -151,9 +167,13 @@ final class EPI_Pull_Runner {
 		$deadline = microtime( true ) + (int) apply_filters( 'epi_pull_batch_seconds', 20 );
 		$outcome  = true;
 
-		while ( true === $outcome && microtime( true ) < $deadline ) {
-			$run     = EPI_Pull_Store::get_run( $run_id );
-			$outcome = $run ? self::step( $run ) : 'done';
+		try {
+			do {
+				$run     = EPI_Pull_Store::get_run( $run_id );
+				$outcome = $run ? self::step( $run ) : 'done';
+			} while ( true === $outcome && microtime( true ) < $deadline );
+		} catch ( Throwable $e ) {
+			$outcome = new WP_Error( 'epi_pull_fatal', $e->getMessage() );
 		}
 
 		remove_filter( 'epi_change_source', array( __CLASS__, 'as_epim' ) );
@@ -244,7 +264,8 @@ final class EPI_Pull_Runner {
 	 */
 	private static function step( $run ) {
 		// Some databases hand back an ISO time as a plain datetime, so say it as ISO again.
-		$since = '' !== (string) $run->since_utc ? gmdate( 'Y-m-d\TH:i:s\Z', strtotime( $run->since_utc . ' UTC' ) ) : self::BEGINNING;
+		$since_time = '' !== (string) $run->since_utc ? strtotime( $run->since_utc . ' UTC' ) : false;
+		$since      = false !== $since_time ? gmdate( 'Y-m-d\TH:i:s\Z', $since_time ) : self::BEGINNING;
 
 		switch ( $run->stage ) {
 			case 'categories':
@@ -413,7 +434,8 @@ final class EPI_Pull_Runner {
 
 	/**
 	 * Queue the next batch. The batch number keeps each event distinct, or
-	 * WordPress would drop it as a duplicate of the one just run.
+	 * WordPress would drop it as a duplicate of the one just run. Batches chain
+	 * through kick(), which starts the next cron run at once.
 	 *
 	 * @param int $run_id   Run ID.
 	 * @param int $batch_no Batch number.
@@ -422,6 +444,41 @@ final class EPI_Pull_Runner {
 	private static function schedule_batch( $run_id, $batch_no ) {
 		EPI_Pull_Store::update_run( $run_id, array( 'batches' => (int) $batch_no ) );
 		wp_schedule_single_event( time(), self::BATCH_HOOK, array( (int) $run_id, (int) $batch_no ) );
-		spawn_cron();
+		self::kick();
+	}
+
+	/**
+	 * Start the next cron run now. spawn_cron() refuses to from inside a cron
+	 * run, so the same non-blocking request is made directly, at shutdown,
+	 * when wp-cron.php has released its lock. Outside cron spawn_cron() is
+	 * enough.
+	 *
+	 * @return void
+	 */
+	private static function kick() {
+		if ( ! wp_doing_cron() ) {
+			spawn_cron();
+			return;
+		}
+
+		add_action( 'shutdown', array( __CLASS__, 'loopback' ), 200 );
+	}
+
+	/**
+	 * The request spawn_cron() would make.
+	 *
+	 * @return void
+	 */
+	public static function loopback() {
+		$doing_wp_cron = sprintf( '%.22F', microtime( true ) );
+
+		wp_remote_post(
+			add_query_arg( 'doing_wp_cron', $doing_wp_cron, site_url( 'wp-cron.php' ) ),
+			array(
+				'timeout'   => 0.01,
+				'blocking'  => false,
+				'sslverify' => apply_filters( 'https_local_ssl_verify', false ), // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core's own filter, as spawn_cron() uses it.
+			)
+		);
 	}
 }

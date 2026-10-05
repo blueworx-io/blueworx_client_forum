@@ -126,6 +126,15 @@ final class EPI_Plugin {
 	}
 
 	/**
+	 * Stop the daily ePim pull when the plugin is switched off.
+	 *
+	 * @return void
+	 */
+	public static function deactivate() {
+		wp_clear_scheduled_hook( 'epi_pull_daily' );
+	}
+
+	/**
 	 * Initialise the plugin once all other plugins are loaded.
 	 *
 	 * Activation-safe: if Elementor or WooCommerce are unavailable we simply
@@ -192,6 +201,7 @@ final class EPI_Plugin {
 }
 
 register_activation_hook( __FILE__, array( 'EPI_Plugin', 'activate' ) );
+register_deactivation_hook( __FILE__, array( 'EPI_Plugin', 'deactivate' ) );
 
 /**
  * Kick things off.

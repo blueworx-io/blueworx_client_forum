@@ -676,5 +676,30 @@ add_action(
 				},
 			)
 		);
+
+		// Run exactly one batch with no time budget, as cron would, and report
+		// which batch event got queued next.
+		register_rest_route(
+			'epi-test/v1',
+			'/pull/batch-once',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => $admin_only,
+				'callback'            => static function ( WP_REST_Request $request ) {
+					$run_id    = (int) $request['run_id'];
+					$no_budget = static function () { return 0; };
+					add_filter( 'epi_pull_batch_seconds', $no_budget );
+					EPI_Pull_Runner::batch( $run_id, 1, true );
+					remove_filter( 'epi_pull_batch_seconds', $no_budget );
+					$run = EPI_Pull_Store::get_run( $run_id );
+
+					return array(
+						'stage'   => $run ? $run->stage : '',
+						'batches' => $run ? (int) $run->batches : 0,
+						'next'    => (bool) wp_next_scheduled( EPI_Pull_Runner::BATCH_HOOK, array( $run_id, $run ? (int) $run->batches : 0 ) ),
+					);
+				},
+			)
+		);
 	}
 );
