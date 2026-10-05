@@ -120,7 +120,9 @@ final class EPI_Plugin {
 	 */
 	public static function activate() {
 		require_once EPI_PLUGIN_DIR . 'includes/class-epi-product-change-log.php';
+		require_once EPI_PLUGIN_DIR . 'includes/pull/class-epi-pull.php';
 		EPI_Product_Change_Log::install();
+		EPI_Pull::install();
 	}
 
 	/**
