@@ -37,6 +37,7 @@ final class EPI_Pull {
 		require_once __DIR__ . '/class-epi-pull-mapper.php';
 		require_once __DIR__ . '/class-epi-pull-categories.php';
 		require_once __DIR__ . '/class-epi-pull-writer.php';
+		require_once __DIR__ . '/class-epi-pull-runner.php';
 	}
 
 	/**
@@ -61,5 +62,7 @@ final class EPI_Pull {
 		if ( self::DB_VERSION !== get_option( self::DB_OPTION ) ) {
 			self::install();
 		}
+
+		EPI_Pull_Runner::init();
 	}
 }

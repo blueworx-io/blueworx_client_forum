@@ -265,3 +265,105 @@ test('a name with an ampersand is stored the same way every run', async ({ page 
   expect(product.content).toBe('Fish &amp; chips x');
   expect((await applyRaw(page, { ...RAW_A, Name: 'Switch & Receiver', SKU_Text: 'Fish & chips <script>x</script>' })).action).toBe('unchanged');
 });
+
+test('a first pull imports everything and a second asks only for changes', async ({ page }) => {
+  const first = await pull(page);
+  expect(first).toMatchObject({ status: 'done', is_full: '1', since_utc: '', added: '2', updated: '0', hidden: '0', skipped: '1', errors: '0' });
+
+  const calls = await api(page, 'GET', '/calls');
+  expect(calls.map((c) => c.path)).toEqual(['Categories', 'Variations', 'Variations', 'DeletedEntities']);
+  expect(calls[1].query.changedSinceUTC).toBe('2000-01-01T00:00:00Z');
+
+  const second = await pull(page, { scenario: 'changed' });
+  expect(second).toMatchObject({ status: 'done', is_full: '0', added: '0', updated: '1', hidden: '1', unchanged: '0', skipped: '1' });
+  // Since the first run started, less five minutes. The harness database may store it as a plain datetime; ePim is always asked in ISO UTC.
+  expect(second.since_utc).toMatch(/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}Z?$/);
+  const sinceCalls = await api(page, 'GET', '/calls');
+  const asked = sinceCalls.find((c) => c.path === 'Variations').query.changedSinceUTC;
+  expect(asked).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
+  expect(asked).toBe(second.since_utc.replace(' ', 'T').replace(/Z?$/, 'Z'));
+
+  expect(await api(page, 'GET', '/product/TEST-1001')).toMatchObject({ title: 'Single Kinetic Switch Kit - White', price: '55.00' });
+  expect((await api(page, 'GET', '/product/TEST-1002')).status).toBe('draft');
+
+  // A full re-import asks for everything again.
+  const full = await pull(page, { full: true });
+  expect(full).toMatchObject({ status: 'done', is_full: '1', since_utc: '' });
+});
+
+test('a deleted entity hides its product', async ({ page }) => {
+  await pull(page);
+  const run = await pull(page, { scenario: 'deleted' });
+
+  expect(run).toMatchObject({ status: 'done', hidden: '2' });
+  expect((await api(page, 'GET', '/product/TEST-1001')).status).toBe('draft');
+  expect((await api(page, 'GET', '/product/TEST-1002')).status).toBe('draft');
+
+  const items = await api(page, 'GET', `/runs/${run.id}/items`);
+  const hidden = items.filter((i) => i.action === 'hidden');
+  expect(hidden.map((i) => i.sku).sort()).toEqual(['TEST-1001', 'TEST-1002']);
+  expect(hidden[0].raw.EntityType).toBeDefined();
+});
+
+test('a record without a SKU is an error and the run carries on', async ({ page }) => {
+  await api(page, 'POST', '/scenario', { scenario: 'nosku' });
+  const run = await api(page, 'POST', '/pull', {});
+
+  expect(run).toMatchObject({ status: 'done', added: '1', errors: '1' });
+  const items = await api(page, 'GET', `/runs/${run.id}/items`);
+  expect(items.find((i) => i.action === 'error').message).toBe('No SKU, so it cannot be matched to a product.');
+});
+
+test('a second pull is refused while one is running, and a stale lock is cleared', async ({ page }) => {
+  const started = await api(page, 'POST', '/start', {});
+  expect(started.run_id).toBeGreaterThan(0);
+
+  const again = await api(page, 'POST', '/start', {});
+  expect(again.error).toBe('epi_pull_running');
+
+  await api(page, 'POST', '/drain', { run_id: started.run_id });
+  expect((await api(page, 'POST', '/start', {})).run_id).toBeGreaterThan(started.run_id);
+
+  // A lock 21 minutes old belongs to a run that died: it is failed and released.
+  const dead = await api(page, 'POST', '/lock', { minutes_ago: 21 });
+  const next = await api(page, 'POST', '/start', {});
+  expect(next.run_id).toBeGreaterThan(0);
+  const runs = await api(page, 'GET', '/runs');
+  expect(runs.find((r) => Number(r.id) === dead.run_id)).toMatchObject({ status: 'failed', message: 'Timed out: no batch finished for 20 minutes.' });
+});
+
+test('a bad key fails the run with a plain message', async ({ page }) => {
+  await api(page, 'POST', '/settings', { key: 'wrong' });
+  const run = await api(page, 'POST', '/pull', {});
+  expect(run).toMatchObject({ status: 'failed', message: 'ePim did not accept the subscription key.' });
+});
+
+test('records older than 90 days are pruned', async ({ page }) => {
+  const old = await api(page, 'POST', '/seed-run', { days_ago: 100 });
+  const recent = await api(page, 'POST', '/seed-run', { days_ago: 80 });
+
+  const pruned = await api(page, 'POST', '/prune');
+  expect(pruned.removed).toBe(1);
+
+  const runs = await api(page, 'GET', '/runs');
+  expect(runs.map((r) => Number(r.id))).toEqual([recent.id]);
+  expect(runs.map((r) => Number(r.id))).not.toContain(old.id);
+  expect(await api(page, 'GET', `/runs/${old.id}/items`)).toEqual([]);
+});
+
+test('a daily pull is scheduled for 02:00 site time', async ({ page }) => {
+  const schedule = await api(page, 'GET', '/schedule');
+  expect(schedule.next).toBeGreaterThan(Date.now() / 1000);
+  expect(schedule.local_time).toBe('02:00');
+  expect(schedule.recurrence).toBe('daily');
+});
+
+test('a pull shows in the product change log as ePim', async ({ page }) => {
+  await pull(page);
+  const product = await api(page, 'GET', '/product/TEST-1001');
+
+  const updates = await api(page, 'GET', `/changes/${product.id}`);
+  expect(updates.length).toBeGreaterThan(0);
+  expect(updates[0].source).toBe('epim');
+  expect(updates[0].actor).toBe('ePim External API');
+});

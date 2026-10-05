@@ -92,9 +92,14 @@ function epi_test_epim_fixtures( $scenario ) {
 		);
 	}
 
+	if ( 'nosku' === $scenario ) {
+		$b['SKU'] = '';
+		$c        = null;
+	}
+
 	return array(
 		'categories' => $categories,
-		'variations' => array( $a, $b, $c ),
+		'variations' => array_values( array_filter( array( $a, $b, $c ) ) ),
 		'deleted'    => $deleted,
 	);
 }
@@ -512,6 +517,162 @@ add_action(
 				'callback'            => static function ( WP_REST_Request $request ) {
 					EPI_Pull_Settings::save( array( 'key' => (string) $request['key'], 'images' => ! empty( $request['images'] ) ) );
 					return EPI_Pull_Settings::get();
+				},
+			)
+		);
+
+		$run_to_array = static function ( $run ) {
+			return $run ? (array) $run : null;
+		};
+
+		register_rest_route(
+			'epi-test/v1',
+			'/pull/start',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => $admin_only,
+				'callback'            => static function ( WP_REST_Request $request ) {
+					$started = EPI_Pull_Runner::start( 'manual', ! empty( $request['full'] ) );
+					return is_wp_error( $started ) ? array( 'error' => $started->get_error_code() ) : array( 'run_id' => $started );
+				},
+			)
+		);
+
+		register_rest_route(
+			'epi-test/v1',
+			'/pull/drain',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => $admin_only,
+				'callback'            => static function ( WP_REST_Request $request ) use ( $run_to_array ) {
+					return $run_to_array( EPI_Pull_Runner::drain( (int) $request['run_id'] ) );
+				},
+			)
+		);
+
+		// Start and run to the end in one go. Calls are cleared first so a
+		// test can see exactly what this pull asked ePim for.
+		register_rest_route(
+			'epi-test/v1',
+			'/pull/pull',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => $admin_only,
+				'callback'            => static function ( WP_REST_Request $request ) use ( $run_to_array ) {
+					delete_option( 'epi_test_epim_calls' );
+					$started = EPI_Pull_Runner::start( 'manual', ! empty( $request['full'] ) );
+
+					if ( is_wp_error( $started ) ) {
+						return array( 'error' => $started->get_error_code(), 'message' => $started->get_error_message() );
+					}
+
+					return $run_to_array( EPI_Pull_Runner::drain( $started ) );
+				},
+			)
+		);
+
+		register_rest_route(
+			'epi-test/v1',
+			'/pull/runs',
+			array(
+				'methods'             => 'GET',
+				'permission_callback' => $admin_only,
+				'callback'            => static function () {
+					return array_map( static function ( $run ) { return (array) $run; }, EPI_Pull_Store::get_runs( 1, 100 ) );
+				},
+			)
+		);
+
+		register_rest_route(
+			'epi-test/v1',
+			'/pull/runs/(?P<id>\d+)/items',
+			array(
+				'methods'             => 'GET',
+				'permission_callback' => $admin_only,
+				'callback'            => static function ( WP_REST_Request $request ) {
+					return EPI_Pull_Store::get_items( (int) $request['id'], 1, 100 );
+				},
+			)
+		);
+
+		// A finished run from some days ago, with one item.
+		register_rest_route(
+			'epi-test/v1',
+			'/pull/seed-run',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => $admin_only,
+				'callback'            => static function ( WP_REST_Request $request ) {
+					$run_id = EPI_Pull_Store::create_run( 'auto', '', false );
+					EPI_Pull_Store::update_run(
+						$run_id,
+						array(
+							'started_at' => gmdate( 'Y-m-d H:i:s', time() - (int) $request['days_ago'] * DAY_IN_SECONDS ),
+							'status'     => 'done',
+						)
+					);
+					EPI_Pull_Store::add_item( $run_id, array( 'sku' => 'SEED', 'name' => 'Seed', 'action' => 'added' ) );
+
+					return array( 'id' => $run_id );
+				},
+			)
+		);
+
+		register_rest_route(
+			'epi-test/v1',
+			'/pull/prune',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => $admin_only,
+				'callback'            => static function () {
+					return array( 'removed' => EPI_Pull_Store::prune( EPI_Pull_Runner::KEEP_DAYS ) );
+				},
+			)
+		);
+
+		register_rest_route(
+			'epi-test/v1',
+			'/pull/schedule',
+			array(
+				'methods'             => 'GET',
+				'permission_callback' => $admin_only,
+				'callback'            => static function () {
+					$next = (int) wp_next_scheduled( EPI_Pull_Runner::DAILY_HOOK );
+
+					return array(
+						'next'       => $next,
+						'local_time' => $next ? wp_date( 'H:i', $next ) : '',
+						'recurrence' => $next ? wp_get_schedule( EPI_Pull_Runner::DAILY_HOOK ) : '',
+					);
+				},
+			)
+		);
+
+		// A lock some minutes old, as a run that died mid-batch would leave.
+		register_rest_route(
+			'epi-test/v1',
+			'/pull/lock',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => $admin_only,
+				'callback'            => static function ( WP_REST_Request $request ) {
+					$run_id = EPI_Pull_Store::create_run( 'auto', '', false );
+					EPI_Pull_Store::update_run( $run_id, array( 'status' => 'running' ) );
+					update_option( 'epi_pull_lock', array( 'run_id' => $run_id, 'time' => time() - (int) $request['minutes_ago'] * MINUTE_IN_SECONDS ), false );
+
+					return array( 'run_id' => $run_id );
+				},
+			)
+		);
+
+		register_rest_route(
+			'epi-test/v1',
+			'/pull/changes/(?P<id>\d+)',
+			array(
+				'methods'             => 'GET',
+				'permission_callback' => $admin_only,
+				'callback'            => static function ( WP_REST_Request $request ) {
+					return class_exists( 'EPI_Product_Change_Log' ) ? EPI_Product_Change_Log::get_updates( (int) $request['id'] ) : array();
 				},
 			)
 		);
