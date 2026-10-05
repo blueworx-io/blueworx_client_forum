@@ -542,6 +542,7 @@ test('a test pull records what it would add and creates nothing', async ({ page 
   expect(run).toMatchObject({ status: 'done', is_test: '1', added: '2', skipped: '1' });
   expect((await api(page, 'GET', '/product/TEST-1001')).id).toBe(0);
   expect((await api(page, 'GET', '/product/TEST-1002')).id).toBe(0);
+  expect(await api(page, 'GET', '/terms')).toEqual([]);
 
   const items = await api(page, 'GET', `/runs/${run.id}/items`);
   expect(items.map((i) => i.action)).toEqual(['added', 'added']);
@@ -587,4 +588,26 @@ test('the page shows test mode and marks test runs', async ({ page }) => {
   await page.locator('input[name="epi_pull_test"]').uncheck();
   await page.getByRole('button', { name: 'Save settings' }).click();
   await expect(page.locator('.bw-notice--info')).toHaveCount(0);
+});
+
+test('a dry run matches existing categories and creates, renames or tags nothing', async ({ page }) => {
+  await api(page, 'POST', '/category', { name: 'Decorative' });
+  const tagged = await api(page, 'POST', '/categories', { categories: [{ Id: 1, Name: 'Old controls', ParentId: null }] });
+  expect(tagged.map['1']).toBeGreaterThan(0);
+
+  const dry = await api(page, 'POST', '/categories', {
+    dry_run: true,
+    categories: [
+      { Id: 1, Name: 'Lighting controls', ParentId: null },
+      { Id: 2, Name: 'Kinetic switches', ParentId: 1 },
+      { Id: 3, Name: 'Decorative', ParentId: null },
+    ],
+  });
+  expect(dry.map['1']).toBe(tagged.map['1']);
+  expect(dry.map['2']).toBeUndefined();
+  expect(dry.map['3']).toBeGreaterThan(0);
+  expect(dry.terms).toEqual([
+    { name: 'Decorative', parent: '', epim: 0 },
+    { name: 'Old controls', parent: '', epim: 1 },
+  ]);
 });

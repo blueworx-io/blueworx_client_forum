@@ -361,7 +361,7 @@ add_action(
 				'permission_callback' => $admin_only,
 				'callback'            => static function ( WP_REST_Request $request ) {
 					if ( $request['key'] ) {
-						update_option( 'epi_pull_settings', array( 'key' => (string) $request['key'], 'images' => false ), false );
+						update_option( 'epi_pull_settings', array( 'key' => (string) $request['key'], 'images' => false, 'test' => false ), false );
 					}
 
 					switch ( (string) $request['what'] ) {
@@ -376,7 +376,7 @@ add_action(
 					}
 
 					if ( $request['key'] ) {
-						update_option( 'epi_pull_settings', array( 'key' => EPI_TEST_EPIM_KEY, 'images' => false ), false );
+						update_option( 'epi_pull_settings', array( 'key' => EPI_TEST_EPIM_KEY, 'images' => false, 'test' => false ), false );
 					}
 
 					return is_wp_error( $result ) ? array( 'error' => $result->get_error_message(), 'code' => $result->get_error_code() ) : $result;
@@ -417,7 +417,7 @@ add_action(
 				'methods'             => 'POST',
 				'permission_callback' => $admin_only,
 				'callback'            => static function ( WP_REST_Request $request ) {
-					$map   = EPI_Pull_Categories::sync( (array) $request['categories'] );
+					$map   = EPI_Pull_Categories::sync( (array) $request['categories'], ! empty( $request['dry_run'] ) );
 					$terms = array();
 
 					foreach ( get_terms( array( 'taxonomy' => 'product_cat', 'hide_empty' => false, 'orderby' => 'name' ) ) as $term ) {
@@ -430,6 +430,29 @@ add_action(
 					}
 
 					return array( 'map' => (object) $map, 'terms' => $terms );
+				},
+			)
+		);
+
+		// Every product category, as name and ePim id.
+		register_rest_route(
+			'epi-test/v1',
+			'/pull/terms',
+			array(
+				'methods'             => 'GET',
+				'permission_callback' => $admin_only,
+				'callback'            => static function () {
+					return array_values(
+						array_map(
+							static function ( $term ) {
+								return array(
+									'name' => $term->name,
+									'epim' => (int) get_term_meta( $term->term_id, EPI_Pull_Categories::META, true ),
+								);
+							},
+							get_terms( array( 'taxonomy' => 'product_cat', 'hide_empty' => false, 'orderby' => 'name' ) )
+						)
+					);
 				},
 			)
 		);
