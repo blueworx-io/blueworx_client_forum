@@ -76,3 +76,47 @@ test('the client pages through variations and reports a bad key', async ({ page 
   const bad = await api(page, 'POST', '/fetch', { what: 'categories', key: 'wrong' });
   expect(bad.error).toBe('ePim did not accept the subscription key.');
 });
+
+test('an ePim record maps to the product fields', async ({ page }) => {
+  const mapped = await api(page, 'POST', '/map', {
+    raw: {
+      Id: 7,
+      ProductId: 70,
+      IsArchived: false,
+      IsApprovedForPublishing: false,
+      SKU: ' CUL-1 ',
+      Name: 'Lamp ',
+      SKU_Text: 'Long copy.',
+      Price: 51.2,
+      ProductCategoryIds: [3, 0, 5],
+      PictureIds: [1, 2, 3, 2],
+      PictureIdsGrouped: { Logo: [3] },
+      AttributeValues: [
+        { AttributeHeaderName: 'Colour', Value: 'White' },
+        { AttributeHeaderName: 'Bulb Type', Value: '' },
+        { AttributeHeaderName: '', Value: 'x' },
+      ],
+    },
+  });
+
+  expect(mapped).toEqual({
+    epim_id: 7,
+    epim_product_id: 70,
+    sku: 'CUL-1',
+    name: 'Lamp',
+    description: 'Long copy.',
+    price: '51.20',
+    hidden: true,
+    category_ids: [3, 5],
+    image_ids: [1, 2],
+    attributes: { Colour: 'White' },
+  });
+
+  // With an Image group, that group is the whole picture list, in its order.
+  const grouped = await api(page, 'POST', '/map', {
+    raw: { Id: 8, SKU: 'X', PictureIds: [9, 8, 7], PictureIdsGrouped: { Image: [8, 7], Logo: [9] } },
+  });
+  expect(grouped.image_ids).toEqual([8, 7]);
+  expect(grouped.hidden).toBe(false);
+  expect(grouped.price).toBe('');
+});

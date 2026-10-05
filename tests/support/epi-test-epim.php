@@ -361,5 +361,16 @@ add_action(
 				},
 			)
 		);
+		register_rest_route(
+			'epi-test/v1',
+			'/pull/map',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => $admin_only,
+				'callback'            => static function ( WP_REST_Request $request ) {
+					return EPI_Pull_Mapper::map( (array) $request['raw'] );
+				},
+			)
+		);
 	}
 );
