@@ -39,10 +39,11 @@ final class EPI_Pull_Categories {
 		$map     = array();
 		$pending = $by_id;
 		$guard   = 0;
+		$limit   = count( $by_id );
 
 		// Each pass places every category whose parent is placed (or unknown).
 		// A list of n categories needs at most n passes; the guard stops a cycle.
-		while ( $pending && $guard++ <= count( $by_id ) ) {
+		while ( $pending && $guard++ <= $limit ) {
 			foreach ( $pending as $epim_id => $category ) {
 				$parent_epim = isset( $category['ParentId'] ) ? absint( $category['ParentId'] ) : 0;
 

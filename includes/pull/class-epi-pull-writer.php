@@ -48,7 +48,7 @@ final class EPI_Pull_Writer {
 			return self::result( 'unchanged', $id, array(), '' );
 		}
 
-		$wanted = $product['hidden'] ? array( 'status' => 'draft' ) : self::wanted( $product, $category_map, $images );
+		$wanted  = $product['hidden'] ? array( 'status' => 'draft' ) : self::wanted( $product, $category_map, $images );
 		$changes = self::diff( $before, $wanted );
 
 		if ( $id && empty( $changes ) ) {
