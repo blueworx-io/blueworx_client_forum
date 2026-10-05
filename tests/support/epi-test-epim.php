@@ -372,5 +372,44 @@ add_action(
 				},
 			)
 		);
+
+		// A category the site already had before the pull existed.
+		register_rest_route(
+			'epi-test/v1',
+			'/pull/category',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => $admin_only,
+				'callback'            => static function ( WP_REST_Request $request ) {
+					$term = wp_insert_term( (string) $request['name'], 'product_cat' );
+					return is_wp_error( $term ) ? array( 'error' => $term->get_error_message() ) : $term;
+				},
+			)
+		);
+
+		// Sync a category list, then report every term as name, parent name, ePim id.
+		register_rest_route(
+			'epi-test/v1',
+			'/pull/categories',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => $admin_only,
+				'callback'            => static function ( WP_REST_Request $request ) {
+					$map   = EPI_Pull_Categories::sync( (array) $request['categories'] );
+					$terms = array();
+
+					foreach ( get_terms( array( 'taxonomy' => 'product_cat', 'hide_empty' => false, 'orderby' => 'name' ) ) as $term ) {
+						$parent  = $term->parent ? get_term( $term->parent, 'product_cat' ) : null;
+						$terms[] = array(
+							'name'   => $term->name,
+							'parent' => $parent instanceof WP_Term ? $parent->name : '',
+							'epim'   => (int) get_term_meta( $term->term_id, EPI_Pull_Categories::META, true ),
+						);
+					}
+
+					return array( 'map' => (object) $map, 'terms' => $terms );
+				},
+			)
+		);
 	}
 );

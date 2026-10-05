@@ -120,3 +120,42 @@ test('an ePim record maps to the product fields', async ({ page }) => {
   expect(grouped.hidden).toBe(false);
   expect(grouped.price).toBe('');
 });
+
+test('categories arrive as a hierarchy and are not duplicated', async ({ page }) => {
+  // A category the site already has, by name, is reused rather than doubled.
+  await api(page, 'POST', '/category', { name: 'Decorative' });
+
+  const first = await api(page, 'POST', '/categories', {
+    categories: [
+      { Id: 1, Name: 'Lighting controls', ParentId: null },
+      { Id: 2, Name: 'Kinetic switches', ParentId: 1 },
+      { Id: 3, Name: 'Decorative', ParentId: null },
+      // A parent ePim never listed: the child still arrives, at the top level.
+      { Id: 4, Name: 'Orphan', ParentId: 77 },
+    ],
+  });
+
+  expect(Object.keys(first.map).sort()).toEqual(['1', '2', '3', '4']);
+  expect(first.terms).toEqual([
+    { name: 'Decorative', parent: '', epim: 3 },
+    { name: 'Kinetic switches', parent: 'Lighting controls', epim: 2 },
+    { name: 'Lighting controls', parent: '', epim: 1 },
+    { name: 'Orphan', parent: '', epim: 4 },
+  ]);
+
+  // A rename and a move follow ePim; nothing is created twice.
+  const second = await api(page, 'POST', '/categories', {
+    categories: [
+      { Id: 1, Name: 'Controls', ParentId: null },
+      { Id: 2, Name: 'Kinetic switches', ParentId: 3 },
+      { Id: 3, Name: 'Decorative', ParentId: null },
+    ],
+  });
+  expect(second.map['1']).toBe(first.map['1']);
+  expect(second.terms).toEqual([
+    { name: 'Controls', parent: '', epim: 1 },
+    { name: 'Decorative', parent: '', epim: 3 },
+    { name: 'Kinetic switches', parent: 'Decorative', epim: 2 },
+    { name: 'Orphan', parent: '', epim: 4 },
+  ]);
+});
