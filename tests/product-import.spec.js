@@ -382,3 +382,63 @@ test('a pull shows in the product change log as ePim', async ({ page }) => {
   expect(updates[0].source).toBe('epim');
   expect(updates[0].actor).toBe('ePim External API');
 });
+
+async function loginAs(page, user, pass) {
+  await page.context().clearCookies();
+  await page.goto('/wp-login.php');
+  await page.fill('#user_login', user);
+  await page.fill('#user_pass', pass);
+  await page.click('#wp-submit');
+  await page.waitForURL(/wp-admin/);
+}
+
+test('only administrators can open Product import', async ({ page }) => {
+  await page.goto('/wp-admin/edit.php?post_type=product');
+  await expect(page.locator('#adminmenu')).toContainText('Product import');
+
+  await loginAs(page, 'epi-test-editor', 'editor-test-pw');
+  await page.goto(SCREEN);
+  await expect(page.locator('#wpbody-content, body')).toContainText('Sorry, you are not allowed to access this page.');
+});
+
+test('the page renders from the design system and saves the settings', async ({ page }) => {
+  await page.goto(SCREEN);
+  await expect(page.locator('.bw-page .bw-pagehead__h1')).toHaveText('Product import');
+  await expect(page.locator('.bw-empty__title')).toHaveText('No pulls yet');
+
+  await page.fill('#epi_pull_key', 'new-key-123');
+  await page.locator('input[name="epi_pull_images"]').check();
+  await page.getByRole('button', { name: 'Save settings' }).click();
+
+  await expect(page.locator('.bw-notice--success')).toContainText('Settings saved.');
+  await expect(page.locator('#epi_pull_key')).toHaveValue('new-key-123');
+  await expect(page.locator('input[name="epi_pull_images"]')).toBeChecked();
+});
+
+test('Pull now starts a pull that shows in the table, and a second is refused while it runs', async ({ page }) => {
+  await page.goto(SCREEN);
+  await page.getByRole('button', { name: 'Pull now' }).click();
+  await expect(page.locator('.bw-notice--success')).toContainText('Pull started.');
+
+  const row = page.locator('.bw-table tbody tr').first();
+  await expect(row).toContainText('Manual');
+  await expect(row.locator('.bw-badge')).toHaveText(/Queued|Running/);
+
+  await page.getByRole('button', { name: 'Pull now' }).click();
+  await expect(page.locator('.bw-notice--warning')).toContainText('A pull is already running.');
+
+  // Let it finish, then the row reads Done with its counts.
+  const runs = await api(page, 'GET', '/runs');
+  await api(page, 'POST', '/drain', { run_id: Number(runs[0].id) });
+  await page.goto(SCREEN);
+  await expect(page.locator('.bw-table tbody tr').first().locator('.bw-badge')).toHaveText('Done');
+  await expect(page.locator('.bw-table tbody tr').first()).toContainText('2'); // added
+  await expect(page.locator('.bw-stat__value').first()).not.toHaveText('Never');
+});
+
+test('without a key, Pull now says so', async ({ page }) => {
+  await api(page, 'POST', '/settings', { key: '' });
+  await page.goto(SCREEN);
+  await page.getByRole('button', { name: 'Pull now' }).click();
+  await expect(page.locator('.bw-notice--warning')).toContainText('No ePim subscription key is saved.');
+});

@@ -38,6 +38,7 @@ final class EPI_Pull {
 		require_once __DIR__ . '/class-epi-pull-categories.php';
 		require_once __DIR__ . '/class-epi-pull-writer.php';
 		require_once __DIR__ . '/class-epi-pull-runner.php';
+		require_once EPI_PLUGIN_DIR . 'includes/class-epi-product-import-page.php';
 	}
 
 	/**
@@ -64,5 +65,9 @@ final class EPI_Pull {
 		}
 
 		EPI_Pull_Runner::init();
+
+		if ( is_admin() ) {
+			EPI_Product_Import_Page::init();
+		}
 	}
 }
