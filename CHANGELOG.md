@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.14.0]
+
+### Added
+- Products now come from ePim by the site pulling them, once a day at 02:00 and
+  whenever you press Pull now, instead of ePim pushing them in. Products are
+  matched by SKU, archived or deleted ones are hidden, and nothing from ePim is
+  saved to the media library.
+- A Product import page under Products, for administrators, lists every pull and
+  shows each product it added, updated or hid, with every changed field before
+  and after and the record exactly as ePim sent it. Records are kept for 90 days.
+- A "Set product pictures from ePim" switch, off until ePim's push is switched off,
+  so the two do not fight over pictures during the changeover.
+
 ## [1.13.0]
 
 ### Changed
