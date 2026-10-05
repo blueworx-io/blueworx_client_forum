@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Products now come from ePim by the site pulling them, once a day at 02:00 and
-  whenever you press Pull now, instead of ePim pushing them in. Products are
+  whenever you press Pull now, alongside ePim's push for now. Products are
   matched by SKU, archived or deleted ones are hidden, and nothing from ePim is
   saved to the media library.
 - A Product import page under Products, for administrators, lists every pull and

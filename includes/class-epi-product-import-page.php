@@ -358,6 +358,7 @@ final class EPI_Product_Import_Page {
 			'epi_pull_no_key'  => array( 'warning', __( 'No ePim subscription key is saved. Add it in Settings, save, then pull.', 'blueworx_client_forum' ) ),
 			'missing'          => array( 'warning', __( 'That pull could not be found. It may have been older than 90 days and removed.', 'blueworx_client_forum' ) ),
 			'epi_pull_store'   => array( 'danger', __( 'The pull could not be recorded. Check the PHP error log.', 'blueworx_client_forum' ) ),
+			'epi_pull_no_woocommerce' => array( 'warning', __( 'WooCommerce is not active, so products cannot be pulled.', 'blueworx_client_forum' ) ),
 		);
 
 		if ( ! isset( $notices[ $notice ] ) ) {

@@ -104,6 +104,18 @@ final class EPI_Pull_Runner {
 	 * @return int|WP_Error Run ID.
 	 */
 	public static function start( $trigger, $full = false ) {
+		/**
+		 * Filter whether a pull may run without WooCommerce, writing plain posts
+		 * and meta instead. Only the test harness should ever set this: on a live
+		 * shop with WooCommerce switched off, the fallback would wipe sale prices
+		 * and leave WooCommerce's lookup tables stale.
+		 *
+		 * @param bool $allow Whether to pull without WooCommerce. Default false.
+		 */
+		if ( ! class_exists( 'WooCommerce' ) && ! apply_filters( 'epi_pull_allow_without_woocommerce', false ) ) {
+			return new WP_Error( 'epi_pull_no_woocommerce', __( 'WooCommerce is not active, so products cannot be pulled.', 'blueworx_client_forum' ) );
+		}
+
 		if ( '' === EPI_Pull_Settings::key() ) {
 			return new WP_Error( 'epi_pull_no_key', __( 'No ePim subscription key is saved.', 'blueworx_client_forum' ) );
 		}
@@ -111,9 +123,31 @@ final class EPI_Pull_Runner {
 		// Clears a stale lock; the answer is not used.
 		self::is_locked();
 
-		// add_option() inserts only when the row does not exist, so two starts
-		// at the same moment cannot both take the lock.
-		if ( ! add_option( self::LOCK, array( 'run_id' => 0, 'time' => time() ), '', false ) ) {
+		global $wpdb;
+
+		// A plain insert fails on the duplicate key, so two starts at the same
+		// moment cannot both take the lock. add_option() would update instead.
+		$suppress = $wpdb->suppress_errors();
+		$taken    = $wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- The one write that must be atomic.
+			$wpdb->options,
+			array(
+				'option_name'  => self::LOCK,
+				'option_value' => maybe_serialize(
+					array(
+						'run_id' => 0,
+						'time'   => time(),
+					)
+				),
+				'autoload'     => 'no',
+			),
+			array( '%s', '%s', '%s' )
+		);
+		$wpdb->suppress_errors( $suppress );
+		wp_cache_delete( self::LOCK, 'options' );
+		wp_cache_delete( 'alloptions', 'options' );
+		wp_cache_delete( 'notoptions', 'options' );
+
+		if ( ! $taken ) {
 			return new WP_Error( 'epi_pull_running', __( 'A pull is already running.', 'blueworx_client_forum' ) );
 		}
 
@@ -306,6 +340,10 @@ final class EPI_Pull_Runner {
 					return $page;
 				}
 
+				if ( empty( $page['results'] ) && (int) $run->cursor_start < (int) $page['total'] ) {
+					return self::short_page( $run, $page );
+				}
+
 				foreach ( $page['results'] as $raw ) {
 					self::apply( (int) $run->id, is_array( $raw ) ? $raw : array() );
 				}
@@ -339,6 +377,10 @@ final class EPI_Pull_Runner {
 					return $page;
 				}
 
+				if ( empty( $page['results'] ) && (int) $run->cursor_start < (int) $page['total'] ) {
+					return self::short_page( $run, $page );
+				}
+
 				foreach ( $page['results'] as $entry ) {
 					foreach ( EPI_Pull_Writer::hide_deleted( is_array( $entry ) ? $entry : array() ) as $result ) {
 						self::record( (int) $run->id, $result, $result['sku'], $result['name'], 0, $entry );
@@ -356,6 +398,22 @@ final class EPI_Pull_Runner {
 		}
 
 		return 'done';
+	}
+
+	/**
+	 * The error for an empty page before the end of the list. Finishing on it
+	 * would make a part-read list the baseline for the next pull.
+	 *
+	 * @param object $run  The run row.
+	 * @param array  $page The page from the client.
+	 * @return WP_Error
+	 */
+	private static function short_page( $run, array $page ) {
+		return new WP_Error(
+			'epi_pull_short_page',
+			/* translators: 1: offset asked for, 2: total ePim reported. */
+			sprintf( __( 'ePim sent an empty page at %1$d of %2$d.', 'blueworx_client_forum' ), (int) $run->cursor_start, (int) $page['total'] )
+		);
 	}
 
 	/**
@@ -479,12 +537,21 @@ final class EPI_Pull_Runner {
 	}
 
 	/**
-	 * The request spawn_cron() would make.
+	 * The request spawn_cron() would make, with the lock it sets: wp-cron.php
+	 * runs nothing unless the doing_cron transient matches the value it is sent.
 	 *
 	 * @return void
 	 */
 	public static function loopback() {
+		$lock = get_transient( 'doing_cron' );
+
+		// Another cron run holds the lock: it will pick up the queued batch itself.
+		if ( $lock && $lock + WP_CRON_LOCK_TIMEOUT > microtime( true ) ) {
+			return;
+		}
+
 		$doing_wp_cron = sprintf( '%.22F', microtime( true ) );
+		set_transient( 'doing_cron', $doing_wp_cron );
 
 		wp_remote_post(
 			add_query_arg( 'doing_wp_cron', $doing_wp_cron, site_url( 'wp-cron.php' ) ),

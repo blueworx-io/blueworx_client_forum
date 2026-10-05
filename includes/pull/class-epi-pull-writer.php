@@ -40,6 +40,14 @@ final class EPI_Pull_Writer {
 		}
 
 		$before = $id ? self::read( $id ) : array();
+
+		// An archived or unapproved record leaves a hidden or binned product
+		// where it is. Only a live record brings one out of the bin.
+		if ( $id && $product['hidden'] && in_array( $before['status'], array( 'draft', 'trash' ), true ) ) {
+			self::stamp( $id, $product );
+			return self::result( 'unchanged', $id, array(), '' );
+		}
+
 		$wanted = $product['hidden'] ? array( 'status' => 'draft' ) : self::wanted( $product, $category_map, $images );
 		$changes = self::diff( $before, $wanted );
 
@@ -86,7 +94,8 @@ final class EPI_Pull_Writer {
 		foreach ( self::find_by_meta( $meta_key, $entity, -1 ) as $id ) {
 			$before = self::read( $id );
 
-			if ( 'draft' === $before['status'] ) {
+			// Already hidden, or in the bin: a deletion must not pull it back out.
+			if ( in_array( $before['status'], array( 'draft', 'trash' ), true ) ) {
 				continue;
 			}
 
@@ -186,8 +195,9 @@ final class EPI_Pull_Writer {
 			$wanted['categories'] = $terms;
 		}
 
-		if ( $images ) {
-			$wanted['image']   = $product['image_ids'] ? (int) $product['image_ids'][0] : 0;
+		// No pictures in the record: leave the product's pictures alone. One empty record must not strip a product's pictures.
+		if ( $images && $product['image_ids'] ) {
+			$wanted['image']   = (int) $product['image_ids'][0];
 			$wanted['gallery'] = array_slice( $product['image_ids'], 1 );
 		}
 

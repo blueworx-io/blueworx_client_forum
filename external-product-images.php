@@ -126,12 +126,15 @@ final class EPI_Plugin {
 	}
 
 	/**
-	 * Stop the daily ePim pull when the plugin is switched off.
+	 * Stop the daily ePim pull, and any batch still queued, when the plugin is
+	 * switched off.
 	 *
 	 * @return void
 	 */
 	public static function deactivate() {
 		wp_clear_scheduled_hook( 'epi_pull_daily' );
+		wp_unschedule_hook( 'epi_pull_batch' );
+		delete_option( 'epi_pull_lock' );
 	}
 
 	/**

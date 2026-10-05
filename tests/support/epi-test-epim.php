@@ -12,9 +12,11 @@ if ( ! defined( 'EPI_TEST_EPIM_KEY' ) ) {
 }
 
 /**
- * ePim as the tests see it. Three scenarios, chosen by the epi_test_epim_scenario option:
+ * ePim as the tests see it. Scenarios, chosen by the epi_test_epim_scenario option:
  * initial (first pull), changed (a rename, a price change, an archive), deleted (an entity
- * deletion). Shapes copy the real API, sampled 2026-10-05.
+ * deletion), nosku (a record without a SKU), broken (a Variations page with no Results,
+ * served by the fake below; the data here is the initial set). Shapes copy the real API,
+ * sampled 2026-10-05.
  */
 function epi_test_epim_fixtures( $scenario ) {
 	$categories = array(
@@ -159,12 +161,16 @@ add_filter(
 		$calls[] = array( 'path' => $path, 'query' => $query );
 		update_option( 'epi_test_epim_calls', $calls, false );
 
-		$data = epi_test_epim_fixtures( get_option( 'epi_test_epim_scenario', 'initial' ) );
+		$scenario = get_option( 'epi_test_epim_scenario', 'initial' );
+		$data     = epi_test_epim_fixtures( $scenario );
 
 		switch ( $path ) {
 			case 'Categories':
 				return epi_test_epim_response( 200, $data['categories'] );
 			case 'Variations':
+				if ( 'broken' === $scenario ) {
+					return epi_test_epim_response( 200, array( 'Start' => 0, 'Limit' => 2, 'TotalResults' => 3 ) );
+				}
 				return epi_test_epim_paged( $data['variations'], $query );
 			case 'DeletedEntities':
 				return epi_test_epim_paged( $data['deleted'], $query );
@@ -175,6 +181,10 @@ add_filter(
 	10,
 	3
 );
+
+// The pull refuses to start without WooCommerce on a real site. The harness is
+// the one place it may write plain posts instead.
+add_filter( 'epi_pull_allow_without_woocommerce', '__return_true' );
 
 // CI's harness has no WooCommerce. The pull writes posts of type "product" with
 // "product_cat" terms, so plain ones stand in. Guarded, because the change log's
@@ -228,6 +238,11 @@ add_filter(
 	'pre_http_request',
 	static function ( $pre, $args, $url ) {
 		if ( false !== strpos( (string) $url, 'wp-cron.php' ) ) {
+			// Kept so a test can check the loopback carries the cron lock.
+			$calls   = get_option( 'epi_test_cron_calls', array() );
+			$calls[] = array( 'url' => $url );
+			update_option( 'epi_test_cron_calls', $calls, false );
+
 			return array(
 				'headers'  => array(),
 				'body'     => '',
@@ -286,7 +301,8 @@ add_action(
 				'callback'            => static function () {
 					global $wpdb;
 
-					foreach ( get_posts( array( 'post_type' => 'product', 'post_status' => 'any', 'posts_per_page' => -1, 'fields' => 'ids' ) ) as $id ) {
+					// 'any' leaves out the bin, so binned products are named.
+					foreach ( get_posts( array( 'post_type' => 'product', 'post_status' => array( 'any', 'trash' ), 'posts_per_page' => -1, 'fields' => 'ids' ) ) as $id ) {
 						wp_delete_post( $id, true );
 					}
 
@@ -299,7 +315,7 @@ add_action(
 					// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 					$wpdb->query( 'DELETE FROM ' . $wpdb->prefix . 'epi_pull_runs' );
 
-					foreach ( array( 'epi_pull_lock', 'epi_pull_category_map', 'epi_test_epim_scenario', 'epi_test_epim_calls' ) as $option ) {
+					foreach ( array( 'epi_pull_lock', 'epi_pull_category_map', 'epi_test_epim_scenario', 'epi_test_epim_calls', 'epi_test_cron_calls' ) as $option ) {
 						delete_option( $option );
 					}
 
@@ -433,7 +449,8 @@ add_action(
 			)
 		);
 
-		// A product that existed before the pull: SKU, no ePim id.
+		// A product that existed before the pull: SKU, no ePim id, and
+		// optionally the pictures ePim's push gave it.
 		register_rest_route(
 			'epi-test/v1',
 			'/pull/product',
@@ -450,7 +467,67 @@ add_action(
 					);
 					update_post_meta( $id, '_sku', (string) $request['sku'] );
 
+					if ( null !== $request['thumbnail'] ) {
+						update_post_meta( $id, '_thumbnail_id', (string) $request['thumbnail'] );
+					}
+
+					if ( null !== $request['gallery'] ) {
+						update_post_meta( $id, '_product_image_gallery', (string) $request['gallery'] );
+					}
+
 					return array( 'id' => (int) $id );
+				},
+			)
+		);
+
+		// Move the product with a SKU to the bin.
+		register_rest_route(
+			'epi-test/v1',
+			'/pull/trash',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => $admin_only,
+				'callback'            => static function ( WP_REST_Request $request ) {
+					$ids = get_posts(
+						array(
+							'post_type'      => 'product',
+							'post_status'    => 'any',
+							'posts_per_page' => 1,
+							'fields'         => 'ids',
+							'meta_key'       => '_sku',
+							'meta_value'     => (string) $request['sku'],
+						)
+					);
+
+					if ( ! $ids ) {
+						return array( 'id' => 0 );
+					}
+
+					wp_trash_post( (int) $ids[0] );
+
+					return array( 'id' => (int) $ids[0] );
+				},
+			)
+		);
+
+		// Make the cron loopback a batch would make at shutdown, with no
+		// cron lock held, and report the lock it set and the request it sent.
+		register_rest_route(
+			'epi-test/v1',
+			'/pull/loopback',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => $admin_only,
+				'callback'            => static function () {
+					// This request may itself have spawned cron on load; only the loopback's call counts.
+					delete_option( 'epi_test_cron_calls' );
+					delete_transient( 'doing_cron' );
+					EPI_Pull_Runner::loopback();
+
+					return array(
+						'transient' => get_transient( 'doing_cron' ),
+						'calls'     => get_option( 'epi_test_cron_calls', array() ),
+					);
 				},
 			)
 		);
@@ -466,7 +543,8 @@ add_action(
 					$ids = get_posts(
 						array(
 							'post_type'      => 'product',
-							'post_status'    => 'any',
+							// The writer's own list: 'any' would hide a binned product.
+							'post_status'    => array( 'publish', 'draft', 'pending', 'private', 'future', 'trash' ),
 							'posts_per_page' => -1,
 							'fields'         => 'ids',
 							'meta_key'       => '_sku',

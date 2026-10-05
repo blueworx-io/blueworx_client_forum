@@ -48,3 +48,4 @@ $wpdb->query( 'DROP TABLE IF EXISTS ' . $wpdb->prefix . 'epi_pull_runs' );
 // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Dropping the plugin's own table on uninstall; the name is built from $wpdb->prefix.
 $wpdb->query( 'DROP TABLE IF EXISTS ' . $wpdb->prefix . 'epi_pull_items' );
 wp_clear_scheduled_hook( 'epi_pull_daily' );
+wp_unschedule_hook( 'epi_pull_batch' );

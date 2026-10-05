@@ -257,6 +257,35 @@ test('pictures are left alone until the switch is on', async ({ page }) => {
   expect(await api(page, 'GET', '/product/TEST-1001')).toMatchObject({ thumbnail: '11', gallery: '12,13' });
 });
 
+test('a record with no pictures leaves the product pictures alone', async ({ page }) => {
+  await applyRaw(page, RAW_A, true);
+  expect(await api(page, 'GET', '/product/TEST-1001')).toMatchObject({ thumbnail: '11', gallery: '12,13' });
+  const result = await applyRaw(page, { ...RAW_A, PictureIds: [], PictureIdsGrouped: {} }, true);
+  expect(result.action).toBe('unchanged');
+  expect(await api(page, 'GET', '/product/TEST-1001')).toMatchObject({ thumbnail: '11', gallery: '12,13' });
+});
+
+test('a product keeps its own pictures while the switch is off', async ({ page }) => {
+  await api(page, 'POST', '/product', { sku: 'TEST-1001', title: 'Pushed product', thumbnail: '900', gallery: '901,902' });
+  expect((await applyRaw(page, RAW_A, false)).action).toBe('updated');
+  expect(await api(page, 'GET', '/product/TEST-1001')).toMatchObject({ thumbnail: '900', gallery: '901,902' });
+});
+
+test('a trashed product stays in the bin for an archived record, and comes back for a live one', async ({ page }) => {
+  await applyRaw(page, RAW_A);
+  await api(page, 'POST', '/trash', { sku: 'TEST-1001' });
+  expect((await api(page, 'GET', '/product/TEST-1001')).status).toBe('trash');
+
+  expect((await applyRaw(page, { ...RAW_A, IsArchived: true })).action).toBe('unchanged');
+  expect((await api(page, 'GET', '/product/TEST-1001')).status).toBe('trash');
+
+  const back = await applyRaw(page, RAW_A);
+  expect(back.action).toBe('updated');
+  const product = await api(page, 'GET', '/product/TEST-1001');
+  expect(product.status).toBe('publish');
+  expect(product.count).toBe(1);
+});
+
 test('a name with an ampersand is stored the same way every run', async ({ page }) => {
   const added = await applyRaw(page, { ...RAW_A, Name: 'Switch & Receiver', SKU_Text: 'Fish & chips <script>x</script>' });
   expect(added.action).toBe('added');
@@ -347,10 +376,24 @@ test('a batch that runs out of time queues the next batch', async ({ page }) => 
   expect(run.status).toBe('done');
 });
 
+test('the batch loopback carries the lock wp-cron.php checks', async ({ page }) => {
+  const result = await api(page, 'POST', '/loopback');
+  expect(result.calls).toHaveLength(1);
+  const url = new URL(result.calls[0].url);
+  expect(url.pathname.endsWith('/wp-cron.php')).toBe(true);
+  expect(url.searchParams.get('doing_wp_cron')).toBe(String(result.transient));
+});
+
 test('a bad key fails the run with a plain message', async ({ page }) => {
   await api(page, 'POST', '/settings', { key: 'wrong' });
   const run = await api(page, 'POST', '/pull', {});
   expect(run).toMatchObject({ status: 'failed', message: 'ePim did not accept the subscription key.' });
+});
+
+test('a page without results fails the run instead of finishing it', async ({ page }) => {
+  const run = await pull(page, { scenario: 'broken' });
+  expect(run.status).toBe('failed');
+  expect(run.message).toContain('without results');
 });
 
 test('records older than 90 days are pruned', async ({ page }) => {

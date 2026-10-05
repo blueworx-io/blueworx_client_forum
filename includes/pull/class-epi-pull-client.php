@@ -93,8 +93,15 @@ final class EPI_Pull_Client {
 			return $body;
 		}
 
+		// A page with no results list is broken, not empty: treating it as the
+		// end of the list would make a part-read pull the next baseline.
+		if ( ! isset( $body['Results'] ) || ! is_array( $body['Results'] ) ) {
+			/* translators: %s: endpoint path. */
+			return new WP_Error( 'epi_pull_body', sprintf( __( 'ePim sent a page without results for %s.', 'blueworx_client_forum' ), $path ) );
+		}
+
 		return array(
-			'results' => isset( $body['Results'] ) && is_array( $body['Results'] ) ? array_values( $body['Results'] ) : array(),
+			'results' => array_values( $body['Results'] ),
 			'total'   => isset( $body['TotalResults'] ) ? (int) $body['TotalResults'] : 0,
 		);
 	}
