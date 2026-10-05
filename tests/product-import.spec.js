@@ -332,6 +332,11 @@ test('a second pull is refused while one is running, and a stale lock is cleared
   expect(runs.find((r) => Number(r.id) === dead.run_id)).toMatchObject({ status: 'failed', message: 'Timed out: no batch finished for 20 minutes.' });
 });
 
+test('a lock left by a start that died is cleared after a minute', async ({ page }) => {
+  await api(page, 'POST', '/lock', { minutes_ago: 2, placeholder: true });
+  expect((await api(page, 'POST', '/start', {})).run_id).toBeGreaterThan(0);
+});
+
 test('a batch that runs out of time queues the next batch', async ({ page }) => {
   const started = await api(page, 'POST', '/start', {});
   const once = await api(page, 'POST', '/batch-once', { run_id: started.run_id });

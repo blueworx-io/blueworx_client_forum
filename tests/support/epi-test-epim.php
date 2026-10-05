@@ -656,6 +656,12 @@ add_action(
 				'methods'             => 'POST',
 				'permission_callback' => $admin_only,
 				'callback'            => static function ( WP_REST_Request $request ) {
+					if ( $request['placeholder'] ) {
+						update_option( 'epi_pull_lock', array( 'run_id' => 0, 'time' => time() - (int) $request['minutes_ago'] * MINUTE_IN_SECONDS ), false );
+
+						return array( 'run_id' => 0 );
+					}
+
 					$run_id = EPI_Pull_Store::create_run( 'auto', '', false );
 					EPI_Pull_Store::update_run( $run_id, array( 'status' => 'running' ) );
 					update_option( 'epi_pull_lock', array( 'run_id' => $run_id, 'time' => time() - (int) $request['minutes_ago'] * MINUTE_IN_SECONDS ), false );

@@ -228,11 +228,25 @@ final class EPI_Pull_Runner {
 	public static function is_locked() {
 		$lock = get_option( self::LOCK );
 
-		if ( ! is_array( $lock ) || empty( $lock['run_id'] ) ) {
+		if ( ! is_array( $lock ) ) {
 			return false;
 		}
 
-		if ( time() - (int) $lock['time'] > self::STALE ) {
+		$age = time() - (int) ( isset( $lock['time'] ) ? $lock['time'] : 0 );
+
+		// A start that died between taking the lock and recording its run
+		// leaves a placeholder with no run id. A minute is far longer than
+		// that gap ever takes.
+		if ( empty( $lock['run_id'] ) ) {
+			if ( $age > MINUTE_IN_SECONDS ) {
+				delete_option( self::LOCK );
+				return false;
+			}
+
+			return true;
+		}
+
+		if ( $age > self::STALE ) {
 			EPI_Pull_Store::finish_run( (int) $lock['run_id'], 'failed', __( 'Timed out: no batch finished for 20 minutes.', 'blueworx_client_forum' ) );
 			delete_option( self::LOCK );
 			return false;
