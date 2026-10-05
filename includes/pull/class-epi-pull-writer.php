@@ -97,6 +97,10 @@ final class EPI_Pull_Writer {
 				? self::result( 'error', $id, $changes, $saved->get_error_message() )
 				: self::result( 'hidden', $id, $changes, '' );
 
+			if ( ! is_wp_error( $saved ) ) {
+				update_post_meta( $id, self::META_SYNCED, gmdate( 'Y-m-d H:i:s' ) );
+			}
+
 			$result['sku']  = $before['sku'];
 			$result['name'] = $before['name'];
 			$results[]      = $result;
@@ -153,12 +157,19 @@ final class EPI_Pull_Writer {
 	private static function wanted( array $product, array $category_map, $images ) {
 		$wanted = array(
 			'status'      => 'publish',
-			'name'        => $product['name'],
-			'description' => $product['description'],
+			// Filtered here the way WordPress filters on save for a user without unfiltered_html
+			// (always the case under cron), so cron and admin runs store, and compare, the same text.
+			'name'        => wp_kses( $product['name'], 'data' ),
+			'description' => wp_kses_post( $product['description'] ),
 			'sku'         => $product['sku'],
-			'price'       => $product['price'],
-			'attributes'  => $product['attributes'],
 		);
+
+		// No usable price from ePim: leave the site price alone. One bad record must not make a live product unbuyable.
+		if ( '' !== $product['price'] ) {
+			$wanted['price'] = $product['price'];
+		}
+
+		$wanted['attributes'] = $product['attributes'];
 
 		$terms = array();
 
@@ -371,7 +382,7 @@ final class EPI_Pull_Writer {
 			get_posts(
 				array(
 					'post_type'      => 'product',
-					'post_status'    => 'any',
+					'post_status'    => array( 'publish', 'draft', 'pending', 'private', 'future', 'trash' ),
 					'posts_per_page' => $limit,
 					'fields'         => 'ids',
 					'no_found_rows'  => true,
@@ -454,7 +465,7 @@ final class EPI_Pull_Writer {
 			$saved = $wc->save();
 
 			return $saved ? (int) $saved : new WP_Error( 'epi_pull_save', __( 'WooCommerce did not save the product.', 'blueworx_client_forum' ) );
-		} catch ( Exception $e ) {
+		} catch ( Throwable $e ) {
 			return new WP_Error( 'epi_pull_save', $e->getMessage() );
 		}
 	}

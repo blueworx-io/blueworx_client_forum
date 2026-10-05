@@ -256,3 +256,12 @@ test('pictures are left alone until the switch is on', async ({ page }) => {
   ]);
   expect(await api(page, 'GET', '/product/TEST-1001')).toMatchObject({ thumbnail: '11', gallery: '12,13' });
 });
+
+test('a name with an ampersand is stored the same way every run', async ({ page }) => {
+  const added = await applyRaw(page, { ...RAW_A, Name: 'Switch & Receiver', SKU_Text: 'Fish & chips <script>x</script>' });
+  expect(added.action).toBe('added');
+  const product = await api(page, 'GET', '/product/TEST-1001');
+  expect(product.title).toBe('Switch &amp; Receiver');
+  expect(product.content).toBe('Fish &amp; chips x');
+  expect((await applyRaw(page, { ...RAW_A, Name: 'Switch & Receiver', SKU_Text: 'Fish & chips <script>x</script>' })).action).toBe('unchanged');
+});
