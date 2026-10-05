@@ -33,6 +33,7 @@ final class EPI_Pull {
 	public static function load() {
 		require_once __DIR__ . '/class-epi-pull-settings.php';
 		require_once __DIR__ . '/class-epi-pull-store.php';
+		require_once __DIR__ . '/class-epi-pull-client.php';
 	}
 
 	/**

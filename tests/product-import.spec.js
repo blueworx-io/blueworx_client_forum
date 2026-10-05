@@ -55,3 +55,24 @@ test('the pull feature is on by default and its tables exist', async ({ page }) 
   const tables = await api(page, 'GET', '/tables');
   expect(tables).toEqual({ runs: true, items: true });
 });
+
+test('the client pages through variations and reports a bad key', async ({ page }) => {
+  // The fake serves two records a page (filter epi_pull_page_size), and the
+  // initial scenario has three variations.
+  const first = await api(page, 'POST', '/fetch', { what: 'variations', start: 0 });
+  expect(first.total).toBe(3);
+  expect(first.results.map((r) => r.SKU)).toEqual(['TEST-1001', 'TEST-1002']);
+
+  const second = await api(page, 'POST', '/fetch', { what: 'variations', start: 2 });
+  expect(second.results.map((r) => r.SKU)).toEqual(['TEST-1003']);
+
+  const calls = await api(page, 'GET', '/calls');
+  expect(calls[0].path).toBe('Variations');
+  expect(calls[0].query).toMatchObject({ start: '0', limit: '2', showArchived: 'true', showUnApproved: 'true' });
+
+  const categories = await api(page, 'POST', '/fetch', { what: 'categories' });
+  expect(categories.map((c) => c.Name)).toEqual(['Lighting controls', 'Kinetic switches', 'Decorative']);
+
+  const bad = await api(page, 'POST', '/fetch', { what: 'categories', key: 'wrong' });
+  expect(bad.error).toBe('ePim did not accept the subscription key.');
+});
