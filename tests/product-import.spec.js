@@ -432,7 +432,7 @@ test('Pull now starts a pull that shows in the table, and a second is refused wh
   await api(page, 'POST', '/drain', { run_id: Number(runs[0].id) });
   await page.goto(SCREEN);
   await expect(page.locator('.bw-table tbody tr').first().locator('.bw-badge')).toHaveText('Done');
-  await expect(page.locator('.bw-table tbody tr').first()).toContainText('2'); // added
+  await expect(page.locator('.bw-table tbody tr').first().locator('td').nth(2)).toHaveText('2'); // Added
   await expect(page.locator('.bw-stat__value').first()).not.toHaveText('Never');
 });
 

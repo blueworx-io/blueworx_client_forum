@@ -175,7 +175,8 @@ final class EPI_Product_Import_Page {
 		$page_no  = min( $page_no, $pages );
 		$runs     = EPI_Pull_Store::get_runs( $page_no, self::RUNS_PER_PAGE );
 		$last     = EPI_Pull_Store::last_successful_run();
-		$latest   = $runs && 1 === $page_no ? $runs[0] : null;
+		$newest   = EPI_Pull_Store::get_runs( 1, 1 );
+		$latest   = $newest ? $newest[0] : null;
 		$next     = (int) wp_next_scheduled( EPI_Pull_Runner::DAILY_HOOK );
 		?>
 		<div class="wrap bw-wrap">
@@ -354,7 +355,7 @@ final class EPI_Product_Import_Page {
 			'saved'            => array( 'success', __( 'Settings saved.', 'blueworx_client_forum' ) ),
 			'started'          => array( 'success', __( 'Pull started. It runs in the background; refresh this page to follow it.', 'blueworx_client_forum' ) ),
 			'epi_pull_running' => array( 'warning', __( 'A pull is already running. Wait for it to finish, then try again.', 'blueworx_client_forum' ) ),
-			'epi_pull_no_key'  => array( 'warning', __( 'No ePim subscription key is saved. Add it below, save, then pull.', 'blueworx_client_forum' ) ),
+			'epi_pull_no_key'  => array( 'warning', __( 'No ePim subscription key is saved. Add it in Settings, save, then pull.', 'blueworx_client_forum' ) ),
 			'epi_pull_store'   => array( 'danger', __( 'The pull could not be recorded. Check the PHP error log.', 'blueworx_client_forum' ) ),
 		);
 
