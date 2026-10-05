@@ -187,3 +187,27 @@ detail view. WooCommerce's own save path is checked by hand on staging.
 Stock (decided), variable products, downloading pictures, ePim groups as WooCommerce
 grouped products, related or alternative products, keywords, GTIN, switching the push off
 (an ePim-side action after go-live testing).
+
+## Addendum, 2026-10-05 (after the first build and review)
+
+Decisions from Luke:
+
+- **A price of 0 from ePim means the price is zero.** No special handling.
+- **Pull one category.** The site's products are already right, so a full import is pointless;
+  ePim updates are made one category at a time. The Product import page gets a "Pull one
+  category" card: a "Refresh categories from ePim" button (fetches the Categories list and
+  creates or renames the matching product categories, so new ePim categories appear) and a
+  category select with a "Pull this category" button. A category pull fetches the whole
+  variation list and applies only records in that category or any category under it. It never
+  runs the deleted-entities stage and never becomes the baseline for the next incremental pull.
+  The runs table shows which category a pull covered.
+- **Test mode.** A switch in Settings, **on by default when the update installs**, so the first
+  pulls change nothing. In test mode a pull does everything except write: it finds and compares
+  each product and records what it would have added, updated or hidden, with the same field
+  changes and raw data, and marks the run "Test". Nothing is stamped, no product is saved, no
+  category is created (existing categories are matched for the comparison). Test runs are not a
+  baseline either. The page shows a notice while test mode is on, and the detail view says the
+  run changed nothing. Luke turns the switch off once he has seen a test pull behave.
+
+Storage: two new run columns, `is_test` (0|1), `category_id` (ePim category ID, 0 for a normal
+pull) and `category_name` (for display). Schema version 1.1. Setting `test` (bool, default true).
