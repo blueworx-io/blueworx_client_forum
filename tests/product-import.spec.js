@@ -454,7 +454,7 @@ test('the page renders from the design system and saves the settings', async ({ 
   await page.locator('input[name="epi_pull_images"]').check();
   await page.getByRole('button', { name: 'Save settings' }).click();
 
-  await expect(page.locator('.bw-notice--success')).toContainText('Settings saved.');
+  await expect(page.locator('.bw-page .bw-notice--success')).toContainText('Settings saved.');
   await expect(page.locator('#epi_pull_key')).toHaveValue('new-key-123');
   await expect(page.locator('input[name="epi_pull_images"]')).toBeChecked();
 });
@@ -462,14 +462,14 @@ test('the page renders from the design system and saves the settings', async ({ 
 test('Pull now starts a pull that shows in the table, and a second is refused while it runs', async ({ page }) => {
   await page.goto(SCREEN);
   await page.getByRole('button', { name: 'Pull now' }).click();
-  await expect(page.locator('.bw-notice--success')).toContainText('Pull started.');
+  await expect(page.locator('.bw-page .bw-notice--success')).toContainText('Pull started.');
 
   const row = page.locator('.bw-table tbody tr').first();
   await expect(row).toContainText('Manual');
   await expect(row.locator('.bw-badge')).toHaveText(/Queued|Running/);
 
   await page.getByRole('button', { name: 'Pull now' }).click();
-  await expect(page.locator('.bw-notice--warning')).toContainText('A pull is already running.');
+  await expect(page.locator('.bw-page .bw-notice--warning')).toContainText('A pull is already running.');
 
   // Let it finish, then the row reads Done with its counts.
   const runs = await api(page, 'GET', '/runs');
@@ -484,7 +484,7 @@ test('without a key, Pull now says so', async ({ page }) => {
   await api(page, 'POST', '/settings', { key: '' });
   await page.goto(SCREEN);
   await page.getByRole('button', { name: 'Pull now' }).click();
-  await expect(page.locator('.bw-notice--warning')).toContainText('No ePim subscription key is saved.');
+  await expect(page.locator('.bw-page .bw-notice--warning')).toContainText('No ePim subscription key is saved.');
 });
 
 test('the detail view lists each product with what changed and the raw record', async ({ page }) => {
@@ -528,7 +528,7 @@ test('the detail view lists each product with what changed and the raw record', 
 
   // A run that does not exist goes back to the list.
   await page.goto(`${SCREEN}&run=999999`);
-  await expect(page.locator('.bw-notice--warning')).toContainText('That pull could not be found.');
+  await expect(page.locator('.bw-page .bw-notice--warning')).toContainText('That pull could not be found.');
 });
 
 test('test mode is on by default after install', async ({ page }) => {
@@ -577,18 +577,18 @@ test('the page shows test mode and marks test runs', async ({ page }) => {
   const run = await pull(page);
 
   await page.goto(SCREEN);
-  await expect(page.locator('.bw-notice--info')).toContainText('Test mode is on');
+  await expect(page.locator('.bw-page .bw-notice--info')).toContainText('Test mode is on');
   await expect(page.locator('input[name="epi_pull_test"]')).toBeChecked();
   await expect(page.locator('.bw-table tbody tr').first()).toContainText('Test');
 
   await page.goto(`${SCREEN}&run=${run.id}`);
-  await expect(page.locator('.bw-notice--info')).toContainText('nothing on the site was changed');
+  await expect(page.locator('.bw-page .bw-notice--info')).toContainText('nothing on the site was changed');
   await expect(page.locator('.bw-dl:not(.bw-dl--stack)')).toContainText('Test');
 
   await page.goto(SCREEN);
   await page.locator('input[name="epi_pull_test"]').uncheck();
   await page.getByRole('button', { name: 'Save settings' }).click();
-  await expect(page.locator('.bw-notice--info')).toHaveCount(0);
+  await expect(page.locator('.bw-page .bw-notice--info')).toHaveCount(0);
 });
 
 test('a dry run matches existing categories and creates, renames or tags nothing', async ({ page }) => {
@@ -618,7 +618,7 @@ test('refreshing categories from the page creates the terms and offers them', as
   await expect(page.locator('#epi_pull_category option')).toHaveCount(1); // the placeholder only
 
   await page.getByRole('button', { name: 'Refresh categories from ePim' }).click();
-  await expect(page.locator('.bw-notice--success')).toContainText('Categories refreshed from ePim.');
+  await expect(page.locator('.bw-page .bw-notice--success')).toContainText('Categories refreshed from ePim.');
 
   const labels = await page.locator('#epi_pull_category option').allTextContents();
   expect(labels.slice(1)).toEqual(['Decorative', 'Lighting controls', 'Lighting controls › Kinetic switches']);
@@ -631,7 +631,7 @@ test('pulling one category touches only its products, including subcategories', 
   // Lighting controls is the parent of Kinetic switches, which holds TEST-1001.
   await page.locator('#epi_pull_category').selectOption({ label: 'Lighting controls' });
   await page.getByRole('button', { name: 'Pull this category' }).click();
-  await expect(page.locator('.bw-notice--success')).toContainText('Pull started.');
+  await expect(page.locator('.bw-page .bw-notice--success')).toContainText('Pull started.');
 
   const runs = await api(page, 'GET', '/runs');
   const run = await api(page, 'POST', '/drain', { run_id: Number(runs[0].id) });
@@ -651,9 +651,9 @@ test('pulling with no category chosen says so', async ({ page }) => {
   await page.goto(SCREEN);
   // The button is disabled until ePim's categories are on the site.
   await page.getByRole('button', { name: 'Refresh categories from ePim' }).click();
-  await expect(page.locator('.bw-notice--success')).toContainText('Categories refreshed from ePim.');
+  await expect(page.locator('.bw-page .bw-notice--success')).toContainText('Categories refreshed from ePim.');
   await page.getByRole('button', { name: 'Pull this category' }).click();
-  await expect(page.locator('.bw-notice--warning')).toContainText('Choose a category first.');
+  await expect(page.locator('.bw-page .bw-notice--warning')).toContainText('Choose a category first.');
 });
 
 test('the category picker says when there is nothing to choose yet', async ({ page }) => {
