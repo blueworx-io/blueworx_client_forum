@@ -45,6 +45,7 @@ be placed anywhere with [forum_product_gallery].
 = 1.14.0 =
 * Products are pulled from ePim daily and on demand, matched by SKU, with a
   Product import page that records every pull product by product.
+* Test mode (on to begin with) and a pull of one category at a time.
 
 = 1.13.0 =
 * The product change log keeps each product's last two updates from ePim or

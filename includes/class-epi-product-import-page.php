@@ -469,7 +469,7 @@ final class EPI_Product_Import_Page {
 			return;
 		}
 
-		$icon                = 'success' === $tone ? 'circle-check' : 'triangle-alert';
+		$icon = 'success' === $tone ? 'circle-check' : 'triangle-alert';
 		?>
 		<div class="bw-notice bw-notice--<?php echo esc_attr( $tone ); ?>" role="<?php echo 'danger' === $tone ? 'alert' : 'status'; ?>">
 			<i class="bw-icon bw-icon--18 bw-notice__icon" data-lucide="<?php echo esc_attr( $icon ); ?>" aria-hidden="true"></i>

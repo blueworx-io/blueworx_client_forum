@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and after and the record exactly as ePim sent it. Records are kept for 90 days.
 - A "Set product pictures from ePim" switch, off until ePim's push is switched off,
   so the two do not fight over pictures during the changeover.
+- Test mode, on to begin with: pulls record what they would add, update or hide and
+  change nothing, so the feature can be checked before it touches live products.
+- Pull one category: refresh the category list from ePim, pick a category, and pull
+  just the products in it and under it.
 
 ## [1.13.0]
 
