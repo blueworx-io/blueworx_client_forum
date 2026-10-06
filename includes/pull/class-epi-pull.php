@@ -48,8 +48,9 @@ final class EPI_Pull {
 	 */
 	public static function install() {
 		self::load();
-		update_option( self::DB_OPTION, self::DB_VERSION, false );
 		EPI_Pull_Store::install();
+		// Recorded last, so a failed table change is retried on the next boot.
+		update_option( self::DB_OPTION, self::DB_VERSION, false );
 	}
 
 	/**

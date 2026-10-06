@@ -411,6 +411,7 @@ test('records older than 90 days are pruned', async ({ page }) => {
 
 test('a daily pull is scheduled for 02:00 site time', async ({ page }) => {
   const schedule = await api(page, 'GET', '/schedule');
+  expect(schedule.had).toBeGreaterThan(0);
   expect(schedule.next).toBeGreaterThan(Date.now() / 1000);
   expect(schedule.local_time).toBe('02:00');
   expect(schedule.recurrence).toBe('daily');
@@ -648,6 +649,50 @@ test('pulling one category touches only its products, including subcategories', 
 
 test('pulling with no category chosen says so', async ({ page }) => {
   await page.goto(SCREEN);
+  // The button is disabled until ePim's categories are on the site.
+  await page.getByRole('button', { name: 'Refresh categories from ePim' }).click();
+  await expect(page.locator('.bw-notice--success')).toContainText('Categories refreshed from ePim.');
   await page.getByRole('button', { name: 'Pull this category' }).click();
   await expect(page.locator('.bw-notice--warning')).toContainText('Choose a category first.');
+});
+
+test('the category picker says when there is nothing to choose yet', async ({ page }) => {
+  await page.goto(SCREEN);
+  await expect(page.locator('.bw-field__help').filter({ hasText: 'No ePim categories yet' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Pull this category' })).toBeDisabled();
+});
+
+test('a test pull stamps nothing on a product it matched by SKU', async ({ page }) => {
+  await api(page, 'POST', '/product', { sku: 'TEST-1001', title: 'Old name' });
+  await api(page, 'POST', '/settings', { key: 'epim-test-key', test: true });
+  const run = await pull(page);
+  expect(run).toMatchObject({ is_test: '1', updated: '1' });
+  const product = await api(page, 'GET', '/product/TEST-1001');
+  expect(product).toMatchObject({ title: 'Old name', epim_id: 0, synced: '', categories: [] });
+});
+
+test('a category pull ignores deletions', async ({ page }) => {
+  await pull(page);
+  await api(page, 'POST', '/categories', { categories: [
+    { Id: 1, Name: 'Lighting controls', ParentId: null },
+    { Id: 2, Name: 'Kinetic switches', ParentId: 1 },
+    { Id: 3, Name: 'Decorative', ParentId: null },
+  ] });
+  await api(page, 'POST', '/scenario', { scenario: 'deleted' });
+  const run = await api(page, 'POST', '/pull', { category_id: 3 });
+  expect(run).toMatchObject({ status: 'done', hidden: '0', category_name: 'Decorative' });
+  expect((await api(page, 'GET', '/product/TEST-1001')).status).toBe('publish');
+  expect((await api(page, 'GET', '/product/TEST-1002')).status).toBe('publish');
+});
+
+test('a category pull in test mode creates nothing', async ({ page }) => {
+  await api(page, 'POST', '/categories', { categories: [
+    { Id: 1, Name: 'Lighting controls', ParentId: null },
+    { Id: 2, Name: 'Kinetic switches', ParentId: 1 },
+    { Id: 3, Name: 'Decorative', ParentId: null },
+  ] });
+  await api(page, 'POST', '/settings', { key: 'epim-test-key', test: true });
+  const run = await api(page, 'POST', '/pull', { category_id: 1 });
+  expect(run).toMatchObject({ status: 'done', is_test: '1', added: '1', category_name: 'Lighting controls' });
+  expect((await api(page, 'GET', '/product/TEST-1001')).id).toBe(0);
 });

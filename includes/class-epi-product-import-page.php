@@ -189,7 +189,8 @@ final class EPI_Product_Import_Page {
 		$notice = '' !== $forced_notice ? $forced_notice : ( isset( $_GET['notice'] ) ? sanitize_key( wp_unslash( $_GET['notice'] ) ) : '' );
 
 		$settings = EPI_Pull_Settings::get();
-		$total    = EPI_Pull_Store::count_runs();
+		$choices  = EPI_Pull_Categories::choices();
+		$total   = EPI_Pull_Store::count_runs();
 		$pages    = max( 1, (int) ceil( $total / self::RUNS_PER_PAGE ) );
 		$page_no  = min( $page_no, $pages );
 		$runs     = EPI_Pull_Store::get_runs( $page_no, self::RUNS_PER_PAGE );
@@ -311,18 +312,29 @@ final class EPI_Product_Import_Page {
 											<span class="bw-select">
 												<select class="bw-select__el" id="epi_pull_category" name="epi_pull_category">
 													<option value=""><?php esc_html_e( 'Choose a category', 'blueworx_client_forum' ); ?></option>
-													<?php foreach ( EPI_Pull_Categories::choices() as $epim_id => $label ) : ?>
+													<?php foreach ( $choices as $epim_id => $label ) : ?>
 														<option value="<?php echo esc_attr( (string) $epim_id ); ?>"><?php echo esc_html( $label ); ?></option>
 													<?php endforeach; ?>
 												</select>
 												<i class="bw-icon bw-icon--14 bw-select__arrow" data-lucide="chevron-down" aria-hidden="true"></i>
 											</span>
-											<p class="bw-field__help"><?php esc_html_e( 'Covers the category and everything under it. Refresh first so new ePim categories appear here.', 'blueworx_client_forum' ); ?></p>
+											<p class="bw-field__help">
+													<?php
+													if ( empty( $choices ) ) {
+														esc_html_e( 'No ePim categories yet. Use Refresh categories from ePim first.', 'blueworx_client_forum' );
+													} else {
+														esc_html_e( 'Covers the category and everything under it. Refresh first so new ePim categories appear here.', 'blueworx_client_forum' );
+														if ( $settings['test'] ) {
+															esc_html_e( ' Refreshing updates the shop\'s product categories to match ePim, even in test mode.', 'blueworx_client_forum' );
+														}
+													}
+													?>
+												</p>
 										</div>
 									</div>
 								</div>
 								<div class="bw-card__foot">
-									<button type="submit" class="bw-btn bw-btn--primary"><?php esc_html_e( 'Pull this category', 'blueworx_client_forum' ); ?></button>
+									<button type="submit" class="bw-btn bw-btn--primary" <?php disabled( empty( $choices ) ); ?>><?php esc_html_e( 'Pull this category', 'blueworx_client_forum' ); ?></button>
 								</div>
 							</form>
 						</section>
@@ -333,7 +345,7 @@ final class EPI_Product_Import_Page {
 								<div class="bw-stat__row">
 									<p class="bw-stat__value"><?php echo $latest ? esc_html( self::when( $latest->started_at ) ) : esc_html__( 'Never', 'blueworx_client_forum' ); ?></p>
 								</div>
-								<p class="bw-stat__foot"><?php echo $latest ? esc_html( self::status_label( $latest->status ) . ', ' . self::trigger_label( $latest->trigger_type ) ) : esc_html__( 'Use Pull now to start the first one.', 'blueworx_client_forum' ); ?></p>
+								<p class="bw-stat__foot"><?php echo $latest ? esc_html( self::status_label( $latest->status ) . ', ' . self::trigger_label( $latest->trigger_type ) . ( $latest->is_test ? ', ' . __( 'test', 'blueworx_client_forum' ) : '' ) ) : esc_html__( 'Use Pull now to start the first one.', 'blueworx_client_forum' ); ?></p>
 							</div>
 							<div class="bw-stat">
 								<span class="bw-stat__label"><i class="bw-icon bw-icon--14" data-lucide="calendar" aria-hidden="true"></i><?php esc_html_e( 'Next automatic pull', 'blueworx_client_forum' ); ?></span>
@@ -627,7 +639,7 @@ final class EPI_Product_Import_Page {
 								<i class="bw-icon bw-icon--18 bw-notice__icon" data-lucide="info" aria-hidden="true"></i>
 								<div class="bw-notice__body">
 									<p class="bw-notice__title"><?php esc_html_e( 'Test pull', 'blueworx_client_forum' ); ?></p>
-									<p class="bw-notice__text"><?php esc_html_e( 'This was a test pull: nothing on the site was changed. Each row shows what a real pull would do.', 'blueworx_client_forum' ); ?></p>
+									<p class="bw-notice__text"><?php esc_html_e( 'This was a test pull: nothing on the site was changed. Each row shows what a real pull would do. New ePim categories are only shown once they have been refreshed.', 'blueworx_client_forum' ); ?></p>
 								</div>
 							</div>
 						<?php endif; ?>

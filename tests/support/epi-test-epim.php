@@ -604,6 +604,7 @@ add_action(
 						'attributes'      => (object) $read['attributes'],
 						'thumbnail'       => (string) get_post_meta( $id, '_thumbnail_id', true ),
 						'gallery'         => (string) get_post_meta( $id, '_product_image_gallery', true ),
+						'synced'          => (string) get_post_meta( $id, '_epim_synced_at', true ),
 					);
 				},
 			)
@@ -766,12 +767,16 @@ add_action(
 				'callback'            => static function () {
 					// The harness never fires cron, so an overdue slot would sit in the
 					// past for ever. Re-arm as the daily job itself does, then report.
+					// What the boot hook scheduled before this route touched it.
+					$had = (int) wp_next_scheduled( EPI_Pull_Runner::DAILY_HOOK );
+
 					wp_clear_scheduled_hook( EPI_Pull_Runner::DAILY_HOOK );
 					EPI_Pull_Runner::ensure_schedule();
 
 					$next = (int) wp_next_scheduled( EPI_Pull_Runner::DAILY_HOOK );
 
 					return array(
+						'had'        => $had,
 						'next'       => $next,
 						'local_time' => $next ? wp_date( 'H:i', $next ) : '',
 						'recurrence' => $next ? wp_get_schedule( EPI_Pull_Runner::DAILY_HOOK ) : '',
