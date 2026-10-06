@@ -127,6 +127,24 @@ final class EPI_Product_Import_Page {
 		} elseif ( 'pull' === $action || 'full' === $action ) {
 			$started = EPI_Pull_Runner::start( 'manual', 'full' === $action );
 			$notice  = is_wp_error( $started ) ? $started->get_error_code() : 'started';
+		} elseif ( 'refresh' === $action ) {
+			$count = EPI_Pull_Runner::refresh_categories();
+
+			if ( is_wp_error( $count ) ) {
+				set_transient( 'epi_pull_last_error', $count->get_error_message(), MINUTE_IN_SECONDS );
+				$notice = 'error';
+			} else {
+				$notice = 'categories';
+			}
+		} elseif ( 'category' === $action ) {
+			$category_id = isset( $_POST['epi_pull_category'] ) ? absint( wp_unslash( $_POST['epi_pull_category'] ) ) : 0;
+
+			if ( ! $category_id ) {
+				$notice = 'nocategory';
+			} else {
+				$started = EPI_Pull_Runner::start( 'manual', true, array( 'category_id' => $category_id ) );
+				$notice  = is_wp_error( $started ) ? $started->get_error_code() : 'started';
+			}
 		}
 
 		wp_safe_redirect( self::url( array( 'notice' => $notice ) ) );
@@ -267,6 +285,48 @@ final class EPI_Product_Import_Page {
 							</section>
 						</form>
 
+						<section class="bw-card">
+							<div class="bw-card__head">
+								<div class="bw-card__titles">
+									<h2 class="bw-card__title"><?php esc_html_e( 'Pull one category', 'blueworx_client_forum' ); ?></h2>
+								</div>
+								<div class="bw-card__actions">
+									<form method="post" action="">
+										<?php wp_nonce_field( 'epi_pull_refresh', 'epi_pull_nonce' ); ?>
+										<input type="hidden" name="epi_pull_action" value="refresh" />
+										<button type="submit" class="bw-btn bw-btn--sm">
+											<i class="bw-icon bw-icon--14" data-lucide="refresh-cw" aria-hidden="true"></i>
+											<?php esc_html_e( 'Refresh categories from ePim', 'blueworx_client_forum' ); ?>
+										</button>
+									</form>
+								</div>
+							</div>
+							<form method="post" action="">
+								<?php wp_nonce_field( 'epi_pull_category', 'epi_pull_nonce' ); ?>
+								<input type="hidden" name="epi_pull_action" value="category" />
+								<div class="bw-card__body">
+									<div class="bw-fields">
+										<div class="bw-field">
+											<label class="bw-field__label" for="epi_pull_category"><?php esc_html_e( 'Category', 'blueworx_client_forum' ); ?></label>
+											<span class="bw-select">
+												<select class="bw-select__el" id="epi_pull_category" name="epi_pull_category">
+													<option value=""><?php esc_html_e( 'Choose a category', 'blueworx_client_forum' ); ?></option>
+													<?php foreach ( EPI_Pull_Categories::choices() as $epim_id => $label ) : ?>
+														<option value="<?php echo esc_attr( (string) $epim_id ); ?>"><?php echo esc_html( $label ); ?></option>
+													<?php endforeach; ?>
+												</select>
+												<i class="bw-icon bw-icon--14 bw-select__arrow" data-lucide="chevron-down" aria-hidden="true"></i>
+											</span>
+											<p class="bw-field__help"><?php esc_html_e( 'Covers the category and everything under it. Refresh first so new ePim categories appear here.', 'blueworx_client_forum' ); ?></p>
+										</div>
+									</div>
+								</div>
+								<div class="bw-card__foot">
+									<button type="submit" class="bw-btn bw-btn--primary"><?php esc_html_e( 'Pull this category', 'blueworx_client_forum' ); ?></button>
+								</div>
+							</form>
+						</section>
+
 						<div class="bw-stats">
 							<div class="bw-stat">
 								<span class="bw-stat__label"><i class="bw-icon bw-icon--14" data-lucide="refresh-cw" aria-hidden="true"></i><?php esc_html_e( 'Last pull', 'blueworx_client_forum' ); ?></span>
@@ -337,11 +397,16 @@ final class EPI_Product_Import_Page {
 												<tr>
 													<td>
 														<span class="bw-table__primary"><?php echo esc_html( self::when( $run->started_at ) ); ?></span>
-														<?php if ( $run->is_full ) : ?>
+														<?php if ( $run->is_full && ! $run->category_id ) : ?>
 															<span class="bw-table__sub"><?php esc_html_e( 'Full import', 'blueworx_client_forum' ); ?></span>
 														<?php endif; ?>
 													</td>
-													<td><?php echo esc_html( self::trigger_label( $run->trigger_type ) ); ?></td>
+													<td>
+														<?php echo esc_html( self::trigger_label( $run->trigger_type ) ); ?>
+														<?php if ( '' !== (string) $run->category_name ) : ?>
+															<span class="bw-table__sub"><?php echo esc_html( $run->category_name ); ?></span>
+														<?php endif; ?>
+													</td>
 													<td class="bw-table__num"><?php echo esc_html( (string) (int) $run->added ); ?></td>
 													<td class="bw-table__num"><?php echo esc_html( (string) (int) $run->updated ); ?></td>
 													<td class="bw-table__num"><?php echo esc_html( (string) (int) $run->hidden ); ?></td>
@@ -378,13 +443,16 @@ final class EPI_Product_Import_Page {
 	 */
 	private static function render_notice( $notice ) {
 		$notices = array(
-			'saved'            => array( 'success', __( 'Settings saved.', 'blueworx_client_forum' ) ),
-			'started'          => array( 'success', __( 'Pull started. It runs in the background; refresh this page to follow it.', 'blueworx_client_forum' ) ),
-			'epi_pull_running' => array( 'warning', __( 'A pull is already running. Wait for it to finish, then try again.', 'blueworx_client_forum' ) ),
-			'epi_pull_no_key'  => array( 'warning', __( 'No ePim subscription key is saved. Add it in Settings, save, then pull.', 'blueworx_client_forum' ) ),
-			'missing'          => array( 'warning', __( 'That pull could not be found. It may have been older than 90 days and removed.', 'blueworx_client_forum' ) ),
-			'epi_pull_store'   => array( 'danger', __( 'The pull could not be recorded. Check the PHP error log.', 'blueworx_client_forum' ) ),
+			'saved'                   => array( 'success', __( 'Settings saved.', 'blueworx_client_forum' ) ),
+			'started'                 => array( 'success', __( 'Pull started. It runs in the background; refresh this page to follow it.', 'blueworx_client_forum' ) ),
+			'epi_pull_running'        => array( 'warning', __( 'A pull is already running. Wait for it to finish, then try again.', 'blueworx_client_forum' ) ),
+			'epi_pull_no_key'         => array( 'warning', __( 'No ePim subscription key is saved. Add it in Settings, save, then pull.', 'blueworx_client_forum' ) ),
+			'missing'                 => array( 'warning', __( 'That pull could not be found. It may have been older than 90 days and removed.', 'blueworx_client_forum' ) ),
+			'epi_pull_store'          => array( 'danger', __( 'The pull could not be recorded. Check the PHP error log.', 'blueworx_client_forum' ) ),
 			'epi_pull_no_woocommerce' => array( 'warning', __( 'WooCommerce is not active, so products cannot be pulled.', 'blueworx_client_forum' ) ),
+			'categories'              => array( 'success', __( 'Categories refreshed from ePim.', 'blueworx_client_forum' ) ),
+			'nocategory'              => array( 'warning', __( 'Choose a category first.', 'blueworx_client_forum' ) ),
+			'error'                   => array( 'danger', (string) get_transient( 'epi_pull_last_error' ) ),
 		);
 
 		if ( ! isset( $notices[ $notice ] ) ) {
@@ -392,6 +460,15 @@ final class EPI_Product_Import_Page {
 		}
 
 		list( $tone, $text ) = $notices[ $notice ];
+
+		if ( 'error' === $notice ) {
+			delete_transient( 'epi_pull_last_error' );
+		}
+
+		if ( '' === $text ) {
+			return;
+		}
+
 		$icon                = 'success' === $tone ? 'circle-check' : 'triangle-alert';
 		?>
 		<div class="bw-notice bw-notice--<?php echo esc_attr( $tone ); ?>" role="<?php echo 'danger' === $tone ? 'alert' : 'status'; ?>">
@@ -564,6 +641,10 @@ final class EPI_Product_Import_Page {
 								<dl class="bw-dl">
 									<dt><?php esc_html_e( 'Trigger', 'blueworx_client_forum' ); ?></dt>
 									<dd><?php echo esc_html( self::trigger_label( $run->trigger_type ) ); ?></dd>
+									<?php if ( '' !== (string) $run->category_name ) : ?>
+										<dt><?php esc_html_e( 'Category', 'blueworx_client_forum' ); ?></dt>
+										<dd><?php echo esc_html( $run->category_name ); ?></dd>
+									<?php endif; ?>
 									<dt><?php esc_html_e( 'Status', 'blueworx_client_forum' ); ?></dt>
 									<dd><?php echo esc_html( self::status_label( $run->status ) ); ?></dd>
 									<dt><?php esc_html_e( 'Mode', 'blueworx_client_forum' ); ?></dt>

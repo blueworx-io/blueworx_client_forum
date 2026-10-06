@@ -611,3 +611,43 @@ test('a dry run matches existing categories and creates, renames or tags nothing
     { name: 'Old controls', parent: '', epim: 1 },
   ]);
 });
+
+test('refreshing categories from the page creates the terms and offers them', async ({ page }) => {
+  await page.goto(SCREEN);
+  await expect(page.locator('#epi_pull_category option')).toHaveCount(1); // the placeholder only
+
+  await page.getByRole('button', { name: 'Refresh categories from ePim' }).click();
+  await expect(page.locator('.bw-notice--success')).toContainText('Categories refreshed from ePim.');
+
+  const labels = await page.locator('#epi_pull_category option').allTextContents();
+  expect(labels.slice(1)).toEqual(['Decorative', 'Lighting controls', 'Lighting controls › Kinetic switches']);
+});
+
+test('pulling one category touches only its products, including subcategories', async ({ page }) => {
+  await page.goto(SCREEN);
+  await page.getByRole('button', { name: 'Refresh categories from ePim' }).click();
+
+  // Lighting controls is the parent of Kinetic switches, which holds TEST-1001.
+  await page.locator('#epi_pull_category').selectOption({ label: 'Lighting controls' });
+  await page.getByRole('button', { name: 'Pull this category' }).click();
+  await expect(page.locator('.bw-notice--success')).toContainText('Pull started.');
+
+  const runs = await api(page, 'GET', '/runs');
+  const run = await api(page, 'POST', '/drain', { run_id: Number(runs[0].id) });
+  expect(run).toMatchObject({ status: 'done', added: '1', skipped: '0', category_name: 'Lighting controls' });
+  expect((await api(page, 'GET', '/product/TEST-1001')).id).toBeGreaterThan(0);
+  expect((await api(page, 'GET', '/product/TEST-1002')).id).toBe(0);
+
+  await page.goto(SCREEN);
+  await expect(page.locator('.bw-table tbody tr').first()).toContainText('Lighting controls');
+
+  // A category pull is not a baseline: the next normal pull is still the first full import.
+  const next = await pull(page);
+  expect(next).toMatchObject({ is_full: '1', since_utc: '', added: '1', unchanged: '1' });
+});
+
+test('pulling with no category chosen says so', async ({ page }) => {
+  await page.goto(SCREEN);
+  await page.getByRole('button', { name: 'Pull this category' }).click();
+  await expect(page.locator('.bw-notice--warning')).toContainText('Choose a category first.');
+});

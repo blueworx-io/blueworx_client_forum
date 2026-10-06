@@ -198,6 +198,24 @@ final class EPI_Pull_Runner {
 	}
 
 	/**
+	 * Fetch ePim's categories now and bring the site's into line.
+	 *
+	 * @return int|WP_Error How many categories were matched or made.
+	 */
+	public static function refresh_categories() {
+		$categories = EPI_Pull_Client::categories();
+
+		if ( is_wp_error( $categories ) ) {
+			return $categories;
+		}
+
+		$map = EPI_Pull_Categories::sync( $categories );
+		update_option( self::MAP_OPTION, $map, false );
+
+		return count( $map );
+	}
+
+	/**
 	 * Work on a run for a while, then hand over to the next batch.
 	 *
 	 * @param int  $run_id     Run ID.
@@ -374,13 +392,29 @@ final class EPI_Pull_Runner {
 					return self::short_page( $run, $page );
 				}
 
+				$scope = (int) $run->category_id ? EPI_Pull_Categories::scope( (int) $run->category_id ) : array();
+
 				foreach ( $page['results'] as $raw ) {
+					if ( $scope ) {
+						$record_categories = isset( $raw['ProductCategoryIds'] ) && is_array( $raw['ProductCategoryIds'] ) ? array_map( 'absint', $raw['ProductCategoryIds'] ) : array();
+
+						// A category pull leaves everything outside the category untouched and uncounted.
+						if ( ! array_intersect( $record_categories, $scope ) ) {
+							continue;
+						}
+					}
+
 					self::apply( (int) $run->id, is_array( $raw ) ? $raw : array(), (bool) $run->is_test );
 				}
 
 				$next = (int) $run->cursor_start + EPI_Pull_Settings::page_size();
 
 				if ( empty( $page['results'] ) || $next >= $page['total'] ) {
+					// A category pull does not act on deletions.
+					if ( (int) $run->category_id ) {
+						return 'done';
+					}
+
 					EPI_Pull_Store::update_run(
 						(int) $run->id,
 						array(

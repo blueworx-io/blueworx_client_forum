@@ -93,6 +93,74 @@ final class EPI_Pull_Categories {
 	}
 
 	/**
+	 * Every ePim-tagged category as a choice: ePim ID => "Parent › Child".
+	 *
+	 * @return array Sorted by label.
+	 */
+	public static function choices() {
+		$terms = get_terms(
+			array(
+				'taxonomy'   => 'product_cat',
+				'hide_empty' => false,
+				'orderby'    => 'name',
+				'meta_key'   => self::META, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- The tagged categories are the whole list.
+			)
+		);
+
+		$choices = array();
+
+		foreach ( is_wp_error( $terms ) ? array() : $terms as $term ) {
+			$epim_id = absint( get_term_meta( $term->term_id, self::META, true ) );
+
+			if ( ! $epim_id ) {
+				continue;
+			}
+
+			$path = array( $term->name );
+
+			foreach ( get_ancestors( $term->term_id, 'product_cat', 'taxonomy' ) as $ancestor_id ) {
+				$ancestor = get_term( $ancestor_id, 'product_cat' );
+
+				if ( $ancestor instanceof WP_Term ) {
+					array_unshift( $path, $ancestor->name );
+				}
+			}
+
+			$choices[ $epim_id ] = implode( ' › ', $path );
+		}
+
+		natcasesort( $choices );
+
+		return $choices;
+	}
+
+	/**
+	 * An ePim category and every category under it, as ePim IDs.
+	 *
+	 * @param int $epim_id ePim category ID.
+	 * @return int[]
+	 */
+	public static function scope( $epim_id ) {
+		$epim_id = absint( $epim_id );
+		$ids     = array( $epim_id );
+		$term    = self::term_for( $epim_id );
+
+		if ( $term instanceof WP_Term ) {
+			$children = get_term_children( $term->term_id, 'product_cat' );
+
+			foreach ( is_wp_error( $children ) ? array() : $children as $child_id ) {
+				$child_epim = absint( get_term_meta( $child_id, self::META, true ) );
+
+				if ( $child_epim ) {
+					$ids[] = $child_epim;
+				}
+			}
+		}
+
+		return array_values( array_unique( $ids ) );
+	}
+
+	/**
 	 * The term for one ePim category: found by ePim ID, else by name under the
 	 * same parent (the site's existing categories, on first contact), else made.
 	 * In a dry run only terms that already exist are matched; nothing is
