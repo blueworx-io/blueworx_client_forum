@@ -280,6 +280,15 @@ final class EPI_Feature_Registry {
 				'dependencies'   => array( 'woocommerce' ),
 				'boot'           => array( 'EPI_Product_Change_Log', 'init' ),
 			),
+			'epim-pull'                   => array(
+				'title'          => __( 'ePim product pull', 'blueworx_client_forum' ),
+				'description'    => __( 'Pulls products from ePim once a day and on demand, matched by SKU, and records every pull under Products > Product import.', 'blueworx_client_forum' ),
+				'group'          => 'admin-product',
+				'dangerous'      => false,
+				'danger_message' => '',
+				'dependencies'   => array(),
+				'boot'           => array( __CLASS__, 'boot_epim_pull' ),
+			),
 
 			// --- Tools --------------------------------------------------.
 			'image-purge'                 => array(
@@ -381,6 +390,17 @@ final class EPI_Feature_Registry {
 				$widgets_manager->register( new \EPI_Widget() );
 			}
 		);
+	}
+
+	/**
+	 * Boot the ePim pull. It requires its own files so the feature can be
+	 * switched off without loading any of them.
+	 *
+	 * @return void
+	 */
+	public static function boot_epim_pull() {
+		require_once EPI_PLUGIN_DIR . 'includes/pull/class-epi-pull.php';
+		EPI_Pull::boot();
 	}
 
 	/**

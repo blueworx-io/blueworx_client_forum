@@ -56,7 +56,7 @@ final class EPI_Change_Source {
 	 * @return string
 	 */
 	public static function current( $object_id ) {
-		return self::classify(
+		$source = self::classify(
 			array(
 				'cli'        => defined( 'WP_CLI' ) && WP_CLI,
 				'cron'       => wp_doing_cron(),
@@ -70,6 +70,15 @@ final class EPI_Change_Source {
 				'can_edit'   => current_user_can( 'edit_post', $object_id ),
 			)
 		);
+
+		/**
+		 * Filter who a change is from. The ePim pull runs as a background job,
+		 * which would be ignored; it claims its writes as ePim through this.
+		 *
+		 * @param string $source    One of the class constants.
+		 * @param int    $object_id Product or variation ID.
+		 */
+		return (string) apply_filters( 'epi_change_source', $source, $object_id );
 	}
 
 	/**

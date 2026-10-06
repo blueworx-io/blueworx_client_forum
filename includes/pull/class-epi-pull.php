@@ -1,0 +1,74 @@
+<?php
+/**
+ * The ePim pull feature: loads its classes, keeps its tables, boots its parts.
+ *
+ * @package ExternalProductImages
+ */
+
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/**
+ * Entry point for the pull.
+ */
+final class EPI_Pull {
+
+	/**
+	 * Database schema version.
+	 */
+	const DB_VERSION = '1.1';
+
+	/**
+	 * Option holding the installed schema version.
+	 */
+	const DB_OPTION = 'epi_pull_db_version';
+
+	/**
+	 * Load every pull class. Safe to call more than once.
+	 *
+	 * @return void
+	 */
+	public static function load() {
+		require_once __DIR__ . '/class-epi-pull-settings.php';
+		require_once __DIR__ . '/class-epi-pull-store.php';
+		require_once __DIR__ . '/class-epi-pull-client.php';
+		require_once __DIR__ . '/class-epi-pull-mapper.php';
+		require_once __DIR__ . '/class-epi-pull-categories.php';
+		require_once __DIR__ . '/class-epi-pull-writer.php';
+		require_once __DIR__ . '/class-epi-pull-runner.php';
+		require_once EPI_PLUGIN_DIR . 'includes/class-epi-product-import-page.php';
+	}
+
+	/**
+	 * Create or update the tables.
+	 *
+	 * @return void
+	 */
+	public static function install() {
+		self::load();
+		EPI_Pull_Store::install();
+		// Recorded last, so a failed table change is retried on the next boot.
+		update_option( self::DB_OPTION, self::DB_VERSION, false );
+	}
+
+	/**
+	 * Boot the feature. Called by the feature registry when it is switched on.
+	 *
+	 * @return void
+	 */
+	public static function boot() {
+		self::load();
+
+		if ( self::DB_VERSION !== get_option( self::DB_OPTION ) ) {
+			self::install();
+		}
+
+		EPI_Pull_Runner::init();
+
+		if ( is_admin() ) {
+			EPI_Product_Import_Page::init();
+		}
+	}
+}

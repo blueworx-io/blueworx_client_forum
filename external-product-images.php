@@ -3,7 +3,7 @@
  * Plugin Name:       BlueWorx Lab | Forum Lighting
  * Plugin URI:        https://blueworx.io/
  * Description:        Site functionality plugin for Forum Lighting. A control centre under Settings > BlueWorx Lab switches features on or off, including the WooCommerce product gallery, metadata tools, pricing rules and more.
- * Version:           1.13.0
+ * Version:           1.14.0
  * Author:            BlueWorx
  * Author URI:        https://blueworx.io/
  * Text Domain:       blueworx_client_forum
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Core plugin constants.
  */
-define( 'EPI_VERSION', '1.13.0' );
+define( 'EPI_VERSION', '1.14.0' );
 define( 'EPI_PLUGIN_FILE', __FILE__ );
 define( 'EPI_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'EPI_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -120,7 +120,21 @@ final class EPI_Plugin {
 	 */
 	public static function activate() {
 		require_once EPI_PLUGIN_DIR . 'includes/class-epi-product-change-log.php';
+		require_once EPI_PLUGIN_DIR . 'includes/pull/class-epi-pull.php';
 		EPI_Product_Change_Log::install();
+		EPI_Pull::install();
+	}
+
+	/**
+	 * Stop the daily ePim pull, and any batch still queued, when the plugin is
+	 * switched off.
+	 *
+	 * @return void
+	 */
+	public static function deactivate() {
+		wp_clear_scheduled_hook( 'epi_pull_daily' );
+		wp_unschedule_hook( 'epi_pull_batch' );
+		delete_option( 'epi_pull_lock' );
 	}
 
 	/**
@@ -190,6 +204,7 @@ final class EPI_Plugin {
 }
 
 register_activation_hook( __FILE__, array( 'EPI_Plugin', 'activate' ) );
+register_deactivation_hook( __FILE__, array( 'EPI_Plugin', 'deactivate' ) );
 
 /**
  * Kick things off.
