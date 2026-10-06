@@ -190,7 +190,7 @@ final class EPI_Product_Import_Page {
 
 		$settings = EPI_Pull_Settings::get();
 		$choices  = EPI_Pull_Categories::choices();
-		$total   = EPI_Pull_Store::count_runs();
+		$total    = EPI_Pull_Store::count_runs();
 		$pages    = max( 1, (int) ceil( $total / self::RUNS_PER_PAGE ) );
 		$page_no  = min( $page_no, $pages );
 		$runs     = EPI_Pull_Store::get_runs( $page_no, self::RUNS_PER_PAGE );
