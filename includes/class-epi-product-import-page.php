@@ -228,7 +228,7 @@ final class EPI_Product_Import_Page {
 					</div>
 				</header>
 
-				<div class="bw-page__body bw-page__body--single">
+				<div class="bw-page__body">
 					<div class="bw-panels">
 						<?php self::render_notice( $notice ); ?>
 
@@ -632,7 +632,7 @@ final class EPI_Product_Import_Page {
 					</div>
 				</header>
 
-				<div class="bw-page__body bw-page__body--single">
+				<div class="bw-page__body">
 					<div class="bw-panels">
 						<?php if ( $run->is_test ) : ?>
 							<div class="bw-notice bw-notice--info" role="status">
