@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.14.1]
+
+### Changed
+- The Product import page and each pull's details now use the full width of the
+  screen instead of a narrow column.
+
 ## [1.14.0]
 
 ### Added

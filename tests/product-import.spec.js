@@ -459,6 +459,19 @@ test('the page renders from the design system and saves the settings', async ({ 
   await expect(page.locator('input[name="epi_pull_images"]')).toBeChecked();
 });
 
+test('the list and the detail view use the full width of the screen', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 900 });
+  const run = await pull(page);
+
+  for (const url of [SCREEN, `${SCREEN}&run=${run.id}`]) {
+    await page.goto(url);
+    const panels = await page.locator('.bw-page__body .bw-panels').boundingBox();
+    const head = await page.locator('.bw-pagehead').boundingBox();
+    // The panels fill the page under the header, less the gutters either side.
+    expect(panels.width, url).toBeGreaterThan(head.width - 120);
+  }
+});
+
 test('Pull now starts a pull that shows in the table, and a second is refused while it runs', async ({ page }) => {
   await page.goto(SCREEN);
   await page.getByRole('button', { name: 'Pull now' }).click();
