@@ -23,7 +23,7 @@ test('the Last updated column on the products list is wide enough to read', asyn
 
   await page.goto('/wp-admin/edit.php?post_type=product', { waitUntil: 'domcontentloaded' });
 
-  const header = page.locator('th#epi_last_updated');
+  const header = page.locator('th#bw-last-updated');
   await expect(header).toBeVisible();
   const box = await header.boundingBox();
   // "Last updated" on one line, and a date like "13 October 2026" beneath it.

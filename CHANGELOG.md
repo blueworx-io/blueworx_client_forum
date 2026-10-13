@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - The "Last updated" column on the products list is wide enough to read again,
   instead of being squeezed to one letter wide.
+- A pull's details no longer make the whole page scroll sideways: only the grid
+  scrolls, and its product column stays in place beside it.
+- Admin screens use design system 1.3.0.
 
 ## [1.15.2]
 

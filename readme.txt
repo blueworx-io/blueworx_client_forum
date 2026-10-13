@@ -44,6 +44,7 @@ be placed anywhere with [forum_product_gallery].
 
 = 1.15.3 =
 * The "Last updated" column on the products list is readable again.
+* Only the grid scrolls sideways on a pull's details, not the whole page.
 
 = 1.15.2 =
 * A pull's details show a column for every field pulled, with "No change" where

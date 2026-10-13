@@ -9,15 +9,9 @@
  * The metadata section on the product edit screen, and the "Last updated"
  * column on the product list, are guests on WordPress's own screens: they take
  * the design system's classes and none of these overrides, so nothing here
- * moves anything WordPress drew. The one exception is the column's width: the
- * product list is a fixed-layout table, and a column that names no width
- * gets only what the others leave, which with SEO and brand columns added is
- * nothing at all.
+ * moves anything WordPress drew. The column's width comes from the design
+ * system too, through its "bw-" column key.
  */
-
-.wp-list-table .column-epi_last_updated {
-	width: 10em;
-}
 
 .wrap.bw-wrap {
 	margin: 0;

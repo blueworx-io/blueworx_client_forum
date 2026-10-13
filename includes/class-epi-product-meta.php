@@ -113,14 +113,14 @@ final class EPI_Product_Meta {
 
 		foreach ( $columns as $key => $label ) {
 			if ( 'date' === $key ) {
-				$updated_columns['epi_last_updated'] = esc_html__( 'Last updated', 'blueworx_client_forum' );
+				$updated_columns['bw-last-updated'] = esc_html__( 'Last updated', 'blueworx_client_forum' );
 			}
 
 			$updated_columns[ $key ] = $label;
 		}
 
-		if ( ! isset( $updated_columns['epi_last_updated'] ) ) {
-			$updated_columns['epi_last_updated'] = esc_html__( 'Last updated', 'blueworx_client_forum' );
+		if ( ! isset( $updated_columns['bw-last-updated'] ) ) {
+			$updated_columns['bw-last-updated'] = esc_html__( 'Last updated', 'blueworx_client_forum' );
 		}
 
 		return $updated_columns;
@@ -134,7 +134,7 @@ final class EPI_Product_Meta {
 	 * @return void
 	 */
 	public static function render_product_list_column( $column, $post_id ) {
-		if ( 'epi_last_updated' !== $column ) {
+		if ( 'bw-last-updated' !== $column ) {
 			return;
 		}
 
@@ -170,7 +170,7 @@ final class EPI_Product_Meta {
 	 * @return array
 	 */
 	public static function make_product_list_column_sortable( $columns ) {
-		$columns['epi_last_updated'] = 'modified';
+		$columns['bw-last-updated'] = 'modified';
 
 		return $columns;
 	}
