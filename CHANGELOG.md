@@ -17,6 +17,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ePim sent opens under its product.
 - Admin screens use design system 1.2.0.
 
+## [1.14.2]
+
+### Fixed
+- Product weight in grams, pack sizes, outer carton and waste packaging details
+  no longer show on product pages. They were meant to be hidden, but the rule only
+  recognised the old way ePim sent them.
+- Customer 4 accounts (and administrators) are charged the product's ECD special
+  price from ePim again, instead of 40% of the list price.
+- The ePim pull keeps the name a product already uses for a detail ("Bullet-1"
+  rather than "Bullet 1"), so it no longer reports those as new or renames them.
+
 ## [1.14.1]
 
 ### Changed

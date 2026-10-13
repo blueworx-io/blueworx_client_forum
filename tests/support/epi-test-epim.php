@@ -499,6 +499,25 @@ add_action(
 						update_post_meta( $id, '_product_image_gallery', (string) $request['gallery'] );
 					}
 
+					// Name => value, stored as the push stores custom attributes.
+					if ( is_array( $request['attributes'] ) ) {
+						$stored   = array();
+						$position = 0;
+
+						foreach ( $request['attributes'] as $name => $value ) {
+							$stored[ sanitize_title( $name ) ] = array(
+								'name'         => (string) $name,
+								'value'        => (string) $value,
+								'position'     => $position++,
+								'is_visible'   => 1,
+								'is_variation' => 0,
+								'is_taxonomy'  => 0,
+							);
+						}
+
+						update_post_meta( $id, '_product_attributes', $stored );
+					}
+
 					return array( 'id' => (int) $id );
 				},
 			)

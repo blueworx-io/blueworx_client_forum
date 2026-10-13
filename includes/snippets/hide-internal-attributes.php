@@ -43,16 +43,34 @@ add_filter(
 
 		$hide_id_pattern = '/^pa_epim-(' . implode( '|', $hide_ids ) . ')$/';
 
+		// The same details as ePim now sends them: plain attributes named after
+		// the detail (ePim attribute 18017, 27544-27547 and 27549-27556).
+		$hide_labels = array(
+			'product weight (g)',
+			'product pack height (cm)',
+			'product pack width (cm)',
+			'product pack depth (cm)',
+			'product packed weight (kg)',
+			'outer pack height (cm)',
+			'outer pack width (cm)',
+			'outer pack depth (cm)',
+			'outer pack net weight (kg)',
+			'outer pack gross weight (kg)',
+			'waste packaging weight - pack (kg)',
+			'waste packaging weight - card (kg)',
+			'waste packaging weight - plastic (kg)',
+		);
+
 		return array_filter(
 			$product_attributes,
-			function ( $attr, $key ) use ( $hide_id_pattern ) {
+			function ( $attr, $key ) use ( $hide_id_pattern, $hide_labels ) {
 				// WooCommerce keys these rows "attribute_pa_foo"; some templates pass
 				// the bare taxonomy. Compare against the bare name either way.
 				$key   = strtolower( (string) $key );
 				$key   = preg_replace( '/^attribute_/', '', $key );
 				$label = strtolower( trim( (string) ( $attr['label'] ?? '' ) ) );
 
-				if ( preg_match( $hide_id_pattern, $key ) ) {
+				if ( preg_match( $hide_id_pattern, $key ) || in_array( $label, $hide_labels, true ) ) {
 					return false;
 				}
 

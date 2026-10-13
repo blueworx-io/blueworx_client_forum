@@ -46,6 +46,11 @@ be placed anywhere with [forum_product_gallery].
 * A pull's details are a grid: one row per product, one column per changed field,
   with the old value under the new one and "No change" where nothing moves.
 
+= 1.14.2 =
+* Pack, carton and waste details are hidden from product pages again.
+* Customer 4 accounts are charged their ECD special price again.
+* The ePim pull keeps the site's own names for details like the bullets.
+
 = 1.14.1 =
 * The Product import page uses the full width of the screen.
 
