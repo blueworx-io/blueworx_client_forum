@@ -1,8 +1,8 @@
 /**
  * Product import page.
  *
- * Two jobs: confirm before a full re-import, and open or close the raw-data
- * accordions on the detail view.
+ * Two jobs: confirm before a full re-import, and open or close the raw ePim
+ * record under a product on the detail view.
  */
 ( function () {
 	'use strict';
@@ -14,19 +14,17 @@
 			return;
 		}
 
-		var head = event.target.closest( '[data-epi-accordion] .bw-accordion__head' );
-		if ( ! head ) {
+		var toggle = event.target.closest( '[data-epi-raw]' );
+		if ( ! toggle ) {
 			return;
 		}
 
-		var accordion = head.closest( '[data-epi-accordion]' );
-		var body = accordion.querySelector( '.bw-accordion__body' );
-		var open = ! accordion.classList.contains( 'is-open' );
+		var row = document.getElementById( toggle.getAttribute( 'aria-controls' ) );
+		var open = 'true' !== toggle.getAttribute( 'aria-expanded' );
 
-		accordion.classList.toggle( 'is-open', open );
-		head.setAttribute( 'aria-expanded', open ? 'true' : 'false' );
-		if ( body ) {
-			body.hidden = ! open;
+		toggle.setAttribute( 'aria-expanded', open ? 'true' : 'false' );
+		if ( row ) {
+			row.hidden = ! open;
 		}
 	} );
 } )();

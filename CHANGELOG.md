@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.15.0]
+
+### Changed
+- A pull's details are now a grid you can read at a glance: one row per product,
+  one column per field that changed, each cell showing the new value with the old
+  one struck through underneath, and "No change" where a field stays as it is.
+  The product and its result stay put while you scroll across, and the record
+  ePim sent opens under its product.
+- Admin screens use design system 1.2.0.
+
 ## [1.14.2]
 
 ### Fixed
