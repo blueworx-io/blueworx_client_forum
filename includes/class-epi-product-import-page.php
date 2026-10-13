@@ -731,7 +731,10 @@ final class EPI_Product_Import_Page {
 												$changes = array();
 
 												foreach ( $item['changes'] as $change ) {
-													$changes[ $change['field'] ] = $change;
+													$field = (string) $change['field'];
+													$field = 0 === strpos( $field, 'attribute:' ) ? self::detail_key( substr( $field, strlen( 'attribute:' ) ) ) : $field;
+
+													$changes[ $field ] = $change;
 												}
 												?>
 												<tr>
@@ -798,16 +801,23 @@ final class EPI_Product_Import_Page {
 	}
 
 	/**
-	 * The fields that change on any of these products, as field => column
-	 * heading: the product's own fields first, then its details in the order
-	 * they first turn up.
+	 * Every field the pull brings over for these products, as key => column
+	 * heading, changed or not: the product's own fields first, then each
+	 * detail ePim sent, in the order they first turn up. Pictures and the SKU
+	 * only get a column when one of them changes.
 	 *
 	 * @param array $items Pull items.
 	 * @return array
 	 */
 	private static function change_columns( array $items ) {
-		$own     = array( 'status', 'name', 'description', 'sku', 'price', 'categories', 'image', 'gallery' );
-		$found   = array();
+		$columns = array(
+			'status'      => __( 'Status', 'blueworx_client_forum' ),
+			'name'        => __( 'Product name', 'blueworx_client_forum' ),
+			'description' => __( 'Description', 'blueworx_client_forum' ),
+			'price'       => __( 'Regular price', 'blueworx_client_forum' ),
+			'categories'  => __( 'Categories', 'blueworx_client_forum' ),
+		);
+		$extra   = array();
 		$details = array();
 
 		foreach ( $items as $item ) {
@@ -815,23 +825,41 @@ final class EPI_Product_Import_Page {
 				$field = (string) $change['field'];
 
 				if ( 0 === strpos( $field, 'attribute:' ) ) {
-					$details[ $field ] = substr( $field, strlen( 'attribute:' ) );
-				} else {
-					$found[ $field ] = isset( $change['label'] ) ? (string) $change['label'] : $field;
+					$name = substr( $field, strlen( 'attribute:' ) );
+					$key  = self::detail_key( $name );
+
+					if ( ! isset( $details[ $key ] ) ) {
+						$details[ $key ] = $name;
+					}
+				} elseif ( ! isset( $columns[ $field ] ) ) {
+					$extra[ $field ] = isset( $change['label'] ) ? (string) $change['label'] : $field;
+				}
+			}
+
+			$mapped = EPI_Pull_Mapper::map( is_array( $item['raw'] ) ? $item['raw'] : array() );
+
+			foreach ( array_keys( $mapped['attributes'] ) as $name ) {
+				$key = self::detail_key( (string) $name );
+
+				if ( ! isset( $details[ $key ] ) ) {
+					$details[ $key ] = (string) $name;
 				}
 			}
 		}
 
-		$columns = array();
+		return $columns + $extra + $details;
+	}
 
-		foreach ( $own as $field ) {
-			if ( isset( $found[ $field ] ) ) {
-				$columns[ $field ] = $found[ $field ];
-				unset( $found[ $field ] );
-			}
-		}
-
-		return $columns + $found + $details;
+	/**
+	 * A detail's column key. WooCommerce treats "Bullet-1" and "Bullet 1" as
+	 * one attribute, and the pull keeps whichever name the product already
+	 * had, so both land in the same column.
+	 *
+	 * @param string $name Attribute name.
+	 * @return string
+	 */
+	private static function detail_key( $name ) {
+		return 'attribute:' . sanitize_title( $name );
 	}
 
 	/**

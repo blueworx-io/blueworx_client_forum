@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.15.2]
+
+### Changed
+- A pull's details show a column for every field the pull brings over — status,
+  name, description, price, categories and every detail ePim sent — with "No
+  change" where a field stays as it is, not just the fields that changed.
+
 ## [1.15.1]
 
 ### Fixed

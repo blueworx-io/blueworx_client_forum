@@ -541,10 +541,13 @@ test('the detail view lists each product with what changed and the raw record', 
   await expect(page.locator('.bw-dl:not(.bw-dl--stack)')).toContainText('Manual');
   await expect(page.locator('.bw-dl:not(.bw-dl--stack)')).toContainText('Done');
 
-  // One row per product, one column per field that changed on any of them.
+  // One row per product, one column per field the pull brings over, changed or
+  // not: the product's own fields, then every detail ePim sent.
   const grid = page.locator('.bw-compare');
   const headers = await grid.locator('thead th').allTextContents();
-  expect(headers.map((h) => h.trim())).toEqual(['Product', 'Result', 'Status', 'Product name', 'Regular price', 'Colour']);
+  expect(headers.map((h) => h.trim())).toEqual([
+    'Product', 'Result', 'Status', 'Product name', 'Description', 'Regular price', 'Categories', 'Colour', 'Material',
+  ]);
   const cell = (row, column) => row.locator('th, td').nth(headers.findIndex((h) => h.trim() === column));
 
   const rows = grid.locator('tbody tr:not(.bw-compare__detail)');
@@ -559,6 +562,9 @@ test('the detail view lists each product with what changed and the raw record', 
   await expect(cell(updated, 'Colour').locator('.bw-compare__new')).toHaveText('Off white');
   // A field that stays as it is says so, rather than sitting blank.
   await expect(cell(updated, 'Status')).toHaveText('No change');
+  await expect(cell(updated, 'Description')).toHaveText('No change');
+  await expect(cell(updated, 'Categories')).toHaveText('No change');
+  await expect(cell(updated, 'Material')).toHaveText('No change');
 
   const hidden = rows.filter({ hasText: 'TEST-1002' });
   await expect(cell(hidden, 'Result').locator('.bw-badge')).toHaveText('Hidden');
