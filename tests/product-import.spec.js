@@ -244,6 +244,38 @@ test('an existing product with the SKU but no ePim id is updated, not duplicated
   expect(product.title).toBe('Single Kinetic Switch - White');
 });
 
+// The push names the bullets "Bullet-1", ePim's API says "Bullet 1". Same
+// attribute to WooCommerce; renaming it every day would flip-flop with the push.
+test('an attribute the site has under a near-identical name keeps the site name', async ({ page }) => {
+  await api(page, 'POST', '/product', {
+    sku: 'TEST-1001',
+    title: 'Old name',
+    attributes: { 'Bullet-1': 'No wiring required', 'Bullet-2': 'Old wording' },
+  });
+
+  const result = await applyRaw(page, {
+    ...RAW_A,
+    AttributeValues: [
+      ...RAW_A.AttributeValues,
+      { AttributeHeaderName: 'Bullet 1', Value: 'No wiring required' },
+      { AttributeHeaderName: 'Bullet 2', Value: 'New wording' },
+    ],
+  });
+
+  const bullets = result.changes.filter((c) => /bullet/i.test(c.field));
+  expect(bullets).toEqual([
+    expect.objectContaining({ field: 'attribute:Bullet-2', before: 'Old wording', after: 'New wording' }),
+  ]);
+
+  const product = await api(page, 'GET', '/product/TEST-1001');
+  expect(product.attributes).toEqual({
+    'Bullet-1': 'No wiring required',
+    'Bullet-2': 'New wording',
+    Colour: 'White',
+    Material: 'Plastic',
+  });
+});
+
 test('pictures are left alone until the switch is on', async ({ page }) => {
   await applyRaw(page, RAW_A, false);
   expect(await api(page, 'GET', '/product/TEST-1001')).toMatchObject({ thumbnail: '', gallery: '' });

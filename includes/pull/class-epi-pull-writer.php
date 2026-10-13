@@ -52,7 +52,12 @@ final class EPI_Pull_Writer {
 			return self::result( 'unchanged', $id, array(), '' );
 		}
 
-		$wanted  = $product['hidden'] ? array( 'status' => 'draft' ) : self::wanted( $product, $category_map, $images );
+		$wanted = $product['hidden'] ? array( 'status' => 'draft' ) : self::wanted( $product, $category_map, $images );
+
+		if ( isset( $wanted['attributes'], $before['attributes'] ) ) {
+			$wanted['attributes'] = self::site_names( $wanted['attributes'], $before['attributes'] );
+		}
+
 		$changes = self::diff( $before, $wanted );
 
 		if ( $id && empty( $changes ) ) {
@@ -220,6 +225,34 @@ final class EPI_Pull_Writer {
 		}
 
 		return $wanted;
+	}
+
+	/**
+	 * Give ePim's attributes the names the product already uses for them.
+	 * WooCommerce treats "Bullet-1" and "Bullet 1" as the same attribute; the
+	 * push writes one and the API sends the other, and renaming it on every
+	 * pull would only flip-flop with the push.
+	 *
+	 * @param array $values  Name => value from ePim.
+	 * @param array $current Name => value on the product.
+	 * @return array
+	 */
+	private static function site_names( array $values, array $current ) {
+		$names = array();
+
+		foreach ( array_keys( $current ) as $name ) {
+			$names[ sanitize_title( $name ) ] = (string) $name;
+		}
+
+		$renamed = array();
+
+		foreach ( $values as $name => $value ) {
+			$key = sanitize_title( $name );
+
+			$renamed[ isset( $names[ $key ] ) ? $names[ $key ] : $name ] = $value;
+		}
+
+		return $renamed;
 	}
 
 	/**

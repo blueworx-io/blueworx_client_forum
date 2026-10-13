@@ -87,7 +87,14 @@ function epi_get_attribute_price( $product, $attribute_slug ) {
 	$attributes = $product->get_attributes();
 	$key        = 'pa_' . sanitize_title( $attribute_slug );
 	if ( ! isset( $attributes[ $key ] ) ) {
-		return null;
+		// ePim now sends the price as a plain attribute ("ECD special prices"),
+		// whose options hold the value itself rather than a term ID.
+		$custom = $attributes[ sanitize_title( $attribute_slug ) ] ?? null;
+		if ( ! $custom instanceof WC_Product_Attribute || $custom->is_taxonomy() ) {
+			return null;
+		}
+		$value = trim( (string) current( $custom->get_options() ) );
+		return is_numeric( $value ) ? (float) $value : null;
 	}
 	$attribute = $attributes[ $key ];
 	$options   = $attribute->get_options();
