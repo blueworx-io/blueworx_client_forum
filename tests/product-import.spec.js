@@ -509,27 +509,40 @@ test('the detail view lists each product with what changed and the raw record', 
   await expect(page.locator('.bw-dl:not(.bw-dl--stack)')).toContainText('Manual');
   await expect(page.locator('.bw-dl:not(.bw-dl--stack)')).toContainText('Done');
 
-  const rows = page.locator('.bw-table tbody tr');
+  // One row per product, one column per field that changed on any of them.
+  const grid = page.locator('.bw-compare');
+  const headers = await grid.locator('thead th').allTextContents();
+  expect(headers.map((h) => h.trim())).toEqual(['Product', 'Result', 'Status', 'Product name', 'Regular price', 'Colour']);
+  const cell = (row, column) => row.locator('th, td').nth(headers.findIndex((h) => h.trim() === column));
+
+  const rows = grid.locator('tbody tr:not(.bw-compare__detail)');
   await expect(rows).toHaveCount(2);
 
   const updated = rows.filter({ hasText: 'TEST-1001' });
-  await expect(updated.locator('.bw-badge')).toHaveText('Updated');
-  await expect(updated).toContainText('Product name');
-  await expect(updated).toContainText('Single Kinetic Switch - White');
-  await expect(updated).toContainText('Single Kinetic Switch Kit - White');
-  await expect(updated).toContainText('Regular price');
-  await expect(updated).toContainText('55.00');
+  await expect(cell(updated, 'Result').locator('.bw-badge')).toHaveText('Updated');
+  await expect(cell(updated, 'Product name').locator('.bw-compare__new')).toHaveText('Single Kinetic Switch Kit - White');
+  await expect(cell(updated, 'Product name').locator('.bw-compare__old')).toHaveText('Single Kinetic Switch - White');
+  await expect(cell(updated, 'Regular price').locator('.bw-compare__new')).toHaveText('55.00');
+  await expect(cell(updated, 'Regular price').locator('.bw-compare__old')).toHaveText('51.25');
+  await expect(cell(updated, 'Colour').locator('.bw-compare__new')).toHaveText('Off white');
+  // A field that stays as it is says so, rather than sitting blank.
+  await expect(cell(updated, 'Status')).toHaveText('No change');
 
   const hidden = rows.filter({ hasText: 'TEST-1002' });
-  await expect(hidden.locator('.bw-badge')).toHaveText('Hidden');
-  await expect(hidden).toContainText('Draft (hidden)');
+  await expect(cell(hidden, 'Result').locator('.bw-badge')).toHaveText('Hidden');
+  await expect(cell(hidden, 'Status').locator('.bw-compare__new')).toHaveText('Draft (hidden)');
+  await expect(cell(hidden, 'Status').locator('.bw-compare__old')).toHaveText('Published');
+  await expect(cell(hidden, 'Product name')).toHaveText('No change');
 
-  // The raw record is there, closed until asked for.
-  const raw = updated.locator('[data-epi-accordion]');
-  await expect(raw.locator('.bw-accordion__body')).toBeHidden();
-  await raw.locator('.bw-accordion__head').click();
-  await expect(raw.locator('.bw-accordion__body')).toBeVisible();
-  await expect(raw.locator('pre')).toContainText('"SKU": "TEST-1001"');
+  // The raw record sits under its product, closed until asked for.
+  const toggle = updated.getByRole('button', { name: 'Raw' });
+  const detail = page.locator(`#${await toggle.getAttribute('aria-controls')}`);
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(detail).toBeHidden();
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(detail).toBeVisible();
+  await expect(detail.locator('pre')).toContainText('"SKU": "TEST-1001"');
 
   await page.getByRole('link', { name: 'Back to pulls' }).click();
   await expect(page.locator('.bw-pagehead__h1')).toHaveText('Product import');

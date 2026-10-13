@@ -712,43 +712,55 @@ final class EPI_Product_Import_Page {
 									<p class="bw-empty__text"><?php esc_html_e( 'ePim sent nothing this pull needed to add, update or hide.', 'blueworx_client_forum' ); ?></p>
 								</div>
 							<?php else : ?>
+								<?php $columns = self::change_columns( $items ); ?>
 								<div class="bw-tablescroll">
-									<table class="bw-table">
+									<table class="bw-table bw-compare">
 										<thead>
 											<tr>
-												<th scope="col"><?php esc_html_e( 'Product', 'blueworx_client_forum' ); ?></th>
-												<th scope="col"><?php esc_html_e( 'Result', 'blueworx_client_forum' ); ?></th>
-												<th scope="col"><?php esc_html_e( 'Changes', 'blueworx_client_forum' ); ?></th>
-												<th scope="col"><?php esc_html_e( 'From ePim', 'blueworx_client_forum' ); ?></th>
+												<th scope="col" class="bw-compare__pin"><?php esc_html_e( 'Product', 'blueworx_client_forum' ); ?></th>
+												<th scope="col" class="bw-compare__pin bw-compare__pin--edge"><?php esc_html_e( 'Result', 'blueworx_client_forum' ); ?></th>
+												<?php foreach ( $columns as $label ) : ?>
+													<th scope="col" class="bw-compare__field"><?php echo esc_html( $label ); ?></th>
+												<?php endforeach; ?>
 											</tr>
 										</thead>
 										<tbody>
-											<?php foreach ( $items as $item ) : ?>
+											<?php foreach ( $items as $index => $item ) : ?>
+												<?php
+												$raw_id  = 'epi-raw-' . (int) $index;
+												$changes = array();
+
+												foreach ( $item['changes'] as $change ) {
+													$changes[ $change['field'] ] = $change;
+												}
+												?>
 												<tr>
-													<td>
+													<th scope="row" class="bw-compare__pin">
 														<span class="bw-table__primary"><?php echo esc_html( '' !== $item['name'] ? $item['name'] : __( '(no name)', 'blueworx_client_forum' ) ); ?></span>
 														<span class="bw-table__sub"><?php echo esc_html( '' !== $item['sku'] ? $item['sku'] : __( 'No SKU', 'blueworx_client_forum' ) ); ?></span>
 														<?php if ( $item['product_id'] ) : ?>
 															<span class="bw-table__sub"><a href="<?php echo esc_url( get_edit_post_link( (int) $item['product_id'], 'raw' ) ); ?>"><?php esc_html_e( 'Open product', 'blueworx_client_forum' ); ?></a></span>
 														<?php endif; ?>
-													</td>
-													<td>
+														<button type="button" class="bw-btn bw-btn--ghost bw-btn--sm" data-epi-raw aria-expanded="false" aria-controls="<?php echo esc_attr( $raw_id ); ?>">
+															<?php esc_html_e( 'Raw', 'blueworx_client_forum' ); ?>
+															<i class="bw-icon" data-lucide="chevron-down" aria-hidden="true"></i>
+														</button>
+													</th>
+													<td class="bw-compare__pin bw-compare__pin--edge">
 														<?php self::render_action_badge( $item['action'] ); ?>
 														<?php if ( '' !== (string) $item['message'] ) : ?>
 															<span class="bw-table__sub"><?php echo esc_html( $item['message'] ); ?></span>
 														<?php endif; ?>
 													</td>
-													<td><?php self::render_changes( $item['changes'] ); ?></td>
-													<td>
-														<section class="bw-accordion" data-epi-accordion>
-															<button type="button" class="bw-accordion__head" aria-expanded="false">
-																<span class="bw-accordion__title"><?php esc_html_e( 'Raw ePim data', 'blueworx_client_forum' ); ?></span>
-																<i class="bw-icon bw-accordion__chev" data-lucide="chevron-down" aria-hidden="true"></i>
-															</button>
-															<div class="bw-accordion__body" hidden>
-																<pre><?php echo esc_html( (string) wp_json_encode( $item['raw'], $json ) ); ?></pre>
-															</div>
-														</section>
+													<?php foreach ( array_keys( $columns ) as $field ) : ?>
+														<td><?php self::render_change( isset( $changes[ $field ] ) ? $changes[ $field ] : null ); ?></td>
+													<?php endforeach; ?>
+												</tr>
+												<tr class="bw-compare__detail" id="<?php echo esc_attr( $raw_id ); ?>" hidden>
+													<td colspan="<?php echo esc_attr( (string) ( 2 + count( $columns ) ) ); ?>">
+														<div class="bw-compare__detail-body">
+															<pre><?php echo esc_html( (string) wp_json_encode( $item['raw'], $json ) ); ?></pre>
+														</div>
 													</td>
 												</tr>
 											<?php endforeach; ?>
@@ -786,31 +798,66 @@ final class EPI_Product_Import_Page {
 	}
 
 	/**
-	 * Field changes as "label: before, arrow, after", one per line.
+	 * The fields that change on any of these products, as field => column
+	 * heading: the product's own fields first, then its details in the order
+	 * they first turn up.
 	 *
-	 * @param array $changes Each: field, label, before, after.
+	 * @param array $items Pull items.
+	 * @return array
+	 */
+	private static function change_columns( array $items ) {
+		$own     = array( 'status', 'name', 'description', 'sku', 'price', 'categories', 'image', 'gallery' );
+		$found   = array();
+		$details = array();
+
+		foreach ( $items as $item ) {
+			foreach ( (array) $item['changes'] as $change ) {
+				$field = (string) $change['field'];
+
+				if ( 0 === strpos( $field, 'attribute:' ) ) {
+					$details[ $field ] = substr( $field, strlen( 'attribute:' ) );
+				} else {
+					$found[ $field ] = isset( $change['label'] ) ? (string) $change['label'] : $field;
+				}
+			}
+		}
+
+		$columns = array();
+
+		foreach ( $own as $field ) {
+			if ( isset( $found[ $field ] ) ) {
+				$columns[ $field ] = $found[ $field ];
+				unset( $found[ $field ] );
+			}
+		}
+
+		return $columns + $found + $details;
+	}
+
+	/**
+	 * One field's cell: the new value over the old one, or "No change".
+	 *
+	 * @param array|null $change Field, label, before, after; null when the field stays as it is.
 	 * @return void
 	 */
-	private static function render_changes( array $changes ) {
-		if ( ! $changes ) {
+	private static function render_change( $change ) {
+		if ( null === $change ) {
 			?>
-			<span class="bw-table__sub"><?php esc_html_e( 'None', 'blueworx_client_forum' ); ?></span>
+			<span class="bw-compare__same"><?php esc_html_e( 'No change', 'blueworx_client_forum' ); ?></span>
 			<?php
 			return;
 		}
 
-		$empty = __( '(empty)', 'blueworx_client_forum' );
+		$after  = isset( $change['after'] ) ? (string) $change['after'] : '';
+		$before = isset( $change['before'] ) ? (string) $change['before'] : '';
+		$after  = '' !== $after ? $after : __( '(empty)', 'blueworx_client_forum' );
 		?>
-		<dl class="bw-dl bw-dl--stack">
-			<?php foreach ( $changes as $change ) : ?>
-				<dt><?php echo esc_html( isset( $change['label'] ) ? $change['label'] : $change['field'] ); ?></dt>
-				<dd>
-					<?php echo esc_html( isset( $change['before'] ) && '' !== (string) $change['before'] && null !== $change['before'] ? (string) $change['before'] : $empty ); ?>
-					<i class="bw-icon bw-icon--14" data-lucide="arrow-right" aria-hidden="true"></i>
-					<?php echo esc_html( isset( $change['after'] ) && '' !== (string) $change['after'] && null !== $change['after'] ? (string) $change['after'] : $empty ); ?>
-				</dd>
-			<?php endforeach; ?>
-		</dl>
+		<span class="bw-compare__new" title="<?php echo esc_attr( $after ); ?>"><?php echo esc_html( $after ); ?></span>
+		<?php if ( '' === $before ) : ?>
+			<span class="bw-compare__was"><?php esc_html_e( 'was empty', 'blueworx_client_forum' ); ?></span>
+		<?php else : ?>
+			<span class="bw-compare__old"><?php echo esc_html( $before ); ?></span>
+		<?php endif; ?>
 		<?php
 	}
 }

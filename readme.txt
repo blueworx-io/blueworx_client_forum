@@ -4,7 +4,7 @@ Tags: woocommerce, elementor, product gallery, product images, site functionalit
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.14.1
+Stable tag: 1.15.0
 License: GPLv2 or later
 
 Site functionality plugin for Forum Lighting: one control centre to switch the WooCommerce gallery, metadata, pricing and more on or off.
@@ -41,6 +41,10 @@ be placed anywhere with [forum_product_gallery].
    category. Save.
 
 == Changelog ==
+
+= 1.15.0 =
+* A pull's details are a grid: one row per product, one column per changed field,
+  with the old value under the new one and "No change" where nothing moves.
 
 = 1.14.1 =
 * The Product import page uses the full width of the screen.
