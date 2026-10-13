@@ -9,7 +9,8 @@
  * The metadata section on the product edit screen, and the "Last updated"
  * column on the product list, are guests on WordPress's own screens: they take
  * the design system's classes and none of these overrides, so nothing here
- * moves anything WordPress drew.
+ * moves anything WordPress drew. The column's width comes from the design
+ * system too, through its "bw-" column key.
  */
 
 .wrap.bw-wrap {

@@ -601,6 +601,31 @@ test('the detail view lists each product with what changed and the raw record', 
   expect(await refused.text()).not.toContain('TEST-1001');
 });
 
+// Real pulls bring dozens of details, so the grid is far wider than the screen.
+// It scrolls inside its own card; the page itself must never scroll sideways.
+test('a wide grid scrolls inside its card, not the whole page', async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await pull(page);
+  const run = await pull(page, { scenario: 'changed' });
+  await page.goto(`${SCREEN}&run=${run.id}`);
+
+  // Widen the grid the way a real pull does: many more detail columns.
+  await page.evaluate(() => {
+    for (const row of document.querySelectorAll('.bw-compare tr')) {
+      const cell = row.children[3];
+      for (let i = 0; i < 25; i++) row.insertBefore(cell.cloneNode(true), cell);
+    }
+  });
+
+  const widths = await page.evaluate(() => ({
+    page: document.documentElement.scrollWidth,
+    window: document.documentElement.clientWidth,
+    grid: document.querySelector('.bw-compare').scrollWidth,
+  }));
+  expect(widths.grid).toBeGreaterThan(widths.window);
+  expect(widths.page).toBeLessThanOrEqual(widths.window);
+});
+
 test('test mode is on by default after install', async ({ page }) => {
   const defaults = await api(page, 'GET', '/settings-default');
   expect(defaults.test).toBe(true);
