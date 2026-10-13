@@ -45,6 +45,7 @@ be placed anywhere with [forum_product_gallery].
 = 1.15.2 =
 * A pull's details show a column for every field pulled, with "No change" where
   nothing moves.
+* The SKU has its own column, and a Raw link opens what ePim sent in a new tab.
 
 = 1.15.1 =
 * Pack Size and Commodity Code are hidden from product pages.

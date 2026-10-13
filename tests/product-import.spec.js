@@ -546,15 +546,16 @@ test('the detail view lists each product with what changed and the raw record', 
   const grid = page.locator('.bw-compare');
   const headers = await grid.locator('thead th').allTextContents();
   expect(headers.map((h) => h.trim())).toEqual([
-    'Product', 'Result', 'Status', 'Product name', 'Description', 'Regular price', 'Categories', 'Colour', 'Material',
+    'Product', 'Result', 'SKU', 'Status', 'Product name', 'Description', 'Regular price', 'Categories', 'Colour', 'Material', 'Raw',
   ]);
   const cell = (row, column) => row.locator('th, td').nth(headers.findIndex((h) => h.trim() === column));
 
-  const rows = grid.locator('tbody tr:not(.bw-compare__detail)');
+  const rows = grid.locator('tbody tr');
   await expect(rows).toHaveCount(2);
 
   const updated = rows.filter({ hasText: 'TEST-1001' });
   await expect(cell(updated, 'Result').locator('.bw-badge')).toHaveText('Updated');
+  await expect(cell(updated, 'SKU')).toHaveText('TEST-1001');
   await expect(cell(updated, 'Product name').locator('.bw-compare__new')).toHaveText('Single Kinetic Switch Kit - White');
   await expect(cell(updated, 'Product name').locator('.bw-compare__old')).toHaveText('Single Kinetic Switch - White');
   await expect(cell(updated, 'Regular price').locator('.bw-compare__new')).toHaveText('55.00');
@@ -572,15 +573,14 @@ test('the detail view lists each product with what changed and the raw record', 
   await expect(cell(hidden, 'Status').locator('.bw-compare__old')).toHaveText('Published');
   await expect(cell(hidden, 'Product name')).toHaveText('No change');
 
-  // The raw record sits under its product, closed until asked for.
-  const toggle = updated.getByRole('button', { name: 'Raw' });
-  const detail = page.locator(`#${await toggle.getAttribute('aria-controls')}`);
-  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-  await expect(detail).toBeHidden();
-  await toggle.click();
-  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-  await expect(detail).toBeVisible();
-  await expect(detail.locator('pre')).toContainText('"SKU": "TEST-1001"');
+  // The raw record is a link in the last column, opening the JSON on a page of its own.
+  const raw = cell(updated, 'Raw').getByRole('link', { name: 'Raw' });
+  await expect(raw).toHaveAttribute('target', '_blank');
+  const json = await page.request.get(await raw.getAttribute('href'));
+  expect(json.headers()['content-type']).toContain('application/json');
+  expect((await json.json()).SKU).toBe('TEST-1001');
+
+  const rawHref = await raw.getAttribute('href');
 
   await page.getByRole('link', { name: 'Back to pulls' }).click();
   await expect(page.locator('.bw-pagehead__h1')).toHaveText('Product import');
@@ -593,6 +593,12 @@ test('the detail view lists each product with what changed and the raw record', 
   // A run that does not exist goes back to the list.
   await page.goto(`${SCREEN}&run=999999`);
   await expect(page.locator('.bw-page .bw-notice--warning')).toContainText('That pull could not be found.');
+
+  // Only administrators can read a raw record.
+  await loginAs(page, 'epi-test-editor', 'editor-test-pw');
+  const refused = await page.request.get(rawHref);
+  expect(refused.headers()['content-type']).not.toContain('application/json');
+  expect(await refused.text()).not.toContain('TEST-1001');
 });
 
 test('test mode is on by default after install', async ({ page }) => {
