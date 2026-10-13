@@ -752,6 +752,13 @@ final class EPI_Product_Import_Page {
 										<tbody>
 											<?php foreach ( $items as $item ) : ?>
 												<?php
+												$raw_url = add_query_arg(
+													array(
+														'action' => 'epi_pull_raw',
+														'item'   => (int) $item['id'],
+													),
+													admin_url( 'admin-post.php' )
+												);
 												$changes = array();
 
 												foreach ( $item['changes'] as $change ) {
@@ -785,7 +792,7 @@ final class EPI_Product_Import_Page {
 														<td><?php self::render_change( isset( $changes[ $field ] ) ? $changes[ $field ] : null ); ?></td>
 													<?php endforeach; ?>
 													<td>
-														<a href="<?php echo esc_url( add_query_arg( array( 'action' => 'epi_pull_raw', 'item' => (int) $item['id'] ), admin_url( 'admin-post.php' ) ) ); ?>" target="_blank" rel="noopener">
+														<a href="<?php echo esc_url( $raw_url ); ?>" target="_blank" rel="noopener">
 															<?php esc_html_e( 'Raw', 'blueworx_client_forum' ); ?>
 															<span class="screen-reader-text"><?php esc_html_e( '(opens in a new tab)', 'blueworx_client_forum' ); ?></span>
 														</a>
