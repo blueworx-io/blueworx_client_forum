@@ -4,7 +4,7 @@ Tags: woocommerce, elementor, product gallery, product images, site functionalit
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.15.1
+Stable tag: 1.15.2
 License: GPLv2 or later
 
 Site functionality plugin for Forum Lighting: one control centre to switch the WooCommerce gallery, metadata, pricing and more on or off.
@@ -41,6 +41,11 @@ be placed anywhere with [forum_product_gallery].
    category. Save.
 
 == Changelog ==
+
+= 1.15.2 =
+* A pull's details show a column for every field pulled, with "No change" where
+  nothing moves.
+* The SKU has its own column, and a Raw link opens what ePim sent in a new tab.
 
 = 1.15.1 =
 * Pack Size and Commodity Code are hidden from product pages.

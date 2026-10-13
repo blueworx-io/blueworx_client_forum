@@ -43,6 +43,7 @@ final class EPI_Product_Import_Page {
 	public static function init() {
 		add_action( 'admin_menu', array( __CLASS__, 'register_page' ) );
 		add_action( 'admin_init', array( __CLASS__, 'handle_actions' ) );
+		add_action( 'admin_post_epi_pull_raw', array( __CLASS__, 'render_raw' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
 	}
 
@@ -148,6 +149,29 @@ final class EPI_Product_Import_Page {
 		}
 
 		wp_safe_redirect( self::url( array( 'notice' => $notice ) ) );
+		exit;
+	}
+
+	/**
+	 * One product's record exactly as ePim sent it, as JSON on a page of its own.
+	 *
+	 * @return void
+	 */
+	public static function render_raw() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You are not allowed to manage the product import.', 'blueworx_client_forum' ), '', array( 'response' => 403 ) );
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only view of a stored record; sanitised with absint().
+		$item = EPI_Pull_Store::get_item( isset( $_GET['item'] ) ? absint( wp_unslash( $_GET['item'] ) ) : 0 );
+
+		if ( ! $item ) {
+			wp_die( esc_html__( 'That record could not be found. It may have been older than 90 days and removed.', 'blueworx_client_forum' ), '', array( 'response' => 404 ) );
+		}
+
+		nocache_headers();
+		header( 'Content-Type: application/json; charset=utf-8' );
+		echo wp_json_encode( $item['raw'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON served as JSON, not HTML.
 		exit;
 	}
 
@@ -609,7 +633,6 @@ final class EPI_Product_Import_Page {
 		$pages   = max( 1, (int) ceil( $total / self::ITEMS_PER_PAGE ) );
 		$page_no = min( $page_no, $pages );
 		$items   = EPI_Pull_Store::get_items( $run_id, $page_no, self::ITEMS_PER_PAGE );
-		$json    = JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
 		?>
 		<div class="wrap bw-wrap">
 			<div class="bw-admin bw-page">
@@ -719,32 +742,38 @@ final class EPI_Product_Import_Page {
 											<tr>
 												<th scope="col" class="bw-compare__pin"><?php esc_html_e( 'Product', 'blueworx_client_forum' ); ?></th>
 												<th scope="col" class="bw-compare__pin bw-compare__pin--edge"><?php esc_html_e( 'Result', 'blueworx_client_forum' ); ?></th>
+												<th scope="col" class="bw-compare__field"><?php esc_html_e( 'SKU', 'blueworx_client_forum' ); ?></th>
 												<?php foreach ( $columns as $label ) : ?>
 													<th scope="col" class="bw-compare__field"><?php echo esc_html( $label ); ?></th>
 												<?php endforeach; ?>
+												<th scope="col"><?php esc_html_e( 'Raw', 'blueworx_client_forum' ); ?></th>
 											</tr>
 										</thead>
 										<tbody>
-											<?php foreach ( $items as $index => $item ) : ?>
+											<?php foreach ( $items as $item ) : ?>
 												<?php
-												$raw_id  = 'epi-raw-' . (int) $index;
+												$raw_url = add_query_arg(
+													array(
+														'action' => 'epi_pull_raw',
+														'item'   => (int) $item['id'],
+													),
+													admin_url( 'admin-post.php' )
+												);
 												$changes = array();
 
 												foreach ( $item['changes'] as $change ) {
-													$changes[ $change['field'] ] = $change;
+													$field = (string) $change['field'];
+													$field = 0 === strpos( $field, 'attribute:' ) ? self::detail_key( substr( $field, strlen( 'attribute:' ) ) ) : $field;
+
+													$changes[ $field ] = $change;
 												}
 												?>
 												<tr>
 													<th scope="row" class="bw-compare__pin">
 														<span class="bw-table__primary"><?php echo esc_html( '' !== $item['name'] ? $item['name'] : __( '(no name)', 'blueworx_client_forum' ) ); ?></span>
-														<span class="bw-table__sub"><?php echo esc_html( '' !== $item['sku'] ? $item['sku'] : __( 'No SKU', 'blueworx_client_forum' ) ); ?></span>
 														<?php if ( $item['product_id'] ) : ?>
 															<span class="bw-table__sub"><a href="<?php echo esc_url( get_edit_post_link( (int) $item['product_id'], 'raw' ) ); ?>"><?php esc_html_e( 'Open product', 'blueworx_client_forum' ); ?></a></span>
 														<?php endif; ?>
-														<button type="button" class="bw-btn bw-btn--ghost bw-btn--sm" data-epi-raw aria-expanded="false" aria-controls="<?php echo esc_attr( $raw_id ); ?>">
-															<?php esc_html_e( 'Raw', 'blueworx_client_forum' ); ?>
-															<i class="bw-icon" data-lucide="chevron-down" aria-hidden="true"></i>
-														</button>
 													</th>
 													<td class="bw-compare__pin bw-compare__pin--edge">
 														<?php self::render_action_badge( $item['action'] ); ?>
@@ -752,15 +781,21 @@ final class EPI_Product_Import_Page {
 															<span class="bw-table__sub"><?php echo esc_html( $item['message'] ); ?></span>
 														<?php endif; ?>
 													</td>
+													<td>
+														<?php if ( isset( $changes['sku'] ) ) : ?>
+															<?php self::render_change( $changes['sku'] ); ?>
+														<?php else : ?>
+															<?php echo esc_html( '' !== $item['sku'] ? $item['sku'] : __( 'No SKU', 'blueworx_client_forum' ) ); ?>
+														<?php endif; ?>
+													</td>
 													<?php foreach ( array_keys( $columns ) as $field ) : ?>
 														<td><?php self::render_change( isset( $changes[ $field ] ) ? $changes[ $field ] : null ); ?></td>
 													<?php endforeach; ?>
-												</tr>
-												<tr class="bw-compare__detail" id="<?php echo esc_attr( $raw_id ); ?>" hidden>
-													<td colspan="<?php echo esc_attr( (string) ( 2 + count( $columns ) ) ); ?>">
-														<div class="bw-compare__detail-body">
-															<pre><?php echo esc_html( (string) wp_json_encode( $item['raw'], $json ) ); ?></pre>
-														</div>
+													<td>
+														<a href="<?php echo esc_url( $raw_url ); ?>" target="_blank" rel="noopener">
+															<?php esc_html_e( 'Raw', 'blueworx_client_forum' ); ?>
+															<span class="screen-reader-text"><?php esc_html_e( '(opens in a new tab)', 'blueworx_client_forum' ); ?></span>
+														</a>
 													</td>
 												</tr>
 											<?php endforeach; ?>
@@ -798,16 +833,23 @@ final class EPI_Product_Import_Page {
 	}
 
 	/**
-	 * The fields that change on any of these products, as field => column
-	 * heading: the product's own fields first, then its details in the order
-	 * they first turn up.
+	 * Every field the pull brings over for these products, as key => column
+	 * heading, changed or not: the product's own fields first, then each
+	 * detail ePim sent, in the order they first turn up. Pictures only get a
+	 * column when one of them changes. The SKU has a column of its own.
 	 *
 	 * @param array $items Pull items.
 	 * @return array
 	 */
 	private static function change_columns( array $items ) {
-		$own     = array( 'status', 'name', 'description', 'sku', 'price', 'categories', 'image', 'gallery' );
-		$found   = array();
+		$columns = array(
+			'status'      => __( 'Status', 'blueworx_client_forum' ),
+			'name'        => __( 'Product name', 'blueworx_client_forum' ),
+			'description' => __( 'Description', 'blueworx_client_forum' ),
+			'price'       => __( 'Regular price', 'blueworx_client_forum' ),
+			'categories'  => __( 'Categories', 'blueworx_client_forum' ),
+		);
+		$extra   = array();
 		$details = array();
 
 		foreach ( $items as $item ) {
@@ -815,23 +857,41 @@ final class EPI_Product_Import_Page {
 				$field = (string) $change['field'];
 
 				if ( 0 === strpos( $field, 'attribute:' ) ) {
-					$details[ $field ] = substr( $field, strlen( 'attribute:' ) );
-				} else {
-					$found[ $field ] = isset( $change['label'] ) ? (string) $change['label'] : $field;
+					$name = substr( $field, strlen( 'attribute:' ) );
+					$key  = self::detail_key( $name );
+
+					if ( ! isset( $details[ $key ] ) ) {
+						$details[ $key ] = $name;
+					}
+				} elseif ( 'sku' !== $field && ! isset( $columns[ $field ] ) ) {
+					$extra[ $field ] = isset( $change['label'] ) ? (string) $change['label'] : $field;
+				}
+			}
+
+			$mapped = EPI_Pull_Mapper::map( is_array( $item['raw'] ) ? $item['raw'] : array() );
+
+			foreach ( array_keys( $mapped['attributes'] ) as $name ) {
+				$key = self::detail_key( (string) $name );
+
+				if ( ! isset( $details[ $key ] ) ) {
+					$details[ $key ] = (string) $name;
 				}
 			}
 		}
 
-		$columns = array();
+		return $columns + $extra + $details;
+	}
 
-		foreach ( $own as $field ) {
-			if ( isset( $found[ $field ] ) ) {
-				$columns[ $field ] = $found[ $field ];
-				unset( $found[ $field ] );
-			}
-		}
-
-		return $columns + $found + $details;
+	/**
+	 * A detail's column key. WooCommerce treats "Bullet-1" and "Bullet 1" as
+	 * one attribute, and the pull keeps whichever name the product already
+	 * had, so both land in the same column.
+	 *
+	 * @param string $name Attribute name.
+	 * @return string
+	 */
+	private static function detail_key( $name ) {
+		return 'attribute:' . sanitize_title( $name );
 	}
 
 	/**

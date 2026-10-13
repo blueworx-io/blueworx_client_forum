@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.15.2]
+
+### Changed
+- A pull's details show a column for every field the pull brings over — status,
+  name, description, price, categories and every detail ePim sent — with "No
+  change" where a field stays as it is, not just the fields that changed.
+- The SKU has a column of its own, and the last column is a Raw link that opens
+  the record exactly as ePim sent it on a page of its own.
+
 ## [1.15.1]
 
 ### Fixed

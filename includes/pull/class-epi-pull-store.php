@@ -362,6 +362,39 @@ final class EPI_Pull_Store {
 	}
 
 	/**
+	 * One recorded product.
+	 *
+	 * @param int $item_id Item ID.
+	 * @return array|null As get_items() returns each, or null.
+	 */
+	public static function get_item( $item_id ) {
+		global $wpdb;
+
+		$table = self::items_table();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- The plugin's own table, for an admin-only screen.
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name from $wpdb->prefix; the id is bound.
+				"SELECT * FROM {$table} WHERE id = %d",
+				$item_id
+			),
+			ARRAY_A
+		);
+
+		if ( ! $row ) {
+			return null;
+		}
+
+		$changes        = json_decode( (string) $row['changes'], true );
+		$raw            = json_decode( (string) $row['raw'], true );
+		$row['changes'] = is_array( $changes ) ? $changes : array();
+		$row['raw']     = is_array( $raw ) ? $raw : array();
+
+		return $row;
+	}
+
+	/**
 	 * How many products a run recorded.
 	 *
 	 * @param int $run_id Run ID.
