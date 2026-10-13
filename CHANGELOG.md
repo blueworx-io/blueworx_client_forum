@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.15.3]
+
+### Fixed
+- The "Last updated" column on the products list is wide enough to read again,
+  instead of being squeezed to one letter wide.
+
 ## [1.15.2]
 
 ### Changed
