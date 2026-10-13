@@ -37,13 +37,15 @@ test('pack, carton and waste details are hidden from the product page', async ({
     'Product Packed Weight (kg)': '0.125',
     'Outer Pack Gross Weight (kg)': '5',
     'Waste Packaging Weight - Card (kg)': '0.024',
+    'Pack Size': '40',
+    'Commodity Code': '9405491000',
   });
 
   await page.goto(product.permalink, { waitUntil: 'domcontentloaded' });
 
   const table = page.locator('.woocommerce-product-attributes');
   await expect(table).toContainText('Colour');
-  for (const hidden of ['Product Weight (g)', 'Pack Depth', 'Packed Weight', 'Outer Pack', 'Waste Packaging']) {
+  for (const hidden of ['Product Weight (g)', 'Pack Depth', 'Packed Weight', 'Outer Pack', 'Waste Packaging', 'Pack Size', 'Commodity Code']) {
     await expect(table).not.toContainText(hidden);
   }
 });

@@ -3,7 +3,7 @@
  * Frontend: Hide Specific Product Attributes
  *
  * Hide the following - Grams Weight, Product Pack Data, Waste Pack Data,
- * Bullets & ECD special prices.
+ * Pack Size, Commodity Code, Bullets & ECD special prices.
  *
  * Originally from the Code Snippets plugin.
  *
@@ -44,8 +44,11 @@ add_filter(
 		$hide_id_pattern = '/^pa_epim-(' . implode( '|', $hide_ids ) . ')$/';
 
 		// The same details as ePim now sends them: plain attributes named after
-		// the detail (ePim attribute 18017, 27544-27547 and 27549-27556).
+		// the detail (ePim attribute 18017, 27544-27547 and 27549-27556), plus
+		// pack size (100707) and commodity code (100694), which are trade-only.
 		$hide_labels = array(
+			'pack size',
+			'commodity code',
 			'product weight (g)',
 			'product pack height (cm)',
 			'product pack width (cm)',
