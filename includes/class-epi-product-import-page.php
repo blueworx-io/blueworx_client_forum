@@ -120,9 +120,11 @@ final class EPI_Product_Import_Page {
 		if ( 'settings' === $action ) {
 			EPI_Pull_Settings::save(
 				array(
-					'key'    => isset( $_POST['epi_pull_key'] ) ? sanitize_text_field( wp_unslash( $_POST['epi_pull_key'] ) ) : '',
-					'images' => ! empty( $_POST['epi_pull_images'] ),
-					'test'   => ! empty( $_POST['epi_pull_test'] ),
+					'key'       => isset( $_POST['epi_pull_key'] ) ? sanitize_text_field( wp_unslash( $_POST['epi_pull_key'] ) ) : '',
+					'images'    => ! empty( $_POST['epi_pull_images'] ),
+					'test'      => ! empty( $_POST['epi_pull_test'] ),
+					// The schedule follows on the next page load: see EPI_Pull_Runner::ensure_schedule().
+					'frequency' => isset( $_POST['epi_pull_frequency'] ) ? sanitize_key( wp_unslash( $_POST['epi_pull_frequency'] ) ) : '',
 				)
 			);
 		} elseif ( 'pull' === $action || 'full' === $action ) {
@@ -230,7 +232,15 @@ final class EPI_Product_Import_Page {
 						<p class="bw-pagehead__eyebrow"><?php esc_html_e( 'ePim', 'blueworx_client_forum' ); ?></p>
 						<h1 class="bw-pagehead__h1"><?php esc_html_e( 'Product import', 'blueworx_client_forum' ); ?></h1>
 						<p class="bw-pagehead__lede">
-							<?php esc_html_e( 'Products are pulled from ePim once a day at 02:00 and whenever you ask. Every pull is listed here, product by product, so you can see exactly what ePim sent.', 'blueworx_client_forum' ); ?>
+							<?php
+							$when = array(
+								'daily'   => __( 'once a day', 'blueworx_client_forum' ),
+								'weekly'  => __( 'once a week', 'blueworx_client_forum' ),
+								'monthly' => __( 'once a month', 'blueworx_client_forum' ),
+							);
+							/* translators: %s: how often, e.g. "once a week". */
+							echo esc_html( sprintf( __( 'Products are pulled from ePim %s at 02:00 and whenever you ask. Every pull is listed here, product by product, so you can see exactly what ePim sent.', 'blueworx_client_forum' ), $when[ $settings['frequency'] ] ) );
+							?>
 						</p>
 					</div>
 					<div class="bw-pagehead__actions">
@@ -281,6 +291,18 @@ final class EPI_Product_Import_Page {
 											<label class="bw-field__label" for="epi_pull_key"><?php esc_html_e( 'Subscription key', 'blueworx_client_forum' ); ?></label>
 											<input class="bw-input bw-input--mono" id="epi_pull_key" name="epi_pull_key" type="text" value="<?php echo esc_attr( $settings['key'] ); ?>" autocomplete="off" spellcheck="false" />
 											<p class="bw-field__help"><?php esc_html_e( 'From the ePim team. It is sent with every request and stored only on this site.', 'blueworx_client_forum' ); ?></p>
+										</div>
+										<div class="bw-field bw-field--wide">
+											<span class="bw-field__label" id="epi_pull_frequency_label"><?php esc_html_e( 'Automatic pull', 'blueworx_client_forum' ); ?></span>
+											<div class="bw-radiogroup bw-radiogroup--row" role="radiogroup" aria-labelledby="epi_pull_frequency_label">
+												<?php foreach ( self::frequency_labels() as $frequency => $label ) : ?>
+													<label class="bw-check">
+														<input type="radio" name="epi_pull_frequency" value="<?php echo esc_attr( $frequency ); ?>" <?php checked( $settings['frequency'], $frequency ); ?> />
+														<span class="bw-check__text"><span><?php echo esc_html( $label ); ?></span></span>
+													</label>
+												<?php endforeach; ?>
+											</div>
+											<p class="bw-field__help"><?php esc_html_e( 'How often products are pulled from ePim on their own, at 02:00. Pull now works whatever you choose.', 'blueworx_client_forum' ); ?></p>
 										</div>
 										<div>
 											<label class="bw-switch bw-switch--bare">
@@ -601,6 +623,19 @@ final class EPI_Product_Import_Page {
 		);
 
 		return isset( $labels[ $status ] ) ? $labels[ $status ] : (string) $status;
+	}
+
+	/**
+	 * The automatic pull's frequencies, as value => label.
+	 *
+	 * @return array
+	 */
+	private static function frequency_labels() {
+		return array(
+			'daily'   => __( 'Daily', 'blueworx_client_forum' ),
+			'weekly'  => __( 'Weekly', 'blueworx_client_forum' ),
+			'monthly' => __( 'Monthly', 'blueworx_client_forum' ),
+		);
 	}
 
 	/**

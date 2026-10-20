@@ -511,12 +511,37 @@ test('records older than 90 days are pruned', async ({ page }) => {
   expect(await api(page, 'GET', `/runs/${old.id}/items`)).toEqual([]);
 });
 
-test('a daily pull is scheduled for 02:00 site time', async ({ page }) => {
+const DAY = 24 * 60 * 60;
+
+test('the automatic pull runs weekly at 02:00 site time by default', async ({ page }) => {
   const schedule = await api(page, 'GET', '/schedule');
+  const now = Date.now() / 1000;
   expect(schedule.had).toBeGreaterThan(0);
-  expect(schedule.next).toBeGreaterThan(Date.now() / 1000);
   expect(schedule.local_time).toBe('02:00');
+  expect(schedule.recurrence).toBe('weekly');
+  expect(schedule.next).toBeGreaterThan(now + 5 * DAY);
+  expect(schedule.next).toBeLessThanOrEqual(now + 7 * DAY);
+});
+
+test('the automatic pull can run daily or monthly instead', async ({ page }) => {
+  await api(page, 'POST', '/settings', { key: 'epim-test-key', frequency: 'daily' });
+  let schedule = await api(page, 'GET', '/schedule');
   expect(schedule.recurrence).toBe('daily');
+  expect(schedule.local_time).toBe('02:00');
+  expect(schedule.next).toBeLessThanOrEqual(Date.now() / 1000 + DAY);
+
+  await api(page, 'POST', '/settings', { key: 'epim-test-key', frequency: 'monthly' });
+  schedule = await api(page, 'GET', '/schedule');
+  expect(schedule.recurrence).toBe('epi_monthly');
+  expect(schedule.local_time).toBe('02:00');
+  expect(schedule.next).toBeGreaterThan(Date.now() / 1000 + 26 * DAY);
+});
+
+// A site updating from a version that pulled daily moves to the setting.
+test('an existing daily schedule moves to the chosen frequency', async ({ page }) => {
+  const schedule = await api(page, 'GET', '/schedule?legacy=1');
+  expect(schedule.recurrence).toBe('weekly');
+  expect(schedule.local_time).toBe('02:00');
 });
 
 test('a pull shows in the product change log as ePim', async ({ page }) => {
@@ -552,13 +577,20 @@ test('the page renders from the design system and saves the settings', async ({ 
   await expect(page.locator('.bw-page .bw-pagehead__h1')).toHaveText('Product import');
   await expect(page.locator('.bw-empty__title')).toHaveText('No pulls yet');
 
+  const frequency = page.getByRole('radiogroup', { name: 'Automatic pull' });
+  await expect(frequency.getByRole('radio', { name: 'Weekly' })).toBeChecked();
+  await expect(page.locator('.bw-pagehead__lede')).toContainText('once a week at 02:00');
+
   await page.fill('#epi_pull_key', 'new-key-123');
   await page.locator('input[name="epi_pull_images"]').check();
+  await frequency.getByRole('radio', { name: 'Monthly' }).check();
   await page.getByRole('button', { name: 'Save settings' }).click();
 
   await expect(page.locator('.bw-page .bw-notice--success')).toContainText('Settings saved.');
   await expect(page.locator('#epi_pull_key')).toHaveValue('new-key-123');
   await expect(page.locator('input[name="epi_pull_images"]')).toBeChecked();
+  await expect(frequency.getByRole('radio', { name: 'Monthly' })).toBeChecked();
+  await expect(page.locator('.bw-pagehead__lede')).toContainText('once a month at 02:00');
 });
 
 test('the list and the detail view use the full width of the screen', async ({ page }) => {
@@ -700,6 +732,7 @@ test('test mode is on by default after install', async ({ page }) => {
   const defaults = await api(page, 'GET', '/settings-default');
   expect(defaults.test).toBe(true);
   expect(defaults.images).toBe(false);
+  expect(defaults.frequency).toBe('weekly');
 });
 
 test('a test pull records what it would add and creates nothing', async ({ page }) => {

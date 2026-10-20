@@ -39,37 +39,78 @@ final class EPI_Pull_Runner {
 	const BEGINNING = '2000-01-01T00:00:00Z';
 
 	/**
-	 * Register the cron hooks and make sure the daily event exists.
+	 * Register the cron hooks and make sure the automatic pull is scheduled.
+	 * The hook keeps its "daily" name from when it always ran daily, so
+	 * existing schedules are found and moved.
 	 *
 	 * @return void
 	 */
 	public static function init() {
 		add_action( self::DAILY_HOOK, array( __CLASS__, 'daily' ) );
 		add_action( self::BATCH_HOOK, array( __CLASS__, 'batch' ), 10, 2 );
+		add_filter( 'cron_schedules', array( __CLASS__, 'add_monthly' ) );
 		add_action( 'init', array( __CLASS__, 'ensure_schedule' ) );
 	}
 
 	/**
-	 * Schedule the daily pull at 02:00 site time if it is not scheduled.
+	 * WordPress has daily and weekly schedules, but no monthly one.
+	 *
+	 * @param array $schedules Schedules.
+	 * @return array
+	 */
+	public static function add_monthly( $schedules ) {
+		$schedules['epi_monthly'] = array(
+			'interval' => MONTH_IN_SECONDS,
+			'display'  => __( 'Once a month', 'blueworx_client_forum' ),
+		);
+
+		return $schedules;
+	}
+
+	/**
+	 * The WordPress schedule for the chosen frequency.
+	 *
+	 * @return string
+	 */
+	private static function recurrence() {
+		$frequency = EPI_Pull_Settings::frequency();
+
+		return 'monthly' === $frequency ? 'epi_monthly' : $frequency;
+	}
+
+	/**
+	 * Schedule the automatic pull at 02:00 site time, at the chosen frequency,
+	 * if it is not scheduled or the frequency has changed.
 	 *
 	 * @return void
 	 */
 	public static function ensure_schedule() {
-		if ( ! wp_next_scheduled( self::DAILY_HOOK ) ) {
-			wp_schedule_event( self::next_two_am(), 'daily', self::DAILY_HOOK );
+		$event = wp_get_scheduled_event( self::DAILY_HOOK );
+
+		if ( $event && self::recurrence() === $event->schedule ) {
+			return;
 		}
+
+		wp_clear_scheduled_hook( self::DAILY_HOOK );
+		wp_schedule_event( self::next_run(), self::recurrence(), self::DAILY_HOOK );
 	}
 
 	/**
-	 * The next 02:00 in the site's timezone, as a Unix time.
+	 * The next automatic pull, as a Unix time: the first 02:00 in the site's
+	 * timezone a day, a week or a month from now, counting tonight as a day.
 	 *
 	 * @return int
 	 */
-	public static function next_two_am() {
-		$now = new DateTimeImmutable( 'now', wp_timezone() );
-		$two = $now->setTime( 2, 0, 0 );
+	public static function next_run() {
+		$gaps = array(
+			'daily'   => '+0 days',
+			'weekly'  => '+6 days',
+			'monthly' => '+1 month -1 day',
+		);
+		$from = ( new DateTimeImmutable( 'now', wp_timezone() ) )->modify( $gaps[ EPI_Pull_Settings::frequency() ] );
+		$two  = $from->setTime( 2, 0, 0 );
 
-		if ( $two <= $now ) {
+		if ( $two <= $from ) {
 			$two = $two->modify( '+1 day' );
 		}
 
@@ -77,14 +118,14 @@ final class EPI_Pull_Runner {
 	}
 
 	/**
-	 * The daily job: clear old records, then pull.
+	 * The automatic job: clear old records, then pull.
 	 *
 	 * @return void
 	 */
 	public static function daily() {
 		// Re-arm at the next real 02:00, so a clock or timezone change is picked up.
 		wp_clear_scheduled_hook( self::DAILY_HOOK );
-		wp_schedule_event( self::next_two_am(), 'daily', self::DAILY_HOOK );
+		wp_schedule_event( self::next_run(), self::recurrence(), self::DAILY_HOOK );
 
 		EPI_Pull_Store::prune( self::KEEP_DAYS );
 

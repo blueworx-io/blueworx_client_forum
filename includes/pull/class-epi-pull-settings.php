@@ -26,25 +26,31 @@ final class EPI_Pull_Settings {
 	const DEFAULT_BASE = 'https://epim.azure-api.net/forum-website-categorised-channel/api/';
 
 	/**
+	 * How often the automatic pull can run.
+	 */
+	const FREQUENCIES = array( 'daily', 'weekly', 'monthly' );
+
+	/**
 	 * The saved settings, with defaults filled in.
 	 *
-	 * @return array{key: string, images: bool, test: bool}
+	 * @return array{key: string, images: bool, test: bool, frequency: string}
 	 */
 	public static function get() {
 		$saved = get_option( self::OPTION, array() );
 		$saved = is_array( $saved ) ? $saved : array();
 
 		return array(
-			'key'    => isset( $saved['key'] ) ? (string) $saved['key'] : '',
-			'images' => ! empty( $saved['images'] ),
-			'test'   => ! array_key_exists( 'test', $saved ) || ! empty( $saved['test'] ),
+			'key'       => isset( $saved['key'] ) ? (string) $saved['key'] : '',
+			'images'    => ! empty( $saved['images'] ),
+			'test'      => ! array_key_exists( 'test', $saved ) || ! empty( $saved['test'] ),
+			'frequency' => isset( $saved['frequency'] ) && in_array( $saved['frequency'], self::FREQUENCIES, true ) ? $saved['frequency'] : 'weekly',
 		);
 	}
 
 	/**
 	 * Save some or all of the settings.
 	 *
-	 * @param array $values Any of: key (string), images (bool), test (bool).
+	 * @param array $values Any of: key (string), images (bool), test (bool), frequency (string).
 	 * @return void
 	 */
 	public static function save( array $values ) {
@@ -62,7 +68,22 @@ final class EPI_Pull_Settings {
 			$current['test'] = ! empty( $values['test'] );
 		}
 
+		if ( isset( $values['frequency'] ) && in_array( $values['frequency'], self::FREQUENCIES, true ) ) {
+			$current['frequency'] = $values['frequency'];
+		}
+
 		update_option( self::OPTION, $current, false );
+	}
+
+	/**
+	 * How often the automatic pull runs: daily, weekly or monthly.
+	 *
+	 * @return string
+	 */
+	public static function frequency() {
+		$settings = self::get();
+
+		return $settings['frequency'];
 	}
 
 	/**

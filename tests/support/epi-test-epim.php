@@ -731,6 +731,10 @@ add_action(
 						}
 					}
 
+					if ( $request->has_param( 'frequency' ) ) {
+						$values['frequency'] = (string) $request['frequency'];
+					}
+
 					EPI_Pull_Settings::save( $values );
 					return EPI_Pull_Settings::get();
 				},
@@ -868,13 +872,19 @@ add_action(
 			array(
 				'methods'             => 'GET',
 				'permission_callback' => $admin_only,
-				'callback'            => static function () {
+				'callback'            => static function ( WP_REST_Request $request ) {
 					// The harness never fires cron, so an overdue slot would sit in the
 					// past for ever. Re-arm as the daily job itself does, then report.
 					// What the boot hook scheduled before this route touched it.
 					$had = (int) wp_next_scheduled( EPI_Pull_Runner::DAILY_HOOK );
 
 					wp_clear_scheduled_hook( EPI_Pull_Runner::DAILY_HOOK );
+
+					// legacy: the event a version that always pulled daily left behind.
+					if ( $request['legacy'] ) {
+						wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', EPI_Pull_Runner::DAILY_HOOK );
+					}
+
 					EPI_Pull_Runner::ensure_schedule();
 
 					$next = (int) wp_next_scheduled( EPI_Pull_Runner::DAILY_HOOK );
