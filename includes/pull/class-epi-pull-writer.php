@@ -25,6 +25,18 @@ final class EPI_Pull_Writer {
 	const META_SYNCED    = '_epim_synced_at';
 
 	/**
+	 * The details the shop filter reads, as attribute slug => name. They are
+	 * saved as shared attributes (taxonomy "pa_<slug>") rather than text, and
+	 * the filter looks them up by these slugs.
+	 */
+	const FILTER_SPECS = array(
+		'colour'         => 'Colour',
+		'bulb-type'      => 'Bulb Type',
+		'ip-rating'      => 'IP Rating',
+		'fittings-class' => 'Fittings Class',
+	);
+
+	/**
 	 * Apply one mapped product.
 	 *
 	 * @param array $product      From EPI_Pull_Mapper::map().
@@ -165,6 +177,22 @@ final class EPI_Pull_Writer {
 		$gallery = (string) get_post_meta( $id, '_product_image_gallery', true );
 		$gallery = '' === $gallery ? array() : array_values( array_filter( array_map( 'absint', explode( ',', $gallery ) ) ) );
 
+		$filters = array();
+
+		foreach ( array_keys( self::filter_specs() ) as $slug ) {
+			$taxonomy = 'pa_' . $slug;
+
+			if ( ! taxonomy_exists( $taxonomy ) || empty( $stored[ $taxonomy ]['is_taxonomy'] ) ) {
+				continue;
+			}
+
+			$names = wp_get_object_terms( $id, $taxonomy, array( 'fields' => 'names' ) );
+
+			if ( ! is_wp_error( $names ) && $names ) {
+				$filters[ $slug ] = implode( ', ', $names );
+			}
+		}
+
 		return array(
 			'status'      => $post instanceof WP_Post ? $post->post_status : '',
 			'name'        => $post instanceof WP_Post ? $post->post_title : '',
@@ -172,6 +200,7 @@ final class EPI_Pull_Writer {
 			'sku'         => (string) get_post_meta( $id, '_sku', true ),
 			'price'       => (string) get_post_meta( $id, '_regular_price', true ),
 			'attributes'  => $attributes,
+			'filters'     => $filters,
 			'categories'  => $categories,
 			'image'       => absint( get_post_meta( $id, '_thumbnail_id', true ) ),
 			'gallery'     => $gallery,
@@ -202,6 +231,12 @@ final class EPI_Pull_Writer {
 		}
 
 		$wanted['attributes'] = $product['attributes'];
+
+		$filters = self::filters( $product['attributes'] );
+
+		if ( $filters ) {
+			$wanted['filters'] = $filters;
+		}
 
 		$terms = array();
 
@@ -256,6 +291,97 @@ final class EPI_Pull_Writer {
 	}
 
 	/**
+	 * The details the shop filter reads, as slug => name.
+	 *
+	 * @return array
+	 */
+	private static function filter_specs() {
+		return (array) apply_filters( 'epi_pull_filter_specs', self::FILTER_SPECS );
+	}
+
+	/**
+	 * The filter details among ePim's attributes, as slug => value. Left as
+	 * text where the site has no way to hold a shared attribute (no
+	 * WooCommerce).
+	 *
+	 * @param array $values Name => value from ePim.
+	 * @return array
+	 */
+	private static function filters( array $values ) {
+		$specs   = self::filter_specs();
+		$filters = array();
+
+		foreach ( $values as $name => $value ) {
+			$slug = sanitize_title( $name );
+
+			if ( isset( $specs[ $slug ] ) && ( taxonomy_exists( 'pa_' . $slug ) || function_exists( 'wc_create_attribute' ) ) ) {
+				$filters[ $slug ] = $value;
+			}
+		}
+
+		return $filters;
+	}
+
+	/**
+	 * The term for a filter value, creating the shared attribute and the
+	 * value when the site does not have them yet.
+	 *
+	 * @param string $slug  Attribute slug.
+	 * @param string $value Value.
+	 * @return int Term ID, 0 when it could not be made.
+	 */
+	private static function filter_term( $slug, $value ) {
+		$taxonomy = 'pa_' . $slug;
+
+		if ( ! taxonomy_exists( $taxonomy ) ) {
+			$specs   = self::filter_specs();
+			$created = function_exists( 'wc_create_attribute' ) ? wc_create_attribute(
+				array(
+					'name'         => isset( $specs[ $slug ] ) ? $specs[ $slug ] : $slug,
+					'slug'         => $slug,
+					'type'         => 'select',
+					'order_by'     => 'menu_order',
+					'has_archives' => false,
+				)
+			) : 0;
+
+			if ( ! $created || is_wp_error( $created ) ) {
+				return 0;
+			}
+
+			// WooCommerce registers its attribute taxonomies on init, which has passed.
+			register_taxonomy(
+				$taxonomy,
+				array( 'product' ),
+				array(
+					'hierarchical' => false,
+					'show_ui'      => false,
+					'query_var'    => true,
+					'rewrite'      => false,
+				)
+			);
+		}
+
+		$term = get_term_by( 'name', $value, $taxonomy );
+
+		if ( ! $term ) {
+			$term = get_term_by( 'slug', sanitize_title( $value ), $taxonomy );
+		}
+
+		if ( $term instanceof WP_Term ) {
+			return (int) $term->term_id;
+		}
+
+		$made = wp_insert_term( $value, $taxonomy );
+
+		if ( is_wp_error( $made ) ) {
+			return 'term_exists' === $made->get_error_code() ? (int) $made->get_error_data() : 0;
+		}
+
+		return (int) $made['term_id'];
+	}
+
+	/**
 	 * The fields whose value would change, in a form the import log shows.
 	 *
 	 * @param array $before From read(), or empty for a new product.
@@ -269,13 +395,47 @@ final class EPI_Pull_Writer {
 			$old = array_key_exists( $field, $before ) ? $before[ $field ] : null;
 
 			if ( 'attributes' === $field ) {
-				$old = is_array( $old ) ? $old : array();
+				$old    = is_array( $old ) ? $old : array();
+				$shared = isset( $wanted['filters'] ) ? $wanted['filters'] : array();
 
 				// Only the attributes ePim sends: one it stopped sending is left alone.
 				foreach ( $after as $name => $value ) {
+					// A filter detail is compared below, as a shared attribute.
+					if ( isset( $shared[ sanitize_title( $name ) ] ) ) {
+						continue;
+					}
+
 					$was = isset( $old[ $name ] ) ? $old[ $name ] : null;
 
 					if ( $was !== $value ) {
+						$changes[] = array(
+							'field'  => 'attribute:' . $name,
+							/* translators: %s: attribute name. */
+							'label'  => sprintf( __( 'Attribute: %s', 'blueworx_client_forum' ), $name ),
+							'before' => $was,
+							'after'  => $value,
+						);
+					}
+				}
+
+				continue;
+			}
+
+			if ( 'filters' === $field ) {
+				$old   = is_array( $old ) ? $old : array();
+				$specs = self::filter_specs();
+				$text  = array();
+
+				foreach ( array_keys( isset( $before['attributes'] ) ? $before['attributes'] : array() ) as $name ) {
+					$text[ sanitize_title( $name ) ] = true;
+				}
+
+				// Changed when the shared value differs, or a text copy is still there to remove.
+				foreach ( $after as $slug => $value ) {
+					$was  = isset( $old[ $slug ] ) ? $old[ $slug ] : null;
+					$name = isset( $specs[ $slug ] ) ? $specs[ $slug ] : $slug;
+
+					if ( $was !== $value || isset( $text[ $slug ] ) ) {
 						$changes[] = array(
 							'field'  => 'attribute:' . $name,
 							/* translators: %s: attribute name. */
@@ -508,7 +668,7 @@ final class EPI_Pull_Writer {
 				$wc->set_category_ids( $wanted['categories'] );
 			}
 			if ( isset( $wanted['attributes'] ) ) {
-				$wc->set_attributes( self::wc_attributes( $wc->get_attributes(), $wanted['attributes'] ) );
+				$wc->set_attributes( self::wc_attributes( $wc->get_attributes(), $wanted['attributes'], isset( $wanted['filters'] ) ? $wanted['filters'] : array() ) );
 			}
 			if ( array_key_exists( 'image', $wanted ) ) {
 				$wc->set_image_id( (int) $wanted['image'] );
@@ -533,13 +693,15 @@ final class EPI_Pull_Writer {
 
 	/**
 	 * Merge ePim's attributes into the product's: ePim's values win, other
-	 * attributes stay. Taxonomy attributes are never touched.
+	 * attributes stay. A filter detail becomes its shared attribute and its
+	 * text copy goes; other taxonomy attributes are never touched.
 	 *
 	 * @param array $current Current WC_Product_Attribute list.
 	 * @param array $values  Name => value from ePim.
+	 * @param array $filters Filter details, slug => value.
 	 * @return array
 	 */
-	private static function wc_attributes( array $current, array $values ) {
+	private static function wc_attributes( array $current, array $values, array $filters ) {
 		$by_key = array();
 
 		foreach ( $current as $attribute ) {
@@ -555,6 +717,20 @@ final class EPI_Pull_Writer {
 			// Always a fresh object: WooCommerce spots a change by comparing the old and new
 			// attribute objects, so editing the existing one in place would never be saved.
 			$attribute = new WC_Product_Attribute();
+			$term_id   = isset( $filters[ $key ] ) ? self::filter_term( $key, $value ) : 0;
+
+			if ( $term_id ) {
+				$attribute->set_id( (int) wc_attribute_taxonomy_id_by_name( 'pa_' . $key ) );
+				$attribute->set_name( 'pa_' . $key );
+				$attribute->set_options( array( $term_id ) );
+				$attribute->set_position( $position++ );
+				$attribute->set_visible( true );
+				$attribute->set_variation( false );
+
+				unset( $by_key[ $key ] );
+				$by_key[ 'pa_' . $key ] = $attribute;
+				continue;
+			}
 
 			$attribute->set_id( 0 );
 			$attribute->set_name( $name );
@@ -617,7 +793,7 @@ final class EPI_Pull_Writer {
 			update_post_meta( $id, '_price', $wanted['price'] );
 		}
 		if ( isset( $wanted['attributes'] ) ) {
-			update_post_meta( $id, '_product_attributes', self::meta_attributes( $id, $wanted['attributes'] ) );
+			update_post_meta( $id, '_product_attributes', self::meta_attributes( $id, $wanted['attributes'], isset( $wanted['filters'] ) ? $wanted['filters'] : array() ) );
 		}
 		if ( isset( $wanted['categories'] ) ) {
 			wp_set_object_terms( $id, $wanted['categories'], 'product_cat', false );
@@ -641,19 +817,39 @@ final class EPI_Pull_Writer {
 
 	/**
 	 * The _product_attributes array WooCommerce stores, with ePim's values
-	 * merged over the current ones.
+	 * merged over the current ones. A filter detail is set as its shared
+	 * attribute's term, and its text copy goes.
 	 *
-	 * @param int   $id     Product ID.
-	 * @param array $values Name => value.
+	 * @param int   $id      Product ID.
+	 * @param array $values  Name => value.
+	 * @param array $filters Filter details, slug => value.
 	 * @return array
 	 */
-	private static function meta_attributes( $id, array $values ) {
+	private static function meta_attributes( $id, array $values, array $filters ) {
 		$stored   = get_post_meta( $id, '_product_attributes', true );
 		$stored   = is_array( $stored ) ? $stored : array();
 		$position = 0;
 
 		foreach ( $values as $name => $value ) {
-			$stored[ sanitize_title( $name ) ] = array(
+			$key     = sanitize_title( $name );
+			$term_id = isset( $filters[ $key ] ) ? self::filter_term( $key, $value ) : 0;
+
+			if ( $term_id ) {
+				wp_set_object_terms( $id, array( $term_id ), 'pa_' . $key, false );
+				unset( $stored[ $key ] );
+
+				$stored[ 'pa_' . $key ] = array(
+					'name'         => 'pa_' . $key,
+					'value'        => '',
+					'position'     => $position++,
+					'is_visible'   => 1,
+					'is_variation' => 0,
+					'is_taxonomy'  => 1,
+				);
+				continue;
+			}
+
+			$stored[ $key ] = array(
 				'name'         => $name,
 				'value'        => $value,
 				'position'     => $position++,

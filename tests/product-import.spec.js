@@ -276,6 +276,76 @@ test('an attribute the site has under a near-identical name keeps the site name'
   });
 });
 
+// The shop filter reads Colour, Bulb Type, IP Rating and Fittings Class from
+// shared attributes. ePim's push saved them as text on each product, which the
+// filter cannot see, so the pull moves them across.
+const RAW_SPECS = {
+  ...RAW_A,
+  AttributeValues: [
+    { AttributeHeaderName: 'Colour', Value: 'White' },
+    { AttributeHeaderName: 'Material', Value: 'Plastic' },
+    { AttributeHeaderName: 'Bulb Type', Value: 'Integral LED' },
+    { AttributeHeaderName: 'IP Rating', Value: 'IP44' },
+    { AttributeHeaderName: 'Fittings Class', Value: 'II' },
+  ],
+};
+
+test('the four filter specs move from text to shared attributes, and a repeat pull changes nothing', async ({ page }) => {
+  await api(page, 'POST', '/filters');
+  await api(page, 'POST', '/product', {
+    sku: 'TEST-1001',
+    title: 'Single Kinetic Switch - White',
+    attributes: { Colour: 'White', Material: 'Plastic', 'Bulb Type': 'Integral LED' },
+  });
+
+  const first = await applyRaw(page, RAW_SPECS);
+  expect(first.action).toBe('updated');
+  expect(first.changes.filter((c) => c.field.startsWith('attribute:'))).toEqual([
+    { field: 'attribute:Colour', label: 'Attribute: Colour', before: null, after: 'White' },
+    { field: 'attribute:Bulb Type', label: 'Attribute: Bulb Type', before: null, after: 'Integral LED' },
+    { field: 'attribute:IP Rating', label: 'Attribute: IP Rating', before: null, after: 'IP44' },
+    { field: 'attribute:Fittings Class', label: 'Attribute: Fittings Class', before: null, after: 'II' },
+  ]);
+
+  const product = await api(page, 'GET', '/product/TEST-1001');
+  // Each spec shows once: the text copy goes, the other details stay text.
+  expect(product.attributes).toEqual({ Material: 'Plastic' });
+  expect(product.filters).toEqual({
+    pa_colour: 'White',
+    'pa_bulb-type': 'Integral LED',
+    'pa_ip-rating': 'IP44',
+    'pa_fittings-class': 'II',
+  });
+  // The filter links by slug, so these must match the old site's.
+  expect(await api(page, 'GET', '/filter-terms/pa_bulb-type')).toEqual([{ name: 'Integral LED', slug: 'integral-led' }]);
+  expect(await api(page, 'GET', '/filter-terms/pa_ip-rating')).toEqual([{ name: 'IP44', slug: 'ip44' }]);
+
+  const again = await applyRaw(page, RAW_SPECS);
+  expect(again.action).toBe('unchanged');
+});
+
+test('products with the same spec share one filter value', async ({ page }) => {
+  await api(page, 'POST', '/filters');
+  await applyRaw(page, RAW_SPECS);
+  await applyRaw(page, { ...RAW_SPECS, Id: 1002, ProductId: 502, SKU: 'TEST-1002' });
+
+  expect(await api(page, 'GET', '/filter-terms/pa_colour')).toEqual([{ name: 'White', slug: 'white' }]);
+  expect((await api(page, 'GET', '/product/TEST-1002')).filters).toMatchObject({ pa_colour: 'White' });
+});
+
+test('a test pull reports the filter specs and creates no filter values', async ({ page }) => {
+  await api(page, 'POST', '/filters');
+  await api(page, 'POST', '/product', { sku: 'TEST-1001', title: 'Old name', attributes: { Colour: 'White' } });
+
+  const result = await api(page, 'POST', '/apply', { raw: RAW_SPECS, dry_run: true });
+  expect(result.changes).toEqual(
+    expect.arrayContaining([{ field: 'attribute:Colour', label: 'Attribute: Colour', before: null, after: 'White' }])
+  );
+
+  expect(await api(page, 'GET', '/filter-terms/pa_colour')).toEqual([]);
+  expect((await api(page, 'GET', '/product/TEST-1001')).attributes).toEqual({ Colour: 'White' });
+});
+
 test('pictures are left alone until the switch is on', async ({ page }) => {
   await applyRaw(page, RAW_A, false);
   expect(await api(page, 'GET', '/product/TEST-1001')).toMatchObject({ thumbnail: '', gallery: '' });

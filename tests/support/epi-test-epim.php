@@ -106,6 +106,31 @@ function epi_test_epim_fixtures( $scenario ) {
 	);
 }
 
+function epi_test_filter_taxonomies() {
+	return array( 'pa_colour', 'pa_bulb-type', 'pa_ip-rating', 'pa_fittings-class' );
+}
+
+// Read straight from the terms and the stored attribute list, not through the writer,
+// so a test sees what the filter and the product page would.
+function epi_test_filter_values( $id ) {
+	$stored = get_post_meta( $id, '_product_attributes', true );
+	$values = array();
+
+	foreach ( epi_test_filter_taxonomies() as $taxonomy ) {
+		if ( ! taxonomy_exists( $taxonomy ) || empty( $stored[ $taxonomy ]['is_taxonomy'] ) ) {
+			continue;
+		}
+
+		$names = wp_get_object_terms( $id, $taxonomy, array( 'fields' => 'names' ) );
+
+		if ( ! is_wp_error( $names ) && $names ) {
+			$values[ $taxonomy ] = implode( ', ', $names );
+		}
+	}
+
+	return $values;
+}
+
 function epi_test_epim_response( $code, $body ) {
 	return array(
 		'headers'  => array( 'content-type' => 'application/json' ),
@@ -182,6 +207,15 @@ add_filter(
 	3
 );
 
+// The other tests check ePim's details as plain text, so the filter specs stay
+// text too until a test turns them on, whether or not WooCommerce is here.
+add_filter(
+	'epi_pull_filter_specs',
+	static function ( $specs ) {
+		return get_option( 'epi_test_filters' ) ? $specs : array();
+	}
+);
+
 // The pull refuses to start without WooCommerce on a real site. The harness is
 // the one place it may write plain posts instead.
 add_filter( 'epi_pull_allow_without_woocommerce', '__return_true' );
@@ -217,6 +251,17 @@ add_action(
 					'show_ui'      => true,
 				)
 			);
+		}
+
+		// The shop filter's four shared attributes, once a test asks for them.
+		// WooCommerce registers one taxonomy per shared attribute, and the pull
+		// creates them itself where WooCommerce is installed.
+		if ( get_option( 'epi_test_filters' ) && ! function_exists( 'wc_create_attribute' ) ) {
+			foreach ( epi_test_filter_taxonomies() as $taxonomy ) {
+				if ( ! taxonomy_exists( $taxonomy ) ) {
+					register_taxonomy( $taxonomy, 'product', array( 'public' => false ) );
+				}
+			}
 		}
 
 		if ( ! get_user_by( 'login', 'epi-test-editor' ) ) {
@@ -306,8 +351,12 @@ add_action(
 						wp_delete_post( $id, true );
 					}
 
-					foreach ( get_terms( array( 'taxonomy' => 'product_cat', 'hide_empty' => false, 'fields' => 'ids' ) ) as $term_id ) {
-						wp_delete_term( $term_id, 'product_cat' );
+					foreach ( array_merge( array( 'product_cat' ), epi_test_filter_taxonomies() ) as $taxonomy ) {
+						if ( taxonomy_exists( $taxonomy ) ) {
+							foreach ( get_terms( array( 'taxonomy' => $taxonomy, 'hide_empty' => false, 'fields' => 'ids' ) ) as $term_id ) {
+								wp_delete_term( $term_id, $taxonomy );
+							}
+						}
 					}
 
 					// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
@@ -315,7 +364,7 @@ add_action(
 					// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 					$wpdb->query( 'DELETE FROM ' . $wpdb->prefix . 'epi_pull_runs' );
 
-					foreach ( array( 'epi_pull_lock', 'epi_pull_category_map', 'epi_test_epim_scenario', 'epi_test_epim_calls', 'epi_test_cron_calls' ) as $option ) {
+					foreach ( array( 'epi_pull_lock', 'epi_pull_category_map', 'epi_test_epim_scenario', 'epi_test_epim_calls', 'epi_test_cron_calls', 'epi_test_filters' ) as $option ) {
 						delete_option( $option );
 					}
 
@@ -336,6 +385,40 @@ add_action(
 				'callback'            => static function ( WP_REST_Request $request ) {
 					update_option( 'epi_test_epim_scenario', sanitize_key( $request['scenario'] ), false );
 					return array( 'scenario' => get_option( 'epi_test_epim_scenario' ) );
+				},
+			)
+		);
+
+		// Give the site the shop filter's shared attributes, from the next request on.
+		register_rest_route(
+			'epi-test/v1',
+			'/pull/filters',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => $admin_only,
+				'callback'            => static function () {
+					update_option( 'epi_test_filters', 1, false );
+					return array( 'ok' => true );
+				},
+			)
+		);
+
+		// The terms of one shared attribute, as name and slug.
+		register_rest_route(
+			'epi-test/v1',
+			'/pull/filter-terms/(?P<taxonomy>[a-z_-]+)',
+			array(
+				'methods'             => 'GET',
+				'permission_callback' => $admin_only,
+				'callback'            => static function ( WP_REST_Request $request ) {
+					$terms = get_terms( array( 'taxonomy' => (string) $request['taxonomy'], 'hide_empty' => false, 'orderby' => 'name' ) );
+
+					return is_wp_error( $terms ) ? array() : array_map(
+						static function ( $term ) {
+							return array( 'name' => $term->name, 'slug' => $term->slug );
+						},
+						$terms
+					);
 				},
 			)
 		);
@@ -468,7 +551,7 @@ add_action(
 					$fixtures = epi_test_epim_fixtures( 'initial' );
 					$map      = EPI_Pull_Categories::sync( $fixtures['categories'] );
 
-					return EPI_Pull_Writer::apply( EPI_Pull_Mapper::map( (array) $request['raw'] ), $map, ! empty( $request['images'] ) );
+					return EPI_Pull_Writer::apply( EPI_Pull_Mapper::map( (array) $request['raw'] ), $map, ! empty( $request['images'] ), ! empty( $request['dry_run'] ) );
 				},
 			)
 		);
@@ -621,6 +704,8 @@ add_action(
 						'epim_product_id' => (int) get_post_meta( $id, '_epim_product_id', true ),
 						'categories'      => $categories,
 						'attributes'      => (object) $read['attributes'],
+						// Shared attributes, as the filter reads them: taxonomy => term names.
+						'filters'         => (object) epi_test_filter_values( $id ),
 						'thumbnail'       => (string) get_post_meta( $id, '_thumbnail_id', true ),
 						'gallery'         => (string) get_post_meta( $id, '_product_image_gallery', true ),
 						'synced'          => (string) get_post_meta( $id, '_epim_synced_at', true ),
