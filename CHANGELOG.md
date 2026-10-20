@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.16.0]
+
+### Added
+- The import brings the shop filters back. Colour, Bulb Type (Lamp Type on the
+  filter), IP Rating and Fittings Class are saved as shared attributes the
+  filter can read, and the import creates them, and any new value, when the
+  site doesn't have them yet.
+- Each of those four shows once on the product page: the old text copy is
+  removed when the shared one is set.
+- Test mode shows these four in a pull's details like any other field, and a
+  pull with nothing new for them says "No change".
+
 ## [1.15.3]
 
 ### Fixed

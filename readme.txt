@@ -4,7 +4,7 @@ Tags: woocommerce, elementor, product gallery, product images, site functionalit
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.15.3
+Stable tag: 1.16.0
 License: GPLv2 or later
 
 Site functionality plugin for Forum Lighting: one control centre to switch the WooCommerce gallery, metadata, pricing and more on or off.
@@ -41,6 +41,11 @@ be placed anywhere with [forum_product_gallery].
    category. Save.
 
 == Changelog ==
+
+= 1.16.0 =
+* The import brings the shop filters back: Colour, Lamp Type, IP Rating and
+  Fitting Class are saved so the filter can use them, and show once on each
+  product page.
 
 = 1.15.3 =
 * The "Last updated" column on the products list is readable again.
