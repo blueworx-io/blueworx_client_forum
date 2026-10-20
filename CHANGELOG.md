@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.17.0]
+
+### Changed
+- The automatic pull from ePim now runs once a week by default, instead of
+  every day. Product import's settings let you choose Daily, Weekly or Monthly;
+  it still runs at 02:00, and Pull now works whatever you choose.
+
 ## [1.16.0]
 
 ### Added
