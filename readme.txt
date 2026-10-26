@@ -4,7 +4,7 @@ Tags: woocommerce, elementor, product gallery, product images, site functionalit
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.17.0
+Stable tag: 1.18.0
 License: GPLv2 or later
 
 Site functionality plugin for Forum Lighting: one control centre to switch the WooCommerce gallery, metadata, pricing and more on or off.
@@ -41,6 +41,10 @@ be placed anywhere with [forum_product_gallery].
    category. Save.
 
 == Changelog ==
+
+= 1.18.0 =
+* The Kinetic page compares the six receivers in a table, edited in the page
+  editor. New switch photo in "What they are" and new step icons.
 
 = 1.17.0 =
 * The automatic pull runs weekly by default. Choose Daily, Weekly or Monthly

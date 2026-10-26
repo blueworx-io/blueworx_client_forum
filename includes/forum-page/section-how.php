@@ -59,7 +59,7 @@ $epi_illustrations = array( 'step-press.svg', 'step-generate.svg', 'step-transmi
 							<?php if ( ! empty( $epi_step['image'] ) ) : ?>
 								<?php echo wp_get_attachment_image( (int) $epi_step['image'], 'large', false, array( 'class' => 'epi-forum-page__stepphoto' ) ); ?>
 							<?php elseif ( isset( $epi_illustrations[ $epi_i ] ) ) : ?>
-								<img src="<?php echo esc_url( EPI_PLUGIN_URL . 'assets/img/forum-page/' . $epi_illustrations[ $epi_i ] ); ?>" alt="">
+								<img class="epi-forum-page__stepart epi-forum-page__stepart--<?php echo esc_attr( basename( $epi_illustrations[ $epi_i ], '.svg' ) ); ?>" src="<?php echo esc_url( EPI_Forum_Page_Renderer::asset_url( 'assets/img/forum-page/' . $epi_illustrations[ $epi_i ] ) ); ?>" alt="">
 							<?php endif; ?>
 						</div>
 

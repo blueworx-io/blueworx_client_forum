@@ -182,3 +182,19 @@ test('the range shows a product picked by SKU', async ({ page }) => {
     await expect(card.locator('a.epi-forum-page__button')).toHaveAttribute('href', /kinetic-1-gang/);
   }
 });
+
+test('with no receivers listed, the receiver table is left out', async ({ page }) => {
+  await loginAsAdmin(page);
+  const id = await newForumPage(page, 'No receivers');
+
+  await page.fill('#hero_heading', 'No receivers');
+  await page.locator('.bw-tabs').getByText('Evidence').click();
+  await page.fill('#where_heading', 'Jobs where the cable is the problem');
+  await page.fill('#where_receivers_heading', 'Six receivers, one for every circuit');
+  await saveEditor(page, expect);
+
+  await page.goto(`/?p=${id}&post_type=forum_page`);
+
+  await expect(page.locator('#where h2')).toHaveText('Jobs where the cable is the problem');
+  await expect(page.locator('.epi-forum-page__receivers')).toHaveCount(0);
+});

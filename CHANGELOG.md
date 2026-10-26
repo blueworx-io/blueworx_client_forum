@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.18.0]
+
+### Added
+- The Kinetic page compares the six receivers in a table under "Where they
+  work". The receivers are edited in the page editor (Evidence tab), and the
+  live page is filled in with the six to start.
+
+### Changed
+- "What they are" shows the new switch photo, with its parts labelled.
+- "How they work" has the new step icons.
+
 ## [1.17.0]
 
 ### Changed
