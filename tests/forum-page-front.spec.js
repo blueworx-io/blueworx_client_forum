@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const { test, expect } = require('@playwright/test');
 const {
   loginAsAdmin,
@@ -207,6 +209,13 @@ test('a receiver takes its details from the product with its SKU', async ({ page
       r.text()
     )
   );
+  // A photo for the product, so the test sees the product's image come through.
+  const media = await page.request.post('/wp-json/wp/v2/media', {
+    headers: { 'X-WP-Nonce': nonce, 'Content-Disposition': 'attachment; filename=receiver-test.png' },
+    data: fs.readFileSync(path.join(__dirname, '..', 'assets', 'seed', 'receiver-mini.png')),
+  });
+  const mediaId = media.ok() ? (await media.json()).id : 0;
+
   // Attributes named as the ePim import names them.
   const sku = `EPI-RECV-${Date.now()}`;
   const created = await page.request.post('/wp-json/wc/v3/products', {
@@ -216,6 +225,7 @@ test('a receiver takes its details from the product with its SKU', async ({ page
       sku,
       regular_price: '25',
       status: 'publish',
+      images: mediaId ? [{ id: mediaId }] : [],
       attributes: [
         { name: 'Max rated load', options: ['max. 2 x 6A / 2 x 600W LED'], visible: true },
         { name: 'Product Height (mm)', options: ['80mm'], visible: true },
@@ -224,7 +234,9 @@ test('a receiver takes its details from the product with its SKU', async ({ page
       ],
     },
   });
-  test.skip(!created.ok(), 'WooCommerce is not installed on this WordPress');
+  // CI's harness has no WooCommerce; there the SKU matches nothing and the
+  // typed values must stand in, which is checked either way.
+  const hasProduct = created.ok();
 
   const id = await newForumPage(page, 'Receivers by SKU');
   await page.fill('#hero_heading', 'Receivers by SKU');
@@ -248,16 +260,22 @@ test('a receiver takes its details from the product with its SKU', async ({ page
   await page.goto(`/?p=${id}&post_type=forum_page`);
   const table = page.locator('.epi-forum-page__receivers table');
 
-  const product = table.locator('thead th[scope="col"]').nth(0);
-  await expect(product).toContainText('RF 2 Channel Kinetic Switch On/Off Receiver Non-dimmable');
-  await expect(product.locator('a')).toHaveAttribute('href', /rf-2-channel-kinetic/);
-  await expect(table.locator('thead th[scope="col"]').nth(1)).toContainText('Mini RF Receiver');
-
   const cells = (label) => table.locator('tbody tr', { hasText: label }).locator('td');
-  await expect(cells('Max load').nth(0)).toHaveText('2 x 6A / 2 x 600W LED');
+  const first = table.locator('thead th[scope="col"]').nth(0);
+  await expect(table.locator('thead th[scope="col"]').nth(1)).toContainText('Mini RF Receiver');
   await expect(cells('Max load').nth(1)).toHaveText('6A / 500w LED');
-  await expect(cells('Size').nth(0)).toHaveText('80mm x 39mm x 22mm');
   await expect(cells('Size').nth(1)).toHaveText('44mm x 50mm');
   // Channels are not in the shop, so the typed value stays.
   await expect(cells('Channels').nth(0)).toHaveText('2');
+
+  if (hasProduct) {
+    await expect(first).toContainText('RF 2 Channel Kinetic Switch On/Off Receiver Non-dimmable');
+    await expect(first.locator('a')).toHaveAttribute('href', /rf-2-channel-kinetic/);
+    await expect(first.locator('.epi-forum-page__receiverimage img')).toHaveCount(1);
+    await expect(cells('Max load').nth(0)).toHaveText('2 x 6A / 2 x 600W LED');
+    await expect(cells('Size').nth(0)).toHaveText('80mm x 39mm x 22mm');
+  } else {
+    await expect(first).toContainText('Typed name');
+    await expect(cells('Max load').nth(0)).toHaveText('Typed load');
+  }
 });

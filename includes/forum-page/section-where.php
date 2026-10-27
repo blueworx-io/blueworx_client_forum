@@ -37,7 +37,8 @@ foreach ( EPI_Forum_Page_Renderer::rows( $post_id, 'where_receivers' ) as $epi_r
 		}
 	}
 
-	if ( $epi_product ) {
+	// A drafted or withdrawn product would link to a page nobody can see.
+	if ( $epi_product && 'publish' === $epi_product->get_status() ) {
 		// The import writes "max. 10A / 1000W LED"; the row is already called Max load.
 		$epi_load = trim( (string) preg_replace( '/^\s*max\.?\s*/i', '', $epi_product->get_attribute( 'Max rated load' ) ) );
 		$epi_size = array();
@@ -49,9 +50,15 @@ foreach ( EPI_Forum_Page_Renderer::rows( $post_id, 'where_receivers' ) as $epi_r
 		}
 
 		$epi_row['url'] = $epi_product->get_permalink();
+
+		// The product's own image markup, so a photo held in ePim shows the
+		// way it does in the shop rather than being read as a media item.
+		if ( $epi_product->get_image_id() ) {
+			$epi_row['image_html'] = $epi_product->get_image( 'medium' );
+		}
+
 		foreach ( array(
 			'name'     => $epi_product->get_name(),
-			'image'    => (int) $epi_product->get_image_id(),
 			'max_load' => $epi_load,
 			'size'     => implode( ' x ', $epi_size ),
 		) as $epi_key => $epi_value ) {
@@ -78,7 +85,7 @@ $epi_r_rows    = array(
 	'wired'      => __( 'Wired switch supported', 'blueworx_client_forum' ),
 	'size'       => __( 'Size', 'blueworx_client_forum' ),
 );
-$epi_tick      = EPI_PLUGIN_URL . 'assets/img/forum-page/receiver-tick.svg';
+$epi_tick      = EPI_Forum_Page_Renderer::asset_url( 'assets/img/forum-page/receiver-tick.svg' );
 ?>
 <section class="epi-forum-page__section epi-forum-page__where" id="where">
 	<p class="epi-forum-page__number"><?php echo esc_html( $number ); ?></p>
@@ -112,7 +119,9 @@ $epi_tick      = EPI_PLUGIN_URL . 'assets/img/forum-page/receiver-tick.svg';
 				<?php if ( $epi_r_eyebrow ) : ?>
 					<p class="epi-forum-page__receivereyebrow"><?php echo esc_html( $epi_r_eyebrow ); ?></p>
 				<?php endif; ?>
-				<h3><?php echo esc_html( $epi_r_heading ); ?></h3>
+				<?php if ( $epi_r_heading ) : ?>
+					<h3><?php echo esc_html( $epi_r_heading ); ?></h3>
+				<?php endif; ?>
 				<?php if ( $epi_r_intro ) : ?>
 					<p class="epi-forum-page__receiverintro"><?php echo esc_html( $epi_r_intro ); ?></p>
 				<?php endif; ?>
@@ -137,7 +146,9 @@ $epi_tick      = EPI_PLUGIN_URL . 'assets/img/forum-page/receiver-tick.svg';
 							<?php foreach ( $epi_receivers as $epi_receiver ) : ?>
 								<th scope="col">
 									<span class="epi-forum-page__receiverimage">
-										<?php if ( ! empty( $epi_receiver['image'] ) ) : ?>
+										<?php if ( ! empty( $epi_receiver['image_html'] ) ) : ?>
+											<?php echo $epi_receiver['image_html']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- WooCommerce's own image markup. ?>
+										<?php elseif ( ! empty( $epi_receiver['image'] ) ) : ?>
 											<?php echo wp_get_attachment_image( (int) $epi_receiver['image'], 'medium' ); ?>
 										<?php endif; ?>
 									</span>

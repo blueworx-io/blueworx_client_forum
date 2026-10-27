@@ -341,7 +341,7 @@ final class EPI_Forum_Page_Editor {
 					'id'       => 'where',
 					'eyebrow'  => __( 'Forum page · Where they work', 'blueworx_client_forum' ),
 					'title'    => __( 'Where they work', 'blueworx_client_forum' ),
-					'note'     => __( 'The photo cards. Any number of them.', 'blueworx_client_forum' ),
+					'note'     => __( 'The photo cards, any number of them, then the receiver comparison table.', 'blueworx_client_forum' ),
 					'hideable' => true,
 					'fields'   => array(
 						array(
