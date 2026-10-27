@@ -409,6 +409,12 @@ final class EPI_Forum_Page_Editor {
 							'help'   => __( 'One column of the comparison table each. Leave the list empty to hide the table.', 'blueworx_client_forum' ),
 							'fields' => array(
 								array(
+									'id'    => 'sku',
+									'kind'  => 'text',
+									'label' => __( 'SKU', 'blueworx_client_forum' ),
+									'help'  => __( 'The name, photo, link, max load and size come from this product. What you type below is only used where the product has none.', 'blueworx_client_forum' ),
+								),
+								array(
 									'id'    => 'image',
 									'kind'  => 'media',
 									'label' => __( 'Photograph', 'blueworx_client_forum' ),

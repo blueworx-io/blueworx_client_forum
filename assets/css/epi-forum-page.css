@@ -932,6 +932,16 @@ body:has( .epi-forum-page--breakout ) .wp-block-post-terms {
 	color: var( --epi-fp-navy );
 }
 
+.epi-forum-page__receivername a {
+	color: inherit;
+	text-decoration: none;
+}
+
+.epi-forum-page__receivername a:hover,
+.epi-forum-page__receivername a:focus-visible {
+	text-decoration: underline;
+}
+
 .epi-forum-page__receivers tbody th {
 	font-weight: 700;
 }

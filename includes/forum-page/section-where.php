@@ -21,8 +21,49 @@ $epi_intro   = EPI_Forum_Page_Renderer::value( $post_id, 'where_intro' );
 $epi_cards   = EPI_Forum_Page_Renderer::rows( $post_id, 'where_cards' );
 
 // The receiver table: one column per receiver, one row per property. The
-// connection doubles as the red tag above each name.
-$epi_receivers = EPI_Forum_Page_Renderer::rows( $post_id, 'where_receivers' );
+// connection doubles as the red tag above each name. A receiver with a SKU
+// takes its name, photo, link, max load and size from that product; what was
+// typed fills in only where the product has nothing, and the rest is typed.
+$epi_receivers = array();
+
+foreach ( EPI_Forum_Page_Renderer::rows( $post_id, 'where_receivers' ) as $epi_row ) {
+	$epi_sku     = isset( $epi_row['sku'] ) ? trim( (string) $epi_row['sku'] ) : '';
+	$epi_product = null;
+
+	if ( '' !== $epi_sku && function_exists( 'wc_get_product_id_by_sku' ) ) {
+		$epi_found = wc_get_product_id_by_sku( $epi_sku );
+		if ( $epi_found ) {
+			$epi_product = wc_get_product( $epi_found );
+		}
+	}
+
+	if ( $epi_product ) {
+		// The import writes "max. 10A / 1000W LED"; the row is already called Max load.
+		$epi_load = trim( (string) preg_replace( '/^\s*max\.?\s*/i', '', $epi_product->get_attribute( 'Max rated load' ) ) );
+		$epi_size = array();
+		foreach ( array( 'Product Height (mm)', 'Product Width (mm)', 'Product Depth (mm)' ) as $epi_dimension ) {
+			$epi_mm = trim( (string) preg_replace( '/\s*mm\s*$/i', '', $epi_product->get_attribute( $epi_dimension ) ) );
+			if ( '' !== $epi_mm ) {
+				$epi_size[] = $epi_mm . 'mm';
+			}
+		}
+
+		$epi_row['url'] = $epi_product->get_permalink();
+		foreach ( array(
+			'name'     => $epi_product->get_name(),
+			'image'    => (int) $epi_product->get_image_id(),
+			'max_load' => $epi_load,
+			'size'     => implode( ' x ', $epi_size ),
+		) as $epi_key => $epi_value ) {
+			if ( $epi_value ) {
+				$epi_row[ $epi_key ] = $epi_value;
+			}
+		}
+	}
+
+	$epi_receivers[] = $epi_row;
+}
+
 $epi_r_eyebrow = EPI_Forum_Page_Renderer::value( $post_id, 'where_receivers_eyebrow' );
 $epi_r_heading = EPI_Forum_Page_Renderer::value( $post_id, 'where_receivers_heading' );
 $epi_r_intro   = EPI_Forum_Page_Renderer::value( $post_id, 'where_receivers_intro' );
@@ -103,7 +144,13 @@ $epi_tick      = EPI_PLUGIN_URL . 'assets/img/forum-page/receiver-tick.svg';
 									<?php if ( ! empty( $epi_receiver['connection'] ) ) : ?>
 										<span class="epi-forum-page__receivertag"><?php echo esc_html( $epi_receiver['connection'] ); ?></span>
 									<?php endif; ?>
-									<span class="epi-forum-page__receivername"><?php echo esc_html( isset( $epi_receiver['name'] ) ? $epi_receiver['name'] : '' ); ?></span>
+									<span class="epi-forum-page__receivername">
+										<?php if ( ! empty( $epi_receiver['url'] ) ) : ?>
+											<a href="<?php echo esc_url( $epi_receiver['url'] ); ?>"><?php echo esc_html( isset( $epi_receiver['name'] ) ? $epi_receiver['name'] : '' ); ?></a>
+										<?php else : ?>
+											<?php echo esc_html( isset( $epi_receiver['name'] ) ? $epi_receiver['name'] : '' ); ?>
+										<?php endif; ?>
+									</span>
 								</th>
 							<?php endforeach; ?>
 						</tr>

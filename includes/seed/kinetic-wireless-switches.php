@@ -136,6 +136,7 @@ return array(
 		'where_receivers_note'     => 'Fast Fit connectors · IP20',
 		'where_receivers'          => array(
 			array(
+				'sku'        => 'CUL-45728',
 				'image'      => 'receiver-standard.png',
 				'name'       => 'RF Receiver',
 				'connection' => 'RF',
@@ -147,6 +148,7 @@ return array(
 				'size'       => '',
 			),
 			array(
+				'sku'        => 'CUL-45729',
 				'image'      => 'receiver-standard.png',
 				'name'       => 'RF + WiFi Receiver',
 				'connection' => 'RF + WiFi',
@@ -158,6 +160,7 @@ return array(
 				'size'       => '',
 			),
 			array(
+				'sku'        => 'CUL-45730',
 				'image'      => 'receiver-standard.png',
 				'name'       => '2 Channel RF Receiver',
 				'connection' => 'RF',
@@ -169,6 +172,7 @@ return array(
 				'size'       => '',
 			),
 			array(
+				'sku'        => 'CUL-45731',
 				'image'      => 'receiver-standard.png',
 				'name'       => 'RF + WiFi Dimmable Receiver',
 				'connection' => 'RF + WiFi',
@@ -180,6 +184,7 @@ return array(
 				'size'       => '',
 			),
 			array(
+				'sku'        => 'CUL-47549',
 				'image'      => 'receiver-mini.png',
 				'name'       => 'Mini RF Receiver',
 				'connection' => 'RF',
@@ -191,6 +196,7 @@ return array(
 				'size'       => '44mm x 50mm',
 			),
 			array(
+				'sku'        => 'CUL-47550',
 				'image'      => 'receiver-mini.png',
 				'name'       => 'Mini RF + WiFi Receiver',
 				'connection' => 'RF + WiFi',

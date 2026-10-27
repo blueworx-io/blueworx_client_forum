@@ -43,8 +43,9 @@ be placed anywhere with [forum_product_gallery].
 == Changelog ==
 
 = 1.18.0 =
-* The Kinetic page compares the six receivers in a table, edited in the page
-  editor. New switch photo in "What they are" and new step icons.
+* The Kinetic page compares the six receivers in a table, filled from each
+  product by SKU. New switch photo in "What they are"; "How they work" is
+  back on with new step icons.
 
 = 1.17.0 =
 * The automatic pull runs weekly by default. Choose Daily, Weekly or Monthly

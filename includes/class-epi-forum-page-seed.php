@@ -94,11 +94,13 @@ final class EPI_Forum_Page_Seed {
 	}
 
 	/**
-	 * Give a Kinetic page seeded before 1.18.0 its receiver table, once.
+	 * Bring a Kinetic page seeded before 1.18.0 up to the 1.18.0 design, once.
 	 *
-	 * Only the receiver values are written, and only while the page has no
-	 * receivers, so nothing anyone has typed is overwritten. Stamped before
-	 * the attempt, like the seed, so emptying the list later sticks.
+	 * "How they work" is switched back on, since it carries the new step
+	 * icons, and the receiver table is filled in. The receivers are written
+	 * only while the page has none, so nothing anyone has typed is
+	 * overwritten. Stamped before the attempt, like the seed, so switching
+	 * the section off or emptying the list later sticks.
 	 *
 	 * @return void
 	 */
@@ -113,14 +115,19 @@ final class EPI_Forum_Page_Seed {
 		$post   = get_page_by_path( $page['slug'], OBJECT, EPI_Forum_Page_Type::POST_TYPE );
 		$screen = \Blueworx\PageEditor\v1\Editor::get( EPI_Forum_Page_Type::SCREEN );
 
-		if ( ! $post || ! $screen || EPI_Forum_Page_Renderer::rows( $post->ID, 'where_receivers' ) ) {
+		if ( ! $post || ! $screen ) {
 			return;
 		}
 
-		$values = array_intersect_key(
-			$page['values'],
-			array_flip( array( 'where_receivers_eyebrow', 'where_receivers_heading', 'where_receivers_intro', 'where_receivers_note', 'where_receivers' ) )
-		);
+		$values = array( 'how__shown' => true );
+
+		if ( ! EPI_Forum_Page_Renderer::rows( $post->ID, 'where_receivers' ) ) {
+			$values += array_intersect_key(
+				$page['values'],
+				array_flip( array( 'where_receivers_eyebrow', 'where_receivers_heading', 'where_receivers_intro', 'where_receivers_note', 'where_receivers' ) )
+			);
+		}
+
 		$values = \Blueworx\PageEditor\v1\Sanitise::values( $screen, self::attach_images( $values, $post->ID ) );
 		\Blueworx\PageEditor\v1\Store::for( $screen )->write( $values, $post->ID );
 	}
