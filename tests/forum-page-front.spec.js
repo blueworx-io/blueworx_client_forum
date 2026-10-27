@@ -279,3 +279,43 @@ test('a receiver takes its details from the product with its SKU', async ({ page
     await expect(cells('Max load').nth(0)).toHaveText('Typed load');
   }
 });
+
+test('a card photo fills its frame, with no gap under it', async ({ page }) => {
+  await loginAsAdmin(page);
+
+  const nonce = await page.evaluate(() =>
+    fetch('/wp-admin/admin-ajax.php?action=rest-nonce', { credentials: 'same-origin' }).then((r) =>
+      r.text()
+    )
+  );
+  const media = await page.request.post('/wp-json/wp/v2/media', {
+    headers: { 'X-WP-Nonce': nonce, 'Content-Disposition': 'attachment; filename=card-test.jpg' },
+    data: fs.readFileSync(path.join(__dirname, '..', 'assets', 'seed', 'kinetic-hero.jpg')),
+  });
+  const mediaId = (await media.json()).id;
+
+  const id = await newForumPage(page, 'Card photo');
+  await page.fill('#hero_heading', 'Card photo');
+  await page.locator('.bw-tabs').getByText('Evidence').click();
+  await page.fill('#where_heading', 'Jobs where the cable is the problem');
+  await addRepeaterRow(page, 'where_cards');
+  const cards = repeater(page, 'where_cards');
+  await cards.locator('#title-0').fill('Bathrooms');
+
+  // Pick the photo through WordPress's own media library.
+  await cards.getByRole('button', { name: 'Photograph' }).click();
+  await page.locator('.media-modal').getByRole('tab', { name: 'Media Library' }).click();
+  await page.locator(`.media-modal .attachment[data-id="${mediaId}"]`).click();
+  await page.locator('.media-modal .media-button-select').click();
+  await saveEditor(page, expect);
+
+  await page.goto(`/?p=${id}&post_type=forum_page`);
+  const frame = page.locator('#where .epi-forum-page__cardimage').first();
+  const photo = frame.locator('img');
+  await expect(photo).toBeVisible();
+
+  const box = await frame.boundingBox();
+  const img = await photo.boundingBox();
+  // Only the 1px border may sit between the photo and the frame's edge.
+  expect(box.y + box.height - (img.y + img.height)).toBeLessThanOrEqual(1.5);
+});

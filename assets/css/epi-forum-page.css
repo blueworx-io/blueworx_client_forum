@@ -760,7 +760,6 @@ body:has( .epi-forum-page--breakout ) .wp-block-post-terms {
 	align-items: flex-end;
 	justify-content: center;
 	aspect-ratio: 574 / 392;
-	padding-bottom: 14px;
 	border: 1px solid var( --epi-fp-rule );
 	border-radius: 8px;
 	background-color: var( --epi-fp-panel );
@@ -1535,7 +1534,10 @@ body:has( .epi-forum-page--breakout ) .wp-block-post-terms {
 	}
 }
 
-/* The empty photo frame's caption is set light, not bold. */
+/* The empty photo frame's caption is set light, not bold, and sits a little
+   above the frame's foot. The space is the caption's own, so a photo fills
+   the frame to its edge. */
 .epi-forum-page__cardimage .epi-forum-page__label {
+	margin-bottom: 14px;
 	font-weight: 400;
 }
