@@ -419,60 +419,75 @@ body:has( .epi-forum-page--breakout ) .wp-block-post-terms {
 	color: var( --epi-fp-navy );
 }
 
+/* The switch photo and its labels, placed as in the 544 x 389 panel of the
+   design. Every position is a share of the panel, so the leader lines keep
+   meeting the plate and the labels as the panel narrows. */
 .epi-forum-page__diagram {
-	display: grid;
-	grid-template-columns: 180px minmax( 0, 1fr );
-	column-gap: 38px;
-	align-items: center;
-	min-height: 388px;
-	padding: 48px 108px 48px 98px;
+	position: relative;
+	width: 100%;
+	max-width: 544px;
+	aspect-ratio: 544 / 389;
 	border-radius: 12px;
 	background: var( --epi-fp-panel );
 }
 
-.epi-forum-page__diagram img {
-	display: block;
-	width: 180px;
-	height: 180px;
+.epi-forum-page__switchphoto {
+	position: absolute;
+	left: 3.125%;
+	top: 9%;
+	width: 55.15%;
+	height: auto;
+}
+
+.epi-forum-page__leaderlines {
+	position: absolute;
+	left: 37.48%;
+	top: 29.68%;
+	width: 20.85%;
+	height: 38.45%;
+}
+
+.epi-forum-page__leaderdots {
+	position: absolute;
+	left: 37.03%;
+	top: 46.42%;
+	width: 6.27%;
+	height: 17.13%;
 }
 
 .epi-forum-page__parts {
+	position: absolute;
+	left: 58.26%;
+	top: 29.68%;
 	display: grid;
 	row-gap: 22px;
+	width: 116.25px;
+}
+
+/* With the leaders drawn, each rule lands on the end of its line. */
+.epi-forum-page__diagram--leaders .epi-forum-page__parts {
+	height: 57.39%;
+	grid-template-rows: repeat( 3, 1fr );
+	row-gap: 0;
 }
 
 .epi-forum-page__parts li {
-	position: relative;
-	padding-top: 8px;
-	border-top: 1px solid var( --epi-fp-navy );
-}
-
-.epi-forum-page__parts li:last-child {
-	border-top-color: var( --epi-fp-accent );
-}
-
-/* The dashed leader from the plate to each label. */
-.epi-forum-page__parts li::before {
-	content: "";
-	position: absolute;
-	top: -1px;
-	right: 100%;
-	width: 38px;
-	border-top: 1px dashed var( --epi-fp-navy );
+	padding-top: 7px;
+	border-top: 1.085px solid var( --epi-fp-accent );
 }
 
 .epi-forum-page__parts h3 {
-	font-size: 12px;
+	font-size: 11.625px;
 	font-weight: 700;
-	line-height: 1.3;
+	line-height: 1.2;
 	color: var( --epi-fp-navy );
 }
 
 .epi-forum-page__parts p {
 	margin-top: 4px;
-	font-size: 11px;
-	line-height: 1.3;
-	color: var( --epi-fp-quiet );
+	font-size: 10.075px;
+	line-height: 1.2;
+	color: var( --epi-fp-grey );
 }
 
 /* --- How they work ------------------------------------------------------- */
@@ -567,6 +582,7 @@ body:has( .epi-forum-page--breakout ) .wp-block-post-terms {
 }
 
 .epi-forum-page__stepimage {
+	position: relative;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -577,13 +593,39 @@ body:has( .epi-forum-page--breakout ) .wp-block-post-terms {
 	overflow: hidden;
 }
 
-.epi-forum-page__stepimage img {
+/* Each drawing sits where the design puts it in its 300px tile. */
+.epi-forum-page__stepart {
+	position: absolute;
 	display: block;
-	max-width: 220px;
-	max-height: 220px;
-	width: auto;
-	height: auto;
-	object-fit: contain;
+	max-width: none;
+}
+
+.epi-forum-page__stepart--step-press {
+	left: 20.72%;
+	top: 18.53%;
+	width: 69.07%;
+	height: 68.88%;
+}
+
+.epi-forum-page__stepart--step-generate {
+	left: 18.51%;
+	top: 24.42%;
+	width: 69.82%;
+	height: 52.68%;
+}
+
+.epi-forum-page__stepart--step-transmit {
+	left: 13.72%;
+	top: 25.16%;
+	width: 71.28%;
+	height: 50.28%;
+}
+
+.epi-forum-page__stepart--step-switch {
+	left: 4.87%;
+	top: 27.19%;
+	width: 83.26%;
+	height: 46.59%;
 }
 
 .epi-forum-page__stepimage img.epi-forum-page__stepphoto {
@@ -762,6 +804,156 @@ body:has( .epi-forum-page--breakout ) .wp-block-post-terms {
 	max-width: 380px;
 	font-size: 17px;
 	line-height: 27px;
+}
+
+/* The receiver table under the cards. Its heading block sits in the heading
+   column, like a section's intro; the table runs the full width, its first
+   column the width of the number rail. */
+.epi-forum-page__receivers {
+	margin-top: 96px;
+	padding-top: 54px;
+	border-top: 1px solid var( --epi-fp-rule );
+}
+
+.epi-forum-page__receiverhead {
+	padding-left: var( --epi-fp-rail );
+}
+
+.epi-forum-page__receivereyebrow {
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	color: var( --epi-fp-accent );
+}
+
+.epi-forum-page__receiverhead h3 {
+	margin-top: 10px;
+	font-size: 28px;
+	font-weight: 700;
+	line-height: 1.2;
+	color: var( --epi-fp-navy );
+}
+
+.epi-forum-page__receiverintro {
+	margin-top: 14px;
+	max-width: 520px;
+	font-size: 17px;
+	line-height: 27px;
+	color: var( --epi-fp-quiet );
+}
+
+.epi-forum-page__receivernote {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0 10px;
+	margin-top: 26px;
+	font-size: 15px;
+	line-height: 18px;
+	color: var( --epi-fp-navy );
+}
+
+.epi-forum-page__receivernote .epi-forum-page__label {
+	margin-right: 18px;
+}
+
+.epi-forum-page__receiverdot {
+	color: var( --epi-fp-grey );
+}
+
+.epi-forum-page__receivers .epi-forum-page__tablewrap {
+	margin-top: 40px;
+}
+
+.epi-forum-page__receivers table {
+	width: 100%;
+	min-width: 760px;
+	table-layout: fixed;
+	border-collapse: collapse;
+	font-size: 16px;
+	line-height: 24px;
+	color: var( --epi-fp-navy );
+}
+
+.epi-forum-page__receivers thead td {
+	width: var( --epi-fp-rail );
+}
+
+.epi-forum-page__receivers th,
+.epi-forum-page__receivers td {
+	padding: 20px 16px 20px 0;
+	border-bottom: 1px solid var( --epi-fp-rule );
+	text-align: left;
+	vertical-align: top;
+}
+
+/* Photos, tags and names sit on the rule, however many lines a name takes. */
+.epi-forum-page__receivers thead th,
+.epi-forum-page__receivers thead td {
+	padding: 0 16px 22px 0;
+	border-bottom-color: var( --epi-fp-navy );
+	vertical-align: bottom;
+}
+
+.epi-forum-page__receivers tbody tr:last-child th,
+.epi-forum-page__receivers tbody tr:last-child td {
+	border-bottom-color: var( --epi-fp-navy );
+}
+
+.epi-forum-page__receiverimage {
+	display: block;
+	width: 76px;
+	height: 112px;
+	margin-bottom: 16px;
+}
+
+.epi-forum-page__receiverimage img {
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+	object-position: left bottom;
+}
+
+.epi-forum-page__receivertag {
+	display: block;
+	font-size: 12px;
+	font-weight: 700;
+	line-height: 22px;
+	text-transform: uppercase;
+	color: var( --epi-fp-accent );
+}
+
+.epi-forum-page__receivername {
+	display: block;
+	font-size: 17px;
+	font-weight: 700;
+	line-height: 22px;
+	color: var( --epi-fp-navy );
+}
+
+.epi-forum-page__receivername a {
+	color: inherit;
+	text-decoration: none;
+}
+
+.epi-forum-page__receivername a:hover,
+.epi-forum-page__receivername a:focus-visible {
+	text-decoration: underline;
+}
+
+.epi-forum-page__receivers tbody th {
+	font-weight: 700;
+}
+
+.epi-forum-page__tick {
+	display: inline-block;
+	width: 13.4999px;
+	height: 9.74996px;
+}
+
+.epi-forum-page__dash {
+	color: var( --epi-fp-grey );
 }
 
 /* --- Comparison ---------------------------------------------------------- */
@@ -1164,10 +1356,6 @@ body:has( .epi-forum-page--breakout ) .wp-block-post-terms {
 	.epi-forum-page__products {
 		grid-template-columns: repeat( 2, minmax( 0, 1fr ) );
 	}
-
-	.epi-forum-page__diagram {
-		padding: 40px;
-	}
 }
 
 @media ( max-width: 900px ) {
@@ -1217,6 +1405,8 @@ body:has( .epi-forum-page--breakout ) .wp-block-post-terms {
 	.epi-forum-page__stepimage {
 		width: 100%;
 		max-width: 300px;
+		height: auto;
+		aspect-ratio: 1;
 	}
 
 	.epi-forum-page__section.epi-forum-page__cta {
@@ -1282,19 +1472,36 @@ body:has( .epi-forum-page--breakout ) .wp-block-post-terms {
 		padding: 8px 10px 8px 0;
 	}
 
+	/* On a phone the labels move under the photo and the leaders go. */
 	.epi-forum-page__diagram {
-		grid-template-columns: minmax( 0, 1fr );
-		row-gap: 32px;
+		display: grid;
 		justify-items: center;
-		padding: 32px 24px;
+		row-gap: 24px;
+		aspect-ratio: auto;
+		padding: 24px;
 	}
 
-	.epi-forum-page__parts {
+	.epi-forum-page__switchphoto {
+		position: static;
 		width: 100%;
+		max-width: 300px;
 	}
 
-	.epi-forum-page__parts li::before {
+	.epi-forum-page__leaders {
 		display: none;
+	}
+
+	.epi-forum-page__parts,
+	.epi-forum-page__diagram--leaders .epi-forum-page__parts {
+		position: static;
+		width: 100%;
+		height: auto;
+		grid-template-rows: none;
+		row-gap: 22px;
+	}
+
+	.epi-forum-page__receiverhead {
+		padding-left: 0;
 	}
 
 	.epi-forum-page__advantagegrid,

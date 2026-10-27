@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.18.0]
+
+### Added
+- The Kinetic page compares the six receivers in a table under "Where they
+  work". Each receiver is linked to its product by SKU, and takes its name,
+  photo, link, max load and size from the shop. Connection, channels,
+  function, app control and wired switch are typed in the page editor
+  (Evidence tab), which also fills any gap the product leaves. The live page
+  is filled in with the six to start.
+
+### Changed
+- "What they are" shows the new switch photo, with its parts labelled.
+- "How they work" has the new step icons, and is switched back on for the
+  Kinetic page.
+
 ## [1.17.0]
 
 ### Changed

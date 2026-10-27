@@ -184,6 +184,17 @@ final class EPI_Forum_Page_Renderer {
 	}
 
 	/**
+	 * The address of one shipped image, versioned like the stylesheet, so a
+	 * redrawn image is not hidden behind a cached copy of the old one.
+	 *
+	 * @param string $file Path under the plugin directory.
+	 * @return string
+	 */
+	public static function asset_url( $file ) {
+		return add_query_arg( 'ver', self::asset_version( $file ), EPI_PLUGIN_URL . $file );
+	}
+
+	/**
 	 * Render the sections on a Forum Page that no template has claimed.
 	 *
 	 * The site's Elementor single template is the intended home for the

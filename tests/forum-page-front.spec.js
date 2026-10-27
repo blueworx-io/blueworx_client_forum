@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const { test, expect } = require('@playwright/test');
 const {
   loginAsAdmin,
@@ -180,5 +182,100 @@ test('the range shows a product picked by SKU', async ({ page }) => {
   if (hasProduct) {
     await expect(card).toContainText('Kinetic 1 Gang Wireless Wall Switch');
     await expect(card.locator('a.epi-forum-page__button')).toHaveAttribute('href', /kinetic-1-gang/);
+  }
+});
+
+test('with no receivers listed, the receiver table is left out', async ({ page }) => {
+  await loginAsAdmin(page);
+  const id = await newForumPage(page, 'No receivers');
+
+  await page.fill('#hero_heading', 'No receivers');
+  await page.locator('.bw-tabs').getByText('Evidence').click();
+  await page.fill('#where_heading', 'Jobs where the cable is the problem');
+  await page.fill('#where_receivers_heading', 'Six receivers, one for every circuit');
+  await saveEditor(page, expect);
+
+  await page.goto(`/?p=${id}&post_type=forum_page`);
+
+  await expect(page.locator('#where h2')).toHaveText('Jobs where the cable is the problem');
+  await expect(page.locator('.epi-forum-page__receivers')).toHaveCount(0);
+});
+
+test('a receiver takes its details from the product with its SKU', async ({ page }) => {
+  await loginAsAdmin(page);
+
+  const nonce = await page.evaluate(() =>
+    fetch('/wp-admin/admin-ajax.php?action=rest-nonce', { credentials: 'same-origin' }).then((r) =>
+      r.text()
+    )
+  );
+  // A photo for the product, so the test sees the product's image come through.
+  const media = await page.request.post('/wp-json/wp/v2/media', {
+    headers: { 'X-WP-Nonce': nonce, 'Content-Disposition': 'attachment; filename=receiver-test.png' },
+    data: fs.readFileSync(path.join(__dirname, '..', 'assets', 'seed', 'receiver-mini.png')),
+  });
+  const mediaId = media.ok() ? (await media.json()).id : 0;
+
+  // Attributes named as the ePim import names them.
+  const sku = `EPI-RECV-${Date.now()}`;
+  const created = await page.request.post('/wp-json/wc/v3/products', {
+    headers: { 'X-WP-Nonce': nonce },
+    data: {
+      name: 'RF 2 Channel Kinetic Switch On/Off Receiver Non-dimmable',
+      sku,
+      regular_price: '25',
+      status: 'publish',
+      images: mediaId ? [{ id: mediaId }] : [],
+      attributes: [
+        { name: 'Max rated load', options: ['max. 2 x 6A / 2 x 600W LED'], visible: true },
+        { name: 'Product Height (mm)', options: ['80mm'], visible: true },
+        { name: 'Product Width (mm)', options: ['39mm'], visible: true },
+        { name: 'Product Depth (mm)', options: ['22mm'], visible: true },
+      ],
+    },
+  });
+  // CI's harness has no WooCommerce; there the SKU matches nothing and the
+  // typed values must stand in, which is checked either way.
+  const hasProduct = created.ok();
+
+  const id = await newForumPage(page, 'Receivers by SKU');
+  await page.fill('#hero_heading', 'Receivers by SKU');
+  await page.locator('.bw-tabs').getByText('Evidence').click();
+  await page.fill('#where_heading', 'Jobs where the cable is the problem');
+  await page.fill('#where_receivers_heading', 'Six receivers, one for every circuit');
+
+  // One row on the product, one typed by hand with no product behind it.
+  const rows = repeater(page, 'where_receivers');
+  await addRepeaterRow(page, 'where_receivers');
+  await rows.locator('#sku-0').fill(sku);
+  await rows.locator('#name-0').fill('Typed name');
+  await rows.locator('#channels-0').fill('2');
+  await rows.locator('#max_load-0').fill('Typed load');
+  await addRepeaterRow(page, 'where_receivers');
+  await rows.locator('#name-1').fill('Mini RF Receiver');
+  await rows.locator('#max_load-1').fill('6A / 500w LED');
+  await rows.locator('#size-1').fill('44mm x 50mm');
+  await saveEditor(page, expect);
+
+  await page.goto(`/?p=${id}&post_type=forum_page`);
+  const table = page.locator('.epi-forum-page__receivers table');
+
+  const cells = (label) => table.locator('tbody tr', { hasText: label }).locator('td');
+  const first = table.locator('thead th[scope="col"]').nth(0);
+  await expect(table.locator('thead th[scope="col"]').nth(1)).toContainText('Mini RF Receiver');
+  await expect(cells('Max load').nth(1)).toHaveText('6A / 500w LED');
+  await expect(cells('Size').nth(1)).toHaveText('44mm x 50mm');
+  // Channels are not in the shop, so the typed value stays.
+  await expect(cells('Channels').nth(0)).toHaveText('2');
+
+  if (hasProduct) {
+    await expect(first).toContainText('RF 2 Channel Kinetic Switch On/Off Receiver Non-dimmable');
+    await expect(first.locator('a')).toHaveAttribute('href', /rf-2-channel-kinetic/);
+    await expect(first.locator('.epi-forum-page__receiverimage img')).toHaveCount(1);
+    await expect(cells('Max load').nth(0)).toHaveText('2 x 6A / 2 x 600W LED');
+    await expect(cells('Size').nth(0)).toHaveText('80mm x 39mm x 22mm');
+  } else {
+    await expect(first).toContainText('Typed name');
+    await expect(cells('Max load').nth(0)).toHaveText('Typed load');
   }
 });

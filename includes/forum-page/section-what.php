@@ -2,9 +2,10 @@
 /**
  * "What they are".
  *
- * Body copy and the pull quote on the left; on the right, the plate diagram
- * with the parts labelled beside it. The diagram is part of the design, not
- * the record, so it ships with the plugin.
+ * Body copy and the pull quote on the left; on the right, the switch photo
+ * with the parts labelled beside it. The photo is part of the design, not
+ * the record, so it ships with the plugin. Its leader lines are drawn for
+ * three parts, so they are left out when the record lists any other number.
  *
  * @package ExternalProductImages
  *
@@ -33,8 +34,14 @@ $epi_parts     = EPI_Forum_Page_Renderer::rows( $post_id, 'what_parts' );
 		</div>
 
 		<?php if ( $epi_parts ) : ?>
-			<div class="epi-forum-page__diagram">
-				<img src="<?php echo esc_url( EPI_PLUGIN_URL . 'assets/img/forum-page/what-plate.svg' ); ?>" alt="" width="180" height="180">
+			<div class="epi-forum-page__diagram<?php echo 3 === count( $epi_parts ) ? ' epi-forum-page__diagram--leaders' : ''; ?>">
+				<img class="epi-forum-page__switchphoto" src="<?php echo esc_url( EPI_Forum_Page_Renderer::asset_url( 'assets/img/forum-page/what-switch.png' ) ); ?>" alt="" width="300" height="300">
+				<?php if ( 3 === count( $epi_parts ) ) : ?>
+					<span class="epi-forum-page__leaders" aria-hidden="true">
+						<img class="epi-forum-page__leaderlines" src="<?php echo esc_url( EPI_Forum_Page_Renderer::asset_url( 'assets/img/forum-page/what-leaders.svg' ) ); ?>" alt="" width="113.422" height="149.575">
+						<img class="epi-forum-page__leaderdots" src="<?php echo esc_url( EPI_Forum_Page_Renderer::asset_url( 'assets/img/forum-page/what-dots.svg' ) ); ?>" alt="" width="34.1" height="66.65">
+					</span>
+				<?php endif; ?>
 				<ul class="epi-forum-page__parts">
 					<?php foreach ( $epi_parts as $epi_part ) : ?>
 						<li>

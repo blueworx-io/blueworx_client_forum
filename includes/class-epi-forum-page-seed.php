@@ -20,6 +20,11 @@ final class EPI_Forum_Page_Seed {
 	const OPTION = 'epi_forum_page_seeded';
 
 	/**
+	 * Stamp for the 1.18.0 receiver table, which sites seeded earlier lack.
+	 */
+	const RECEIVERS_OPTION = 'epi_forum_page_receivers_seeded';
+
+	/**
 	 * Hook up.
 	 *
 	 * @return void
@@ -27,6 +32,7 @@ final class EPI_Forum_Page_Seed {
 	public static function init() {
 		// After EPI_Forum_Page_Type::register() at 10, so the post type exists.
 		add_action( 'init', array( __CLASS__, 'maybe_seed' ), 20 );
+		add_action( 'init', array( __CLASS__, 'maybe_add_receivers' ), 21 );
 	}
 
 	/**
@@ -85,6 +91,45 @@ final class EPI_Forum_Page_Seed {
 		}
 
 		return (int) $id;
+	}
+
+	/**
+	 * Bring a Kinetic page seeded before 1.18.0 up to the 1.18.0 design, once.
+	 *
+	 * "How they work" is switched back on, since it carries the new step
+	 * icons, and the receiver table is filled in. The receivers are written
+	 * only while the page has none, so nothing anyone has typed is
+	 * overwritten. Stamped before the attempt, like the seed, so switching
+	 * the section off or emptying the list later sticks.
+	 *
+	 * @return void
+	 */
+	public static function maybe_add_receivers() {
+		if ( get_option( self::RECEIVERS_OPTION ) || ! class_exists( '\Blueworx\PageEditor\v1\Editor' ) ) {
+			return;
+		}
+
+		update_option( self::RECEIVERS_OPTION, '1', false );
+
+		$page   = include EPI_PLUGIN_DIR . 'includes/seed/kinetic-wireless-switches.php';
+		$post   = get_page_by_path( $page['slug'], OBJECT, EPI_Forum_Page_Type::POST_TYPE );
+		$screen = \Blueworx\PageEditor\v1\Editor::get( EPI_Forum_Page_Type::SCREEN );
+
+		if ( ! $post || ! $screen ) {
+			return;
+		}
+
+		$values = array( 'how__shown' => true );
+
+		if ( ! EPI_Forum_Page_Renderer::rows( $post->ID, 'where_receivers' ) ) {
+			$values += array_intersect_key(
+				$page['values'],
+				array_flip( array( 'where_receivers_eyebrow', 'where_receivers_heading', 'where_receivers_intro', 'where_receivers_note', 'where_receivers' ) )
+			);
+		}
+
+		$values = \Blueworx\PageEditor\v1\Sanitise::values( $screen, self::attach_images( $values, $post->ID ) );
+		\Blueworx\PageEditor\v1\Store::for( $screen )->write( $values, $post->ID );
 	}
 
 	/**

@@ -341,7 +341,7 @@ final class EPI_Forum_Page_Editor {
 					'id'       => 'where',
 					'eyebrow'  => __( 'Forum page · Where they work', 'blueworx_client_forum' ),
 					'title'    => __( 'Where they work', 'blueworx_client_forum' ),
-					'note'     => __( 'The photo cards. Any number of them.', 'blueworx_client_forum' ),
+					'note'     => __( 'The photo cards, any number of them, then the receiver comparison table.', 'blueworx_client_forum' ),
 					'hideable' => true,
 					'fields'   => array(
 						array(
@@ -378,6 +378,86 @@ final class EPI_Forum_Page_Editor {
 									'id'    => 'body',
 									'kind'  => 'textarea',
 									'label' => __( 'Description', 'blueworx_client_forum' ),
+								),
+							),
+						),
+						array(
+							'id'    => 'where_receivers_eyebrow',
+							'kind'  => 'text',
+							'label' => __( 'Receivers eyebrow', 'blueworx_client_forum' ),
+						),
+						array(
+							'id'    => 'where_receivers_heading',
+							'kind'  => 'text',
+							'label' => __( 'Receivers heading', 'blueworx_client_forum' ),
+						),
+						array(
+							'id'    => 'where_receivers_intro',
+							'kind'  => 'textarea',
+							'label' => __( 'Receivers introduction', 'blueworx_client_forum' ),
+						),
+						array(
+							'id'    => 'where_receivers_note',
+							'kind'  => 'text',
+							'label' => __( 'What every receiver has', 'blueworx_client_forum' ),
+							'help'  => __( 'Shown after "All receivers". Separate items with a dot: Fast Fit connectors · IP20', 'blueworx_client_forum' ),
+						),
+						array(
+							'id'     => 'where_receivers',
+							'kind'   => 'repeater',
+							'label'  => __( 'Receivers', 'blueworx_client_forum' ),
+							'help'   => __( 'One column of the comparison table each. Leave the list empty to hide the table.', 'blueworx_client_forum' ),
+							'fields' => array(
+								array(
+									'id'    => 'sku',
+									'kind'  => 'text',
+									'label' => __( 'SKU', 'blueworx_client_forum' ),
+									'help'  => __( 'The name, photo, link, max load and size come from this product. What you type below is only used where the product has none.', 'blueworx_client_forum' ),
+								),
+								array(
+									'id'    => 'image',
+									'kind'  => 'media',
+									'label' => __( 'Photograph', 'blueworx_client_forum' ),
+								),
+								array(
+									'id'    => 'name',
+									'kind'  => 'text',
+									'label' => __( 'Name', 'blueworx_client_forum' ),
+								),
+								array(
+									'id'    => 'connection',
+									'kind'  => 'text',
+									'label' => __( 'Connection', 'blueworx_client_forum' ),
+								),
+								array(
+									'id'    => 'channels',
+									'kind'  => 'text',
+									'label' => __( 'Channels', 'blueworx_client_forum' ),
+								),
+								array(
+									'id'    => 'function',
+									'kind'  => 'text',
+									'label' => __( 'Function', 'blueworx_client_forum' ),
+								),
+								array(
+									'id'    => 'max_load',
+									'kind'  => 'text',
+									'label' => __( 'Max load', 'blueworx_client_forum' ),
+								),
+								array(
+									'id'    => 'app',
+									'kind'  => 'toggle',
+									'label' => __( 'Smart App control', 'blueworx_client_forum' ),
+								),
+								array(
+									'id'    => 'wired',
+									'kind'  => 'toggle',
+									'label' => __( 'Wired switch supported', 'blueworx_client_forum' ),
+								),
+								array(
+									'id'    => 'size',
+									'kind'  => 'text',
+									'label' => __( 'Size', 'blueworx_client_forum' ),
 								),
 							),
 						),
