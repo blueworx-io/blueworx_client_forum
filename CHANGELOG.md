@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.19.0]
+
+### Added
+- Visitors' browsers now keep the ePim product images they have already seen,
+  for up to 7 days, instead of downloading them again on every page. Nothing
+  is stored on the site. It is on by default under BlueWorx Lab > Product
+  display, "Keep ePim images in the browser"; switching it off also removes it
+  from visitors' browsers.
+
 ## [1.18.1]
 
 ### Fixed
