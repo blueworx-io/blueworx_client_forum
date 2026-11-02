@@ -16,10 +16,8 @@
 	// Records when the saved set was started, so it can be cleared after maxAgeMs.
 	var STAMP = settings.base + '__epi-stamp';
 
-	// Whether ePim allows CORS. Until it does, a response cannot be inspected,
-	// so it is saved as is and the page tells us to forget any that fail.
-	// Learned once per worker start, so a refusal costs one extra request.
-	var corsWorks = true;
+	// ePim does not allow CORS, so a response cannot be inspected: it is saved as
+	// is, and the page tells us to forget any image that fails to show.
 
 	// Saves still in progress, by URL. The page can report a broken image before
 	// its save has finished, so forgetting waits for the save first.
@@ -57,27 +55,47 @@
 		);
 	} );
 
+	// The saved set is opened once per worker run and shared, so images
+	// requested together cannot each clear the set and lose each other's saves.
+	var opening = null;
+	// When the open set was started; 0 while it is still being opened.
+	var startedAt = 0;
+
 	// The saved set, cleared first when it is older than maxAgeMs.
 	function openFresh() {
-		return caches.open( settings.cache ).then( function ( cache ) {
+		if ( opening && ( ! startedAt || Date.now() - startedAt < settings.maxAgeMs ) ) {
+			return opening;
+		}
+
+		startedAt = 0;
+		opening = caches.open( settings.cache ).then( function ( cache ) {
 			return cache.match( STAMP ).then( function ( stamp ) {
 				return stamp ? stamp.text() : '';
 			} ).then( function ( started ) {
-				var age = Date.now() - parseInt( started, 10 );
+				var since = parseInt( started, 10 );
 
-				if ( started && age < settings.maxAgeMs ) {
+				if ( since && Date.now() - since < settings.maxAgeMs ) {
+					startedAt = since;
 					return cache;
 				}
 
 				return caches.delete( settings.cache ).then( function () {
 					return caches.open( settings.cache );
 				} ).then( function ( fresh ) {
-					return fresh.put( STAMP, new Response( String( Date.now() ) ) ).then( function () {
+					var now = Date.now();
+
+					return fresh.put( STAMP, new Response( String( now ) ) ).then( function () {
+						startedAt = now;
 						return fresh;
 					} );
 				} );
 			} );
+		} ).catch( function ( error ) {
+			opening = null;
+			throw error;
 		} );
+
+		return opening;
 	}
 
 	// Drop the oldest images beyond maxEntries. keys() is in the order they were saved.
@@ -94,19 +112,8 @@
 		} );
 	}
 
-	// Ask ePim for the image. Resolves to { response, keep }: whether it is safe to save.
+	// Ask ePim for the image. Resolves to { response, keep }: whether to save it.
 	function download( request ) {
-		if ( corsWorks ) {
-			return fetch( request.url, { mode: 'cors', credentials: 'omit' } ).then( function ( response ) {
-				var type = response.headers.get( 'Content-Type' ) || '';
-
-				return { response: response, keep: response.ok && 0 === type.indexOf( 'image/' ) };
-			}, function () {
-				corsWorks = false;
-				return download( request );
-			} );
-		}
-
 		return fetch( request ).then( function ( response ) {
 			// Opaque: the status cannot be read, so keep it unless it is visibly an error.
 			return { response: response, keep: 'opaque' === response.type || response.ok };

@@ -14,7 +14,7 @@
 	}
 
 	navigator.serviceWorker
-		.register( settings.workerUrl, { scope: settings.scope, updateViaCache: 'none' } )
+		.register( settings.workerUrl, { scope: settings.scope, updateViaCache: 'all' } )
 		.catch( function () {} );
 
 	// Image errors do not bubble, but they do pass the document in the capture

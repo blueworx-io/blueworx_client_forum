@@ -137,7 +137,9 @@ final class EPI_Image_Cache {
 	 */
 	public static function serve_worker() {
 		header( 'Content-Type: application/javascript; charset=utf-8' );
-		header( 'Cache-Control: no-cache, max-age=0' );
+		// Browsers may keep the script for 6 hours, so returning visitors do not start
+		// WordPress on every page just to check it. The off switch takes up to that long.
+		header( 'Cache-Control: max-age=21600' );
 		// Lets a script under /wp-admin/ look after the whole site.
 		header( 'Service-Worker-Allowed: /' );
 

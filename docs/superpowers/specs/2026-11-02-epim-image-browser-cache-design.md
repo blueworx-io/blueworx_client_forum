@@ -39,10 +39,9 @@ removed.
 - **Broken images are forgotten straight away.** ePim answers a missing image with a 500 HTML
   page. Without CORS the worker cannot see the status, so it saves whatever comes back. The page
   tells the worker to drop any ePim image that fails to load, so a broken copy is never reused.
-- **When ePim adds CORS, the worker checks properly** (Claude's call). The worker first asks for
-  the image in CORS mode. If that works, it only saves a real image (status 200, image content
-  type). If CORS is refused, it falls back to the plain request for the rest of that worker's
-  life, so the cost is one extra request per worker start, not one per image.
+- **No CORS attempt for now** (Claude's call, revised after review). Trying CORS first doubled
+  requests to ePim on every uncached image, because workers restart every few seconds of idle.
+  When ePim adds CORS, a release can switch the worker to CORS mode and save only real images.
 - **A cap on how many images are kept** (Claude's call): 300. Oldest go first. Chrome counts each
   CORS-less saved image as several MB against storage quota whatever its real size; a cap keeps
   that in bounds. A failed save (quota) is ignored and the image still shows from the network.
@@ -51,7 +50,8 @@ removed.
   flag as on).
 - **Turning it off removes it from visitors' browsers.** The worker script stays reachable when the
   feature is off, and then serves a version that clears its saved images and unregisters itself.
-  Browsers re-check the worker script on their next visit, so it disappears within a visit or two.
+  Browsers may keep the worker script for 6 hours (see below), so it disappears on the first visit
+  after that.
 - **Warm the connection to ePim early** (Claude's call): a `preconnect` hint for the ePim host on
   front-end pages while the feature is on.
 
@@ -63,8 +63,13 @@ Served through `admin-ajax.php?action=epi_image_cache_sw` (`wp_ajax_` and `wp_aj
 `Service-Worker-Allowed: /` so its scope can be the whole site (`/`) although the script lives under
 `/wp-admin/`. admin-ajax is never page-cached, so the off switch and new releases always reach
 browsers (Claude's call; the live site has an nginx page cache). Response headers:
-`Content-Type: application/javascript; charset=utf-8`, `Cache-Control: no-cache, max-age=0`,
+`Content-Type: application/javascript; charset=utf-8`, `Cache-Control: max-age=21600`,
 `Service-Worker-Allowed: /`. The handler is registered whether or not the feature is on.
+
+Browsers re-check the worker script on page loads. Without any caching that is a full WordPress
+request on every page a returning visitor opens, so the script may be kept for 6 hours (Claude's
+call, after review). The cost is that switching off or a new release takes up to 6 hours to reach a
+browser.
 
 The script is generated from a static JS file in the plugin, with the ePim image base, cache name,
 lifetime and cap passed in (so the worker never hard-codes a host the PHP does not). The plugin
@@ -86,7 +91,7 @@ Caching worker behaviour:
   - Look in the cache. If the saved set is older than 7 days, clear it first. A stamp entry in the
     cache records when the set was started.
   - Hit: return it.
-  - Miss: fetch (CORS first, then plain as above), return the response to the page, and save a copy
+  - Miss: fetch, return the response to the page, and save a copy
     in the background (`event.waitUntil`). Trim to the cap after saving. Never let a failed save
     break the response.
   - If fetching fails outright, let the error reach the page as it would today (the existing
@@ -98,7 +103,7 @@ Caching worker behaviour:
 A small front-end script (not in wp-admin), enqueued on every front-end page while the feature is
 on:
 
-- Registers the worker with `{ scope: '/', updateViaCache: 'none' }`, only when
+- Registers the worker with `{ scope: '/', updateViaCache: 'all' }`, only when
   `'serviceWorker' in navigator`. It is a progressive enhancement: no worker support means today's
   behaviour.
 - Listens for image `error` events on the document in the capture phase, so it sees the failing
