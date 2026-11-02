@@ -69,6 +69,56 @@ final class EPI_Image_Cache {
 	 * @return void
 	 */
 	public static function init() {
+		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue' ) );
+		add_filter( 'wp_resource_hints', array( __CLASS__, 'preconnect' ), 10, 2 );
+	}
+
+	/**
+	 * Register the worker on every front-end page.
+	 *
+	 * @return void
+	 */
+	public static function enqueue() {
+		wp_enqueue_script(
+			'epi-image-cache',
+			EPI_PLUGIN_URL . 'assets/js/epi-image-cache.js',
+			array(),
+			EPI_VERSION,
+			true
+		);
+
+		wp_localize_script(
+			'epi-image-cache',
+			'epiImageCache',
+			array(
+				'workerUrl' => self::worker_url(),
+				'scope'     => (string) wp_parse_url( home_url( '/' ), PHP_URL_PATH ),
+				'base'      => EPI_EPIM_IMAGE_BASE,
+			)
+		);
+	}
+
+	/**
+	 * Open the connection to ePim early, so the first image arrives sooner.
+	 *
+	 * @param array  $urls          URLs to print for the hint.
+	 * @param string $relation_type The hint being printed.
+	 * @return array
+	 */
+	public static function preconnect( $urls, $relation_type ) {
+		if ( 'preconnect' !== $relation_type || is_admin() ) {
+			return $urls;
+		}
+
+		$parts = wp_parse_url( EPI_EPIM_IMAGE_BASE );
+
+		if ( empty( $parts['scheme'] ) || empty( $parts['host'] ) ) {
+			return $urls;
+		}
+
+		$urls[] = $parts['scheme'] . '://' . $parts['host'] . ( empty( $parts['port'] ) ? '' : ':' . $parts['port'] );
+
+		return $urls;
 	}
 
 	/**
