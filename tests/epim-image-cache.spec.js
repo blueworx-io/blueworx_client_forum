@@ -259,24 +259,32 @@ test('an image the browser does not have yet is asked of ePim once', async ({ pa
   const before = standinHits('424250');
   await visitor.reload();
   await visitor.waitForLoadState('load');
-  await expect.poll(() => standinHits('424250')).toBeGreaterThan(before);
+  // Once every image has arrived, every request for it has been made.
+  await visitor.waitForFunction(() => [...document.images].every((img) => img.complete));
   expect(standinHits('424250')).toBe(before + 1);
 
   await visitor.context().close();
 });
 
-test('every image on the first page the worker handles is kept', async ({ page, browser }) => {
-  const ids = ['424260', '424261', '424262'];
-  const { url, featuredId } = await epimPage(page, ids);
+test('images asked for together on the first page the worker handles are all kept', async ({
+  page,
+  browser,
+}) => {
+  const { url } = await epimPage(page, []);
   const base = new URL(page.url());
   const urlFor = (id) => `${base.protocol}//localhost:${base.port}/?epi_test_image=${id}.jpg`;
+  const ids = Array.from({ length: 10 }, (_, i) => String(424260 + i));
 
   const visitor = await (await browser.newContext()).newPage();
   await firstVisit(visitor, url);
-  await visitor.reload();
-  await visitor.waitForLoadState('load');
 
-  for (const id of [featuredId, ...ids]) {
+  // A category page asks for many images at once, before any is saved.
+  await visitor.evaluate(
+    (urls) => Promise.all(urls.map((u) => fetch(u, { mode: 'no-cors' }))),
+    ids.map(urlFor)
+  );
+
+  for (const id of ids) {
     await expect.poll(() => cachedUrls(visitor), { timeout: 10_000 }).toContain(urlFor(id));
   }
 
