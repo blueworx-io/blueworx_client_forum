@@ -123,7 +123,10 @@ test('the worker address serves the caching worker with a site-wide scope header
   expect(res.status()).toBe(200);
   expect(res.headers()['content-type']).toContain('javascript');
   expect(res.headers()['service-worker-allowed']).toBe('/');
-  expect(res.headers()['cache-control']).toContain('no-cache');
+  // Browsers may keep the script for 6 hours, so returning visitors do not
+  // start WordPress on every page just to check it. The off switch takes up to
+  // that long to reach them.
+  expect(res.headers()['cache-control']).toBe('max-age=21600');
 
   const body = await res.text();
   expect(body).toContain(CACHE);
@@ -162,6 +165,11 @@ test('after the first visit, ePim images come from the browser, not ePim', async
   // The worker is now in charge; this load saves the image.
   await visitor.reload();
   await expect.poll(() => cachedUrls(visitor)).toContain(imageUrl);
+
+  // The browser may use its own HTTP cache when re-checking the worker script.
+  expect(
+    await visitor.evaluate(() => navigator.serviceWorker.ready.then((r) => r.updateViaCache))
+  ).toBe('all');
 
   // Every later load takes it from the browser: ePim is not asked again.
   const before = standinHits(featuredId);
@@ -237,6 +245,73 @@ test('switched off, pages no longer register the worker', async ({ page, browser
 
   await expect(visitor.locator('script[src*="epi-image-cache.js"]')).toHaveCount(0);
   expect(await visitor.evaluate(() => navigator.serviceWorker.getRegistrations().then((r) => r.length))).toBe(0);
+
+  await visitor.context().close();
+  await setFeature(page, true);
+});
+
+test('an image the browser does not have yet is asked of ePim once', async ({ page, browser }) => {
+  const { url } = await epimPage(page, ['424250']);
+
+  const visitor = await (await browser.newContext()).newPage();
+  await firstVisit(visitor, url);
+
+  const before = standinHits('424250');
+  await visitor.reload();
+  await visitor.waitForLoadState('load');
+  await expect.poll(() => standinHits('424250')).toBeGreaterThan(before);
+  expect(standinHits('424250')).toBe(before + 1);
+
+  await visitor.context().close();
+});
+
+test('every image on the first page the worker handles is kept', async ({ page, browser }) => {
+  const ids = ['424260', '424261', '424262'];
+  const { url, featuredId } = await epimPage(page, ids);
+  const base = new URL(page.url());
+  const urlFor = (id) => `${base.protocol}//localhost:${base.port}/?epi_test_image=${id}.jpg`;
+
+  const visitor = await (await browser.newContext()).newPage();
+  await firstVisit(visitor, url);
+  await visitor.reload();
+  await visitor.waitForLoadState('load');
+
+  for (const id of [featuredId, ...ids]) {
+    await expect.poll(() => cachedUrls(visitor), { timeout: 10_000 }).toContain(urlFor(id));
+  }
+
+  await visitor.context().close();
+});
+
+test('switching off removes the worker from a browser that already has it', async ({
+  page,
+  browser,
+}) => {
+  const { url } = await epimPage(page, ['424270']);
+
+  const visitor = await (await browser.newContext()).newPage();
+  await firstVisit(visitor, url);
+  await visitor.reload();
+  await expect.poll(async () => (await cachedUrls(visitor)).length).toBeGreaterThan(1);
+
+  await setFeature(page, false);
+
+  // Stand in for the browser's own re-check once its copy of the script is
+  // out of date: forget the copy, then check.
+  const cdp = await visitor.context().newCDPSession(visitor);
+  await cdp.send('Network.clearBrowserCache');
+  await visitor.evaluate(() => navigator.serviceWorker.ready.then((r) => r.update()).catch(() => {}));
+
+  await expect
+    .poll(() => visitor.evaluate(() => navigator.serviceWorker.getRegistrations().then((r) => r.length)))
+    .toBe(0);
+  await expect
+    .poll(() =>
+      visitor.evaluate(() =>
+        caches.keys().then((names) => names.filter((n) => n.startsWith('epi-epim-images-')).length)
+      )
+    )
+    .toBe(0);
 
   await visitor.context().close();
   await setFeature(page, true);
