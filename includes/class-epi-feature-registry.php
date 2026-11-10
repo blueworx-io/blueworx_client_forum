@@ -128,6 +128,15 @@ final class EPI_Feature_Registry {
 				'dependencies'   => array( 'woocommerce' ),
 				'boot'           => array( 'EPI_Featured_Image', 'init' ),
 			),
+			'epim-image-cache'            => array(
+				'title'          => __( 'Keep ePim images in the browser', 'blueworx_client_forum' ),
+				'description'    => __( 'Each visitor\'s browser keeps the ePim product images it has shown and reuses them for 7 days, instead of downloading them again on every page. Nothing is stored on this site. Turning it off also removes it from visitors\' browsers.', 'blueworx_client_forum' ),
+				'group'          => 'product-display',
+				'dangerous'      => false,
+				'danger_message' => '',
+				'dependencies'   => array(),
+				'boot'           => array( 'EPI_Image_Cache', 'init' ),
+			),
 			'hide-internal-attributes'    => array(
 				'title'          => __( 'Hide internal attributes', 'blueworx_client_forum' ),
 				'description'    => __( 'Hides the internal pa_epim-*, pa_bullet-*, pa_ecd-* and "bullet" attributes from the product page.', 'blueworx_client_forum' ),

@@ -3,7 +3,7 @@
  * Plugin Name:       BlueWorx Lab | Forum Lighting
  * Plugin URI:        https://blueworx.io/
  * Description:        Site functionality plugin for Forum Lighting. A control centre under Settings > BlueWorx Lab switches features on or off, including the WooCommerce product gallery, metadata tools, pricing rules and more.
- * Version:           1.18.1
+ * Version:           1.19.0
  * Author:            BlueWorx
  * Author URI:        https://blueworx.io/
  * Text Domain:       blueworx_client_forum
@@ -22,11 +22,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Core plugin constants.
  */
-define( 'EPI_VERSION', '1.18.1' );
+define( 'EPI_VERSION', '1.19.0' );
 define( 'EPI_PLUGIN_FILE', __FILE__ );
 define( 'EPI_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'EPI_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'EPI_EPIM_IMAGE_BASE', 'https://epim.online/webproduct/assetimage/' );
+// Overridable so the tests can stand in for ePim without reaching the real one.
+if ( ! defined( 'EPI_EPIM_IMAGE_BASE' ) ) {
+	define( 'EPI_EPIM_IMAGE_BASE', 'https://epim.online/webproduct/assetimage/' );
+}
 
 /*
  * The shared admin design system, then the page editor library that enqueues
@@ -152,6 +155,11 @@ final class EPI_Plugin {
 		require_once EPI_PLUGIN_DIR . 'includes/class-epi-lab-page.php';
 
 		EPI_Lab_Page::init();
+
+		// The ePim image worker is served even with its feature off, so that
+		// switching it off can remove it from visitors' browsers.
+		require_once EPI_PLUGIN_DIR . 'includes/class-epi-image-cache.php';
+		EPI_Image_Cache::register_worker_endpoint();
 
 		// Most features need WooCommerce. Load the existing product classes (so
 		// their static helpers stay available regardless of which features are
