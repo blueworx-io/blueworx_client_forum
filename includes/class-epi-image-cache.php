@@ -76,6 +76,10 @@ final class EPI_Image_Cache {
 	/**
 	 * Register the worker on every front-end page.
 	 *
+	 * The script goes in the head, not the footer: it listens for images that
+	 * fail so a bad copy is forgotten, and a copy the worker already holds
+	 * comes back fast enough to fail before a footer script would be running.
+	 *
 	 * @return void
 	 */
 	public static function enqueue() {
@@ -84,7 +88,7 @@ final class EPI_Image_Cache {
 			EPI_PLUGIN_URL . 'assets/js/epi-image-cache.js',
 			array(),
 			EPI_VERSION,
-			true
+			false
 		);
 
 		wp_localize_script(

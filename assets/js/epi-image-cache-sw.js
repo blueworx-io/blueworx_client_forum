@@ -33,11 +33,15 @@
 		// Where supported (Chrome 123+), page loads go straight to the network
 		// without starting this worker at all.
 		if ( event.addRoutes ) {
-			event.waitUntil(
-				Promise.resolve( event.addRoutes( [
-					{ condition: { requestMode: 'navigate' }, source: 'network' },
-				] ) ).catch( function () {} )
-			);
+			try {
+				event.waitUntil(
+					Promise.resolve( event.addRoutes( [
+						{ condition: { requestMode: 'navigate' }, source: 'network' },
+					] ) ).catch( function () {} )
+				);
+			} catch ( e ) {
+				// Not supported after all: the fetch handler passes page loads through anyway.
+			}
 		}
 	} );
 

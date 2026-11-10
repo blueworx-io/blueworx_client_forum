@@ -173,6 +173,7 @@ test('after the first visit, ePim images come from the browser, not ePim', async
 
   // Every later load takes it from the browser: ePim is not asked again.
   const before = standinHits(featuredId);
+  expect(before, 'the server log never saw the first download').toBeGreaterThan(0);
   await visitor.reload();
   await visitor.waitForLoadState('load');
   await visitor.reload();
@@ -221,6 +222,40 @@ test('an ePim image that fails to load is not kept', async ({ page, browser }) =
   await expect.poll(() => cachedUrls(visitor)).not.toContain(brokenUrl);
   // The image that worked is still kept.
   await expect.poll(async () => (await cachedUrls(visitor)).length).toBeGreaterThan(1);
+
+  await visitor.context().close();
+});
+
+test('a broken copy already in the browser is thrown away on the next visit', async ({
+  page,
+  browser,
+}) => {
+  const { url } = await epimPage(page, [MISSING]);
+  const base = new URL(page.url());
+  const brokenUrl = `${base.protocol}//localhost:${base.port}/?epi_test_image=${MISSING}.jpg`;
+
+  const visitor = await (await browser.newContext()).newPage();
+  await firstVisit(visitor, url);
+
+  // A bad answer slipped into the browser earlier (ePim blipped, say). It comes
+  // back in an instant, so the image fails before the page's own scripts run.
+  await visitor.evaluate(
+    ([name, broken]) =>
+      caches.open(name).then((cache) => cache.put(broken, new Response('<html>Server Error</html>', {
+        status: 500,
+        headers: { 'Content-Type': 'text/html' },
+      }))),
+    [CACHE, brokenUrl]
+  );
+  expect(await cachedUrls(visitor)).toContain(brokenUrl);
+
+  await visitor.reload();
+  await visitor.waitForLoadState('load');
+
+  await expect(
+    visitor.locator('.epi-gallery__thumb img').nth(1)
+  ).toHaveAttribute('src', /epi-edison-bulb\.svg/);
+  await expect.poll(() => cachedUrls(visitor)).not.toContain(brokenUrl);
 
   await visitor.context().close();
 });
