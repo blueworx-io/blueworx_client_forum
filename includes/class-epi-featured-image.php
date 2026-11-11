@@ -50,6 +50,58 @@ final class EPI_Featured_Image {
 		if ( ! has_filter( 'woocommerce_product_get_image', array( __CLASS__, 'filter_product_image' ) ) ) {
 			add_filter( 'woocommerce_product_get_image', array( __CLASS__, 'filter_product_image' ), 10, 4 );
 		}
+
+		// The cart and checkout pages take their pictures from WooCommerce's
+		// cart, which reads the media library and never calls the filter above.
+		if ( ! has_filter( 'woocommerce_store_api_cart_item_images', array( __CLASS__, 'filter_cart_item_images' ) ) ) {
+			add_filter( 'woocommerce_store_api_cart_item_images', array( __CLASS__, 'filter_cart_item_images' ), 10, 2 );
+		}
+	}
+
+	/**
+	 * Replace a cart item's pictures with its ePim ones.
+	 *
+	 * @param array $images    Image objects WooCommerce found in the media library.
+	 * @param array $cart_item Cart item.
+	 * @return array
+	 */
+	public static function filter_cart_item_images( $images, $cart_item ) {
+		$product_id = is_array( $cart_item ) && isset( $cart_item['product_id'] ) ? absint( $cart_item['product_id'] ) : 0;
+
+		if ( ! $product_id || ( ! self::$all && ! EPI_Images_Provider::uses_epim( $product_id ) ) ) {
+			return $images;
+		}
+
+		$ids     = array( get_post_meta( $product_id, '_thumbnail_id', true ) );
+		$gallery = (string) get_post_meta( $product_id, '_product_image_gallery', true );
+
+		if ( '' !== $gallery ) {
+			$ids = array_merge( $ids, explode( ',', $gallery ) );
+		}
+
+		$title = get_the_title( $product_id );
+		$epim  = array();
+
+		foreach ( array_unique( array_filter( array_map( 'absint', $ids ) ) ) as $id ) {
+			$url = EPI_Images_Provider::build_image_url( $id );
+
+			if ( '' === $url ) {
+				continue;
+			}
+
+			// The shape WooCommerce's cart expects of an image.
+			$epim[] = (object) array(
+				'id'        => $id,
+				'src'       => $url,
+				'thumbnail' => $url,
+				'srcset'    => '',
+				'sizes'     => '',
+				'name'      => $title,
+				'alt'       => $title,
+			);
+		}
+
+		return $epim ? $epim : $images;
 	}
 
 	/**

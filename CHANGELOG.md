@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.19.2]
+
+### Fixed
+- Products whose pictures the ePim pull has set now show their picture on the
+  cart and checkout pages too. Before, those pages showed no picture for them.
+
 ## [1.19.1]
 
 ### Fixed
