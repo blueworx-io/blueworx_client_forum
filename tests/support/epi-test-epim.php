@@ -658,6 +658,52 @@ add_action(
 			)
 		);
 
+		// The pictures the cart and checkout pages would show for a SKU. Those
+		// pages ask WooCommerce's cart for a list of pictures and let plugins
+		// change it; the harness has no WooCommerce, so this asks the same question.
+		register_rest_route(
+			'epi-test/v1',
+			'/pull/cart-images/(?P<sku>[^/]+)',
+			array(
+				'methods'             => 'GET',
+				'permission_callback' => $admin_only,
+				'callback'            => static function ( WP_REST_Request $request ) {
+					$ids = get_posts(
+						array(
+							'post_type'      => 'product',
+							'post_status'    => 'any',
+							'posts_per_page' => 1,
+							'fields'         => 'ids',
+							'meta_key'       => '_sku',
+							'meta_value'     => (string) $request['sku'],
+						)
+					);
+
+					require_once EPI_PLUGIN_DIR . 'includes/class-epi-images-provider.php';
+					require_once EPI_PLUGIN_DIR . 'includes/class-epi-featured-image.php';
+					EPI_Featured_Image::init_marked();
+
+					$images = apply_filters(
+						'woocommerce_store_api_cart_item_images',
+						array(),
+						array( 'product_id' => $ids ? (int) $ids[0] : 0 ),
+						'test-key'
+					);
+
+					return array_map(
+						static function ( $image ) {
+							return array(
+								'id'        => (int) $image->id,
+								'src'       => (string) $image->src,
+								'thumbnail' => (string) $image->thumbnail,
+							);
+						},
+						array_values( (array) $images )
+					);
+				},
+			)
+		);
+
 		// What the site holds for a SKU. `count` says how many products carry it.
 		register_rest_route(
 			'epi-test/v1',
