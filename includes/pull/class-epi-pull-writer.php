@@ -25,6 +25,13 @@ final class EPI_Pull_Writer {
 	const META_SYNCED    = '_epim_synced_at';
 
 	/**
+	 * Marks a product whose pictures the pull has set, so its picture numbers
+	 * are read as ePim's and not as media library items. The same key is read
+	 * by EPI_Images_Provider::uses_epim().
+	 */
+	const META_PICTURES = '_epim_pictures';
+
+	/**
 	 * The details the shop filter reads, as attribute slug => name. They are
 	 * saved as shared attributes (taxonomy "pa_<slug>") rather than text, and
 	 * the filter looks them up by these slugs.
@@ -75,6 +82,7 @@ final class EPI_Pull_Writer {
 		if ( $id && empty( $changes ) ) {
 			if ( ! $dry_run ) {
 				self::stamp( $id, $product );
+				self::mark_pictures( $id, $wanted );
 			}
 
 			return self::result( 'unchanged', $id, array(), '' );
@@ -93,7 +101,25 @@ final class EPI_Pull_Writer {
 			return self::result( 'error', (int) $id, $changes, $saved->get_error_message() );
 		}
 
+		self::mark_pictures( (int) $saved, $wanted );
+
 		return self::result( $action, (int) $saved, $changes, '' );
+	}
+
+	/**
+	 * Mark a product as holding ePim picture numbers, once the pull has set them.
+	 *
+	 * The shop moves over to ePim pictures a category at a time, so the gallery
+	 * and the shop cards cannot use one site-wide answer: they ask per product.
+	 *
+	 * @param int   $id     Product ID.
+	 * @param array $wanted The fields the pull set.
+	 * @return void
+	 */
+	private static function mark_pictures( $id, array $wanted ) {
+		if ( $id && array_key_exists( 'image', $wanted ) ) {
+			update_post_meta( $id, self::META_PICTURES, '1' );
+		}
 	}
 
 	/**

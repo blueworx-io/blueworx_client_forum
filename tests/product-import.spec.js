@@ -359,6 +359,21 @@ test('pictures are left alone until the switch is on', async ({ page }) => {
   expect(await api(page, 'GET', '/product/TEST-1001')).toMatchObject({ thumbnail: '11', gallery: '12,13' });
 });
 
+// The mark is what tells the gallery and the shop cards to read a product's
+// picture numbers as ePim's, product by product.
+test('a product is marked as using ePim pictures only once the pull sets them', async ({ page }) => {
+  await api(page, 'POST', '/product', { sku: 'TEST-1001', title: 'Pushed product', thumbnail: '900', gallery: '901,902' });
+  await applyRaw(page, RAW_A, false);
+  expect((await api(page, 'GET', '/product/TEST-1001')).epim_pictures).toBe('');
+
+  await applyRaw(page, RAW_A, true);
+  expect(await api(page, 'GET', '/product/TEST-1001')).toMatchObject({
+    thumbnail: '11',
+    gallery: '12,13',
+    epim_pictures: '1',
+  });
+});
+
 test('a record with no pictures leaves the product pictures alone', async ({ page }) => {
   await applyRaw(page, RAW_A, true);
   expect(await api(page, 'GET', '/product/TEST-1001')).toMatchObject({ thumbnail: '11', gallery: '12,13' });

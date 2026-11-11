@@ -22,12 +22,34 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class EPI_Featured_Image {
 
 	/**
-	 * Register hooks.
+	 * Whether every product's image is swapped (the feature is switched on),
+	 * or only those the ePim pull has given ePim pictures.
+	 *
+	 * @var bool
+	 */
+	private static $all = false;
+
+	/**
+	 * Register hooks: the feature is on, so every product is swapped.
 	 *
 	 * @return void
 	 */
 	public static function init() {
-		add_filter( 'woocommerce_product_get_image', array( __CLASS__, 'filter_product_image' ), 10, 4 );
+		self::$all = true;
+		self::init_marked();
+	}
+
+	/**
+	 * Register hooks for the products the ePim pull has switched. Runs
+	 * whether or not the feature is on: such a product holds ePim picture
+	 * numbers, which WooCommerce would otherwise look up in the media library.
+	 *
+	 * @return void
+	 */
+	public static function init_marked() {
+		if ( ! has_filter( 'woocommerce_product_get_image', array( __CLASS__, 'filter_product_image' ) ) ) {
+			add_filter( 'woocommerce_product_get_image', array( __CLASS__, 'filter_product_image' ), 10, 4 );
+		}
 	}
 
 	/**
@@ -41,6 +63,10 @@ final class EPI_Featured_Image {
 	 */
 	public static function filter_product_image( $html, $product, $size, $attr ) {
 		if ( ! $product instanceof WC_Product ) {
+			return $html;
+		}
+
+		if ( ! self::$all && ! EPI_Images_Provider::uses_epim( $product->get_id() ) ) {
 			return $html;
 		}
 

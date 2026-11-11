@@ -12,17 +12,21 @@
 add_action(
 	'init',
 	static function () {
-		register_post_meta(
-			'page',
-			'_product_image_gallery',
-			array(
-				'type'          => 'string',
-				'single'        => true,
-				'show_in_rest'  => true,
-				'auth_callback' => static function () {
-					return current_user_can( 'edit_pages' );
-				},
-			)
-		);
+		// `_epim_pictures` is the mark the ePim pull leaves on a product it has
+		// given ePim pictures; a spec sets it the same way.
+		foreach ( array( '_product_image_gallery', '_epim_pictures' ) as $key ) {
+			register_post_meta(
+				'page',
+				$key,
+				array(
+					'type'          => 'string',
+					'single'        => true,
+					'show_in_rest'  => true,
+					'auth_callback' => static function () {
+						return current_user_can( 'edit_pages' );
+					},
+				)
+			);
+		}
 	}
 );

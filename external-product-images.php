@@ -3,7 +3,7 @@
  * Plugin Name:       BlueWorx Lab | Forum Lighting
  * Plugin URI:        https://blueworx.io/
  * Description:        Site functionality plugin for Forum Lighting. A control centre under Settings > BlueWorx Lab switches features on or off, including the WooCommerce product gallery, metadata tools, pricing rules and more.
- * Version:           1.19.0
+ * Version:           1.19.1
  * Author:            BlueWorx
  * Author URI:        https://blueworx.io/
  * Text Domain:       blueworx_client_forum
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Core plugin constants.
  */
-define( 'EPI_VERSION', '1.19.0' );
+define( 'EPI_VERSION', '1.19.1' );
 define( 'EPI_PLUGIN_FILE', __FILE__ );
 define( 'EPI_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'EPI_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -170,6 +170,9 @@ final class EPI_Plugin {
 			require_once EPI_PLUGIN_DIR . 'includes/class-epi-featured-image.php';
 			require_once EPI_PLUGIN_DIR . 'includes/class-epi-product-change-log.php';
 			require_once EPI_PLUGIN_DIR . 'includes/class-epi-product-meta.php';
+			// Products the ePim pull has switched show their ePim picture on
+			// shop cards and in the cart even with the featured image feature off.
+			EPI_Featured_Image::init_marked();
 			EPI_Product_Change_Log::maybe_upgrade();
 			EPI_Product_Change_Log::register_always();
 		} else {

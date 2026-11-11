@@ -42,6 +42,12 @@ class EPI_Images_Provider {
 		$product_id = absint( $product_id );
 		$urls       = array();
 
+		// A product the pull has switched holds ePim picture numbers, whatever
+		// the gallery is set to.
+		if ( self::uses_epim( $product_id ) ) {
+			$source = 'epim';
+		}
+
 		if ( $product_id ) {
 			$ids = array();
 
@@ -79,6 +85,19 @@ class EPI_Images_Provider {
 		 * @param string   $source     'epim' or 'woocommerce'.
 		 */
 		return apply_filters( 'epi_product_images', $urls, $product_id, $source );
+	}
+
+	/**
+	 * Whether the ePim pull has set this product's pictures, so its picture
+	 * numbers are ePim's. The pull leaves the mark (EPI_Pull_Writer::META_PICTURES).
+	 *
+	 * @param int $product_id Product ID.
+	 * @return bool
+	 */
+	public static function uses_epim( $product_id ) {
+		$product_id = absint( $product_id );
+
+		return $product_id && '1' === (string) get_post_meta( $product_id, '_epim_pictures', true );
 	}
 
 	/**
