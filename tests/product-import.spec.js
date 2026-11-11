@@ -374,6 +374,21 @@ test('a product is marked as using ePim pictures only once the pull sets them', 
   });
 });
 
+// The cart and checkout pages take their pictures from WooCommerce's cart, not
+// from the product image the shop cards use, so they need their own answer.
+test('the cart shows ePim pictures for a product the pull has switched, and leaves others alone', async ({ page }) => {
+  await api(page, 'POST', '/product', { sku: 'TEST-1001', title: 'Pushed product', thumbnail: '900', gallery: '901,902' });
+  expect(await api(page, 'GET', '/cart-images/TEST-1001')).toEqual([]);
+
+  await applyRaw(page, RAW_A, true);
+  const epim = (id) => `https://epim.online/webproduct/assetimage/${id}.jpg`;
+  expect(await api(page, 'GET', '/cart-images/TEST-1001')).toEqual([
+    { id: 11, src: epim(11), thumbnail: epim(11) },
+    { id: 12, src: epim(12), thumbnail: epim(12) },
+    { id: 13, src: epim(13), thumbnail: epim(13) },
+  ]);
+});
+
 test('a record with no pictures leaves the product pictures alone', async ({ page }) => {
   await applyRaw(page, RAW_A, true);
   expect(await api(page, 'GET', '/product/TEST-1001')).toMatchObject({ thumbnail: '11', gallery: '12,13' });

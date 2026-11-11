@@ -4,7 +4,7 @@ Tags: woocommerce, elementor, product gallery, product images, site functionalit
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.19.1
+Stable tag: 1.19.2
 License: GPLv2 or later
 
 Site functionality plugin for Forum Lighting: one control centre to switch the WooCommerce gallery, metadata, pricing and more on or off.
@@ -41,6 +41,9 @@ be placed anywhere with [forum_product_gallery].
    category. Save.
 
 == Changelog ==
+
+= 1.19.2 =
+* Products whose pictures the ePim pull has set show their picture on the cart and checkout pages too.
 
 = 1.19.1 =
 * Products whose pictures the ePim pull has set show them on the product page, shop cards and cart, while other products keep their media library pictures. The shop can move over one category at a time.
