@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.19.1]
+
+### Fixed
+- Products whose pictures the ePim pull has set now show those pictures on
+  the product page, shop cards, cart and related products, while every other
+  product keeps its media library pictures. The shop can move over to ePim
+  pictures one category at a time instead of all at once.
+
 ## [1.19.0]
 
 ### Added
