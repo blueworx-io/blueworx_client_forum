@@ -708,7 +708,8 @@ add_action(
 						'filters'         => (object) epi_test_filter_values( $id ),
 						'thumbnail'       => (string) get_post_meta( $id, '_thumbnail_id', true ),
 						'gallery'         => (string) get_post_meta( $id, '_product_image_gallery', true ),
-						'synced'          => (string) get_post_meta( $id, '_epim_synced_at', true ),
+						'epim_pictures'   => (string) get_post_meta( $id, '_epim_pictures', true ),
+						'synced'         => (string) get_post_meta( $id, '_epim_synced_at', true ),
 					);
 				},
 			)

@@ -46,7 +46,7 @@ async function upload(page, nonce, name) {
 }
 
 // A page standing in for a product: featured image plus two gallery images.
-async function productPage(page, content) {
+async function productPage(page, content, meta = {}) {
   await loginAsAdmin(page);
   const nonce = await restNonce(page);
   const stamp = Date.now();
@@ -61,7 +61,7 @@ async function productPage(page, content) {
       content,
       status: 'publish',
       featured_media: featured.id,
-      meta: { _product_image_gallery: `${first.id},${second.id}` },
+      meta: { _product_image_gallery: `${first.id},${second.id}`, ...meta },
     },
   });
   expect(created.ok(), `page: ${created.status()}`).toBeTruthy();
@@ -122,6 +122,28 @@ test('ePim source builds the same order from the ids as ePim asset URLs', async 
   const { id, featured, first, second } = await productPage(
     page,
     '[forum_product_gallery source="epim"]'
+  );
+  await page.goto(`/?page_id=${id}`);
+
+  const thumbs = page.locator('.epi-gallery .epi-gallery__thumb');
+  const epim = (media) => `https://epim.online/webproduct/assetimage/${media.id}.jpg`;
+
+  await expect(thumbs).toHaveCount(3);
+  await expect(thumbs.nth(0)).toHaveAttribute('data-epi-full', epim(featured));
+  await expect(thumbs.nth(1)).toHaveAttribute('data-epi-full', epim(first));
+  await expect(thumbs.nth(2)).toHaveAttribute('data-epi-full', epim(second));
+});
+
+// While the shop moves over to ePim pictures a category at a time, the gallery
+// stays set to the media library. A product the pull has already switched holds
+// ePim picture numbers, so it must be read as ePim's whatever the gallery says.
+test('a product marked as using ePim pictures shows them even when the gallery is set to the media library', async ({
+  page,
+}) => {
+  const { id, featured, first, second } = await productPage(
+    page,
+    '[forum_product_gallery source="woocommerce"]',
+    { _epim_pictures: '1' }
   );
   await page.goto(`/?page_id=${id}`);
 
