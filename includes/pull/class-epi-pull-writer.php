@@ -651,11 +651,18 @@ final class EPI_Pull_Writer {
 	 * @return int|WP_Error Product ID.
 	 */
 	private static function write( $id, array $wanted, $product ) {
-		if ( class_exists( 'WC_Product_Simple' ) && function_exists( 'wc_get_product' ) ) {
-			return self::write_woocommerce( $id, $wanted, $product );
-		}
+		// A switched product's pictures are locked against everything but the pull.
+		EPI_Images_Provider::pull_writing( true );
 
-		return self::write_posts( $id, $wanted, $product );
+		try {
+			if ( class_exists( 'WC_Product_Simple' ) && function_exists( 'wc_get_product' ) ) {
+				return self::write_woocommerce( $id, $wanted, $product );
+			}
+
+			return self::write_posts( $id, $wanted, $product );
+		} finally {
+			EPI_Images_Provider::pull_writing( false );
+		}
 	}
 
 	/**

@@ -3,7 +3,7 @@
  * Plugin Name:       BlueWorx Lab | Forum Lighting
  * Plugin URI:        https://blueworx.io/
  * Description:        Site functionality plugin for Forum Lighting. A control centre under Settings > BlueWorx Lab switches features on or off, including the WooCommerce product gallery, metadata tools, pricing rules and more.
- * Version:           1.19.2
+ * Version:           1.19.3
  * Author:            BlueWorx
  * Author URI:        https://blueworx.io/
  * Text Domain:       blueworx_client_forum
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Core plugin constants.
  */
-define( 'EPI_VERSION', '1.19.2' );
+define( 'EPI_VERSION', '1.19.3' );
 define( 'EPI_PLUGIN_FILE', __FILE__ );
 define( 'EPI_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'EPI_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -160,6 +160,12 @@ final class EPI_Plugin {
 		// switching it off can remove it from visitors' browsers.
 		require_once EPI_PLUGIN_DIR . 'includes/class-epi-image-cache.php';
 		EPI_Image_Cache::register_worker_endpoint();
+
+		// Always on, whatever features are switched off: a product the ePim
+		// pull has given ePim pictures keeps them, or opening it in the admin
+		// would let WooCommerce wipe its gallery.
+		require_once EPI_PLUGIN_DIR . 'includes/class-epi-images-provider.php';
+		EPI_Images_Provider::protect_epim_pictures();
 
 		// Most features need WooCommerce. Load the existing product classes (so
 		// their static helpers stay available regardless of which features are

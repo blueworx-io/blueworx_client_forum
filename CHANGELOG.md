@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.19.3]
+
+### Fixed
+- Opening or saving a product in the admin no longer removes the pictures the
+  ePim pull gave it. Once the pull has set a product's pictures, only the pull
+  changes them.
+
 ## [1.19.2]
 
 ### Fixed
