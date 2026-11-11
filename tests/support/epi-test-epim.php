@@ -658,6 +658,37 @@ add_action(
 			)
 		);
 
+		// Clear a product's pictures the way WooCommerce's product edit screen
+		// does: it drops any gallery picture it cannot find in the media
+		// library, with a plain meta update, as soon as the screen is opened.
+		register_rest_route(
+			'epi-test/v1',
+			'/pull/strip-pictures/(?P<sku>[^/]+)',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => $admin_only,
+				'callback'            => static function ( WP_REST_Request $request ) {
+					$ids = get_posts(
+						array(
+							'post_type'      => 'product',
+							'post_status'    => 'any',
+							'posts_per_page' => 1,
+							'fields'         => 'ids',
+							'meta_key'       => '_sku',
+							'meta_value'     => (string) $request['sku'],
+						)
+					);
+
+					if ( $ids ) {
+						update_post_meta( (int) $ids[0], '_product_image_gallery', '' );
+						delete_post_meta( (int) $ids[0], '_thumbnail_id' );
+					}
+
+					return array( 'ok' => (bool) $ids );
+				},
+			)
+		);
+
 		// The pictures the cart and checkout pages would show for a SKU. Those
 		// pages ask WooCommerce's cart for a list of pictures and let plugins
 		// change it; the harness has no WooCommerce, so this asks the same question.

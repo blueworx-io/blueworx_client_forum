@@ -101,6 +101,59 @@ class EPI_Images_Provider {
 	}
 
 	/**
+	 * True while the ePim pull is saving a product.
+	 *
+	 * @var bool
+	 */
+	private static $pull_writing = false;
+
+	/**
+	 * Keep a switched product's pictures as the pull set them.
+	 *
+	 * WooCommerce's product edit screen drops any gallery picture it cannot
+	 * find in the media library, with a plain meta update, as soon as the
+	 * screen is opened. ePim picture numbers are not media library items, so
+	 * without this, opening a switched product in the admin wipes its gallery.
+	 *
+	 * @return void
+	 */
+	public static function protect_epim_pictures() {
+		add_filter( 'update_post_metadata', array( __CLASS__, 'guard_pictures' ), 10, 3 );
+		add_filter( 'delete_post_metadata', array( __CLASS__, 'guard_pictures' ), 10, 3 );
+	}
+
+	/**
+	 * The pull says when it is saving, so its own writes go through.
+	 *
+	 * @param bool $on Whether the pull is saving a product.
+	 * @return void
+	 */
+	public static function pull_writing( $on ) {
+		self::$pull_writing = (bool) $on;
+	}
+
+	/**
+	 * Refuse a change to a switched product's pictures unless the pull is making it.
+	 *
+	 * @param null|bool $check     Null to let the change through.
+	 * @param int       $object_id Post ID.
+	 * @param string    $meta_key  Meta key.
+	 * @return null|bool
+	 */
+	public static function guard_pictures( $check, $object_id, $meta_key ) {
+		if ( self::$pull_writing || ! in_array( $meta_key, array( '_thumbnail_id', '_product_image_gallery' ), true ) ) {
+			return $check;
+		}
+
+		if ( 'product' !== get_post_type( $object_id ) || ! self::uses_epim( $object_id ) ) {
+			return $check;
+		}
+
+		// Reported as done, and left exactly as it was.
+		return true;
+	}
+
+	/**
 	 * Build the external ePim asset URL for a single image ID.
 	 *
 	 * @param int|string $id ePim asset ID (stored in product meta).
