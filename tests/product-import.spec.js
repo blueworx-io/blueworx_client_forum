@@ -389,6 +389,25 @@ test('the cart shows ePim pictures for a product the pull has switched, and leav
   ]);
 });
 
+// WooCommerce's product edit screen removes any gallery picture it cannot find
+// in the media library, just by being opened. ePim picture numbers are not
+// media library items, so a switched product must be shielded from that.
+test('a switched product keeps its ePim pictures when the admin tries to clear them, and the pull can still change them', async ({ page }) => {
+  await applyRaw(page, RAW_A, true);
+  await api(page, 'POST', '/strip-pictures/TEST-1001');
+  expect(await api(page, 'GET', '/product/TEST-1001')).toMatchObject({ thumbnail: '11', gallery: '12,13' });
+
+  const changed = { ...RAW_A, PictureIds: [21, 22], PictureIdsGrouped: { Image: [21, 22] } };
+  expect((await applyRaw(page, changed, true)).action).toBe('updated');
+  expect(await api(page, 'GET', '/product/TEST-1001')).toMatchObject({ thumbnail: '21', gallery: '22' });
+});
+
+test('a product the pull has not switched can still have its pictures cleared', async ({ page }) => {
+  await api(page, 'POST', '/product', { sku: 'TEST-1001', title: 'Pushed product', thumbnail: '900', gallery: '901,902' });
+  await api(page, 'POST', '/strip-pictures/TEST-1001');
+  expect(await api(page, 'GET', '/product/TEST-1001')).toMatchObject({ thumbnail: '', gallery: '' });
+});
+
 test('a record with no pictures leaves the product pictures alone', async ({ page }) => {
   await applyRaw(page, RAW_A, true);
   expect(await api(page, 'GET', '/product/TEST-1001')).toMatchObject({ thumbnail: '11', gallery: '12,13' });
