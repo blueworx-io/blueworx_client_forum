@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.20.0]
+
+### Changed
+- Product pages now show sharper ePim pictures, up to 1200 pixels, on the main
+  picture and when enlarged. Shop listings, the cart and checkout keep the
+  smaller pictures so they stay fast. A picture whose original is smaller than
+  that shows at its own size.
+
 ## [1.19.3]
 
 ### Fixed
