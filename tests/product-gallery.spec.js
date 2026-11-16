@@ -160,6 +160,55 @@ test('ePim source shows the large picture on the main image and the small one in
   await expectEpimGallery(page, media);
 });
 
+// If ePim ever refuses a sized request, the shopper should still get the
+// standard picture, not the placeholder.
+//
+// The browser picture store's worker can take over the page while it loads, and
+// requests it makes skip page.route and reach the real ePim, which has none of
+// these test pictures. These two tests are about the gallery, so it stays out.
+test.describe('when ePim refuses pictures', () => {
+  test.use({ serviceWorkers: 'block' });
+
+  test('when ePim refuses the large picture, the gallery falls back to the standard one', async ({
+    page,
+  }) => {
+    const { id, featured } = await productPage(page, '[forum_product_gallery source="epim"]');
+    await page.route('https://epim.online/**', (route) =>
+      new URL(route.request().url()).searchParams.has('w')
+        ? route.fulfill({
+            status: 500,
+            contentType: 'text/html',
+            body: 'Server Error',
+          })
+        : route.fulfill({ status: 200, contentType: 'image/png', body: PIXEL })
+    );
+    await page.goto(`/?page_id=${id}`);
+
+    const main = page.locator('.epi-gallery__main-image');
+    await expect(main).toHaveAttribute('src', epim(featured));
+    await expect
+      .poll(() => main.evaluate((img) => img.complete && img.naturalWidth))
+      .toBeGreaterThan(0);
+
+    await page.locator('.epi-gallery .epi-gallery__enlarge').click();
+    await expect(page.locator('.epi-lightbox__image')).toHaveAttribute('src', epim(featured));
+  });
+
+  test('when ePim refuses every picture, the gallery shows the placeholder', async ({ page }) => {
+    const { id } = await productPage(page, '[forum_product_gallery source="epim"]');
+    await page.route('https://epim.online/**', (route) =>
+      route.fulfill({
+        status: 500,
+        contentType: 'text/html',
+        body: 'Server Error',
+      })
+    );
+    await page.goto(`/?page_id=${id}`);
+
+    await expect(page.locator('.epi-gallery__main-image')).toHaveAttribute('src', /\.svg$/);
+  });
+});
+
 test('ePim source opens the large picture in the zoom, and the arrows stay large', async ({
   page,
 }) => {

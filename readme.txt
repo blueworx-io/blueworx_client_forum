@@ -43,7 +43,7 @@ be placed anywhere with [forum_product_gallery].
 == Changelog ==
 
 = 1.20.0 =
-* Product pages show sharper ePim pictures, up to 1200 pixels, on the main picture and when enlarged. Listings, cart and checkout keep the smaller pictures.
+* Product pages show sharper ePim pictures, up to 1200 pixels, on the main picture and when enlarged. Listings, cart and checkout keep the smaller pictures. If ePim cannot send the larger picture, the standard one shows instead.
 
 = 1.19.3 =
 * Opening or saving a product in the admin no longer removes the pictures the ePim pull gave it.
