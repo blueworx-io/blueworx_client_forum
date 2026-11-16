@@ -91,7 +91,10 @@ final class EPI_Gallery {
 		$thumbs   = 'left' === $settings['thumb_position'] ? 'left' : 'bottom';
 
 		// Featured first, then the gallery — and the featured one is what opens.
-		$images = EPI_Images_Provider::get_images( $product_id, $source );
+		// The main picture and the zoom take ePim's larger picture; the
+		// thumbnail strip keeps the standard one. Same order, same count.
+		$images = EPI_Images_Provider::get_images( $product_id, $source, 'large' );
+		$smalls = EPI_Images_Provider::get_images( $product_id, $source );
 
 		if ( empty( $images ) ) {
 			return '';
@@ -160,7 +163,7 @@ final class EPI_Gallery {
 							>
 								<img
 									class="epi-gallery__thumb-image"
-									src="<?php echo esc_url( $image_url ); ?>"
+									src="<?php echo esc_url( isset( $smalls[ $index ] ) ? $smalls[ $index ] : $image_url ); ?>"
 									alt="
 									<?php
 										/* translators: 1: product name, 2: image number. */

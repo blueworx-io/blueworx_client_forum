@@ -30,6 +30,11 @@ define( 'EPI_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 if ( ! defined( 'EPI_EPIM_IMAGE_BASE' ) ) {
 	define( 'EPI_EPIM_IMAGE_BASE', 'https://epim.online/webproduct/assetimage/' );
 }
+// The size, in pixels, of the larger ePim picture shown on the product page and zoom.
+// ePim scales the original down to fit, never up.
+if ( ! defined( 'EPI_EPIM_LARGE_PX' ) ) {
+	define( 'EPI_EPIM_LARGE_PX', 1200 );
+}
 
 /*
  * The shared admin design system, then the page editor library that enqueues
