@@ -31,7 +31,31 @@ final class EPI_One_Time_WC_Product_Image_Purge {
 	private const PAGE_SLUG    = 'one-time-wc-product-image-purge';
 	private const NONCE_ACTION = 'one_time_wc_product_image_purge';
 	private const PLAN_OPTION  = 'one_time_wc_product_image_purge_plan';
+	private const SCAN_OPTION  = 'one_time_wc_product_image_purge_scan';
 	private const BATCH_SIZE   = 250;
+	private const SCAN_ROWS    = 250;
+
+	/**
+	 * Where else an image might be used, checked in this order. Each is
+	 * worked through a page of rows at a time, across as many steps as it takes.
+	 */
+	private const STAGES = array(
+		'content' => 'page and post content',
+		'meta'    => 'page and product details',
+		'options' => 'site settings',
+	);
+
+	/**
+	 * Products the ePim pull has switched hold ePim picture numbers, not media
+	 * items, even where a number matches one. SQL to leave them out, where p is
+	 * the product or variation.
+	 */
+	private const NOT_SWITCHED_SQL = "NOT EXISTS (
+		SELECT 1 FROM %s e
+		WHERE e.post_id IN (p.ID, p.post_parent)
+		AND e.meta_key = '_epim_pictures'
+		AND e.meta_value = '1'
+	)";
 
 	public function __construct() {
 		add_action( 'admin_menu', array( $this, 'add_admin_page' ) );
@@ -78,12 +102,14 @@ final class EPI_One_Time_WC_Product_Image_Purge {
 			$mode = sanitize_text_field( wp_unslash( $_POST['wc_product_image_purge_mode'] ) );
 
 			if ( $mode === 'dry_run' ) {
-				$result = $this->scan();
-				$this->save_plan( $result );
+				$result = $this->start_scan();
+			} elseif ( $mode === 'scan_next' ) {
+				$result = $this->continue_scan();
 			} elseif ( $mode === 'delete' ) {
 				$result = $this->delete_next_batch();
 			} elseif ( $mode === 'clear' ) {
 				delete_option( self::PLAN_OPTION );
+				delete_option( self::SCAN_OPTION );
 				$result = array( 'mode' => 'clear' );
 			}
 		}
@@ -91,6 +117,10 @@ final class EPI_One_Time_WC_Product_Image_Purge {
 		$plan = get_option( self::PLAN_OPTION );
 
 		$saved_count = is_array( $plan ) && ! empty( $plan['remaining_ids'] ) ? count( $plan['remaining_ids'] ) : 0;
+
+		if ( ! $result && is_array( get_option( self::SCAN_OPTION ) ) ) {
+			$result = array( 'mode' => 'scan_stopped' );
+		}
 		?>
 		<div class="wrap bw-wrap">
 			<div class="bw-admin bw-page">
@@ -179,26 +209,200 @@ final class EPI_One_Time_WC_Product_Image_Purge {
 		<?php
 	}
 
-	private function scan(): array {
-		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- set_time_limit() warns on hosts that disable it; the purge must carry on either way.
-		@set_time_limit( 900 );
+	/**
+	 * First step of a scan: find the product images, and protect those other
+	 * records point at by number. Searching the site for the rest is left to
+	 * later steps.
+	 *
+	 * The whole scan once ran in one request, which a host's gateway cut off
+	 * part way on a large shop, so it now works in short steps.
+	 */
+	private function start_scan(): array {
+		delete_option( self::SCAN_OPTION );
 
-		$candidate_map = $this->collect_product_image_ids();
-		$candidate_ids = array_keys( $candidate_map );
+		$candidate_ids = array_keys( $this->collect_product_image_ids() );
 		sort( $candidate_ids );
 
-		$lookup    = $this->build_candidate_lookup( $candidate_ids );
-		$protected = $this->collect_protected_ids( $candidate_ids, $lookup );
-		$to_delete = array_values( array_diff( $candidate_ids, array_keys( $protected ) ) );
-		sort( $to_delete );
+		$protected = array();
+
+		if ( $candidate_ids ) {
+			$this->protect_non_product_featured_images( $candidate_ids, $protected );
+			$this->protect_taxonomy_images( $candidate_ids, $protected );
+			$this->protect_attachments_owned_by_non_products( $candidate_ids, $protected );
+		}
+
+		$state = array(
+			'stage'         => $candidate_ids ? (string) key( self::STAGES ) : 'done',
+			'last_id'       => 0,
+			'candidate_ids' => $candidate_ids,
+			'protected'     => $protected,
+		);
+
+		update_option( self::SCAN_OPTION, $state, false );
 
 		return array(
+			'mode'  => 'scanning',
+			'stage' => $state['stage'],
+			'count' => count( $candidate_ids ),
+		);
+	}
+
+	/**
+	 * One step of a scan: search the site a page of rows at a time until the
+	 * step's time is up, then save where it got to.
+	 */
+	private function continue_scan(): array {
+		$state = get_option( self::SCAN_OPTION );
+
+		if ( ! is_array( $state ) || ! isset( $state['stage'], $state['candidate_ids'] ) ) {
+			return array( 'mode' => 'scan_stopped' );
+		}
+
+		$lookup   = $state['candidate_ids'] ? $this->build_candidate_lookup( $state['candidate_ids'] ) : array();
+		$deadline = microtime( true ) + $this->step_seconds();
+
+		while ( 'done' !== $state['stage'] ) {
+			$this->scan_page( $state, $lookup );
+
+			if ( microtime( true ) >= $deadline ) {
+				break;
+			}
+		}
+
+		if ( 'done' !== $state['stage'] ) {
+			update_option( self::SCAN_OPTION, $state, false );
+
+			return array(
+				'mode'  => 'scanning',
+				'stage' => $state['stage'],
+				'count' => count( $state['candidate_ids'] ),
+			);
+		}
+
+		$candidate_ids = $state['candidate_ids'];
+		$protected     = $state['protected'];
+		$to_delete     = array_values( array_diff( $candidate_ids, array_keys( $protected ) ) );
+		sort( $to_delete );
+
+		$result = array(
 			'mode'          => 'dry_run',
 			'candidate_ids' => $candidate_ids,
 			'protected'     => $protected,
 			'to_delete'     => $to_delete,
-			'candidate_map' => $candidate_map,
 		);
+
+		$this->save_plan( $result );
+		delete_option( self::SCAN_OPTION );
+
+		return $result;
+	}
+
+	/**
+	 * How long one step of a scan or deletion works before handing back.
+	 */
+	private function step_seconds(): float {
+		/**
+		 * Seconds one step works for. Kept well inside a host's gateway time limit.
+		 *
+		 * @param float $seconds Seconds.
+		 */
+		return max( 0.0, (float) apply_filters( 'epi_image_purge_step_seconds', 8 ) );
+	}
+
+	/**
+	 * Search one page of rows of the current stage, moving to the next stage
+	 * when this one has no rows left.
+	 */
+	private function scan_page( array &$state, array $lookup ): void {
+		global $wpdb;
+
+		$last_id = absint( $state['last_id'] );
+		$rows    = array();
+
+		if ( 'content' === $state['stage'] ) {
+			$rows = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT ID, post_type, post_content, post_excerpt
+                     FROM {$wpdb->posts}
+                     WHERE ID > %d
+                     AND post_type <> 'attachment'
+                     AND (post_content <> '' OR post_excerpt <> '')
+                     ORDER BY ID ASC
+                     LIMIT %d",
+					$last_id,
+					self::SCAN_ROWS
+				)
+			);
+
+			foreach ( $rows as $row ) {
+				$last_id = absint( $row->ID );
+				$value   = (string) $row->post_content . "\n" . (string) $row->post_excerpt;
+				$this->protect_images_found_in_value( $value, $lookup, $state['protected'], 'used in content on ' . $row->post_type . ' #' . absint( $row->ID ) );
+			}
+		} elseif ( 'meta' === $state['stage'] ) {
+			$rows = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT pm.meta_id, pm.meta_key, pm.meta_value, p.ID AS post_id, p.post_type
+                     FROM {$wpdb->postmeta} pm
+                     INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
+                     WHERE pm.meta_id > %d
+                     AND p.post_type <> 'attachment'
+                     AND pm.meta_value <> ''
+                     AND pm.meta_key NOT IN ('_thumbnail_id', '_product_image_gallery')
+                     ORDER BY pm.meta_id ASC
+                     LIMIT %d",
+					$last_id,
+					self::SCAN_ROWS
+				)
+			);
+
+			foreach ( $rows as $row ) {
+				$last_id = absint( $row->meta_id );
+				$this->protect_images_found_in_value(
+					(string) $row->meta_value,
+					$lookup,
+					$state['protected'],
+					'used in meta ' . $row->meta_key . ' on ' . $row->post_type . ' #' . absint( $row->post_id )
+				);
+			}
+		} elseif ( 'options' === $state['stage'] ) {
+			$rows = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT option_id, option_name, option_value
+                     FROM {$wpdb->options}
+                     WHERE option_id > %d
+                     AND option_value <> ''
+                     AND option_name NOT LIKE '\_transient\_%'
+                     AND option_name NOT LIKE '\_site\_transient\_%'
+                     AND option_name NOT IN (%s, %s)
+                     ORDER BY option_id ASC
+                     LIMIT %d",
+					$last_id,
+					self::SCAN_OPTION,
+					self::PLAN_OPTION,
+					self::SCAN_ROWS
+				)
+			);
+
+			foreach ( $rows as $row ) {
+				$last_id = absint( $row->option_id );
+				$this->protect_images_found_in_value(
+					(string) $row->option_value,
+					$lookup,
+					$state['protected'],
+					'used in WordPress option ' . $row->option_name
+				);
+			}
+		}
+
+		$state['last_id'] = $last_id;
+
+		if ( ! $rows ) {
+			$stages           = array_keys( self::STAGES );
+			$next             = array_search( $state['stage'], $stages, true );
+			$state['stage']   = ( false !== $next && isset( $stages[ $next + 1 ] ) ) ? $stages[ $next + 1 ] : 'done';
+			$state['last_id'] = 0;
+		}
 	}
 
 	private function save_plan( array $scan ): void {
@@ -223,18 +427,25 @@ final class EPI_One_Time_WC_Product_Image_Purge {
 
 		$plan = get_option( self::PLAN_OPTION );
 
+		// Scanning takes many steps of its own, so it is never started from here.
 		if ( ! is_array( $plan ) || ! isset( $plan['remaining_ids'] ) ) {
-			$scan = $this->scan();
-			$this->save_plan( $scan );
-			$plan = get_option( self::PLAN_OPTION );
+			return array( 'mode' => 'no_plan' );
 		}
 
 		$remaining = array_values( array_map( 'absint', $plan['remaining_ids'] ) );
-		$batch     = array_slice( $remaining, 0, self::BATCH_SIZE );
+		$batch     = array();
 		$deleted   = array();
 		$failed    = array();
+		$deadline  = microtime( true ) + $this->step_seconds();
 
-		foreach ( $batch as $attachment_id ) {
+		foreach ( array_slice( $remaining, 0, self::BATCH_SIZE ) as $attachment_id ) {
+			// At least one per step, and no more once the step's time is up.
+			if ( $batch && microtime( true ) >= $deadline ) {
+				break;
+			}
+
+			$batch[] = $attachment_id;
+
 			if ( ! $attachment_id ) {
 				continue;
 			}
@@ -274,14 +485,16 @@ final class EPI_One_Time_WC_Product_Image_Purge {
 	private function collect_product_image_ids(): array {
 		global $wpdb;
 
-		$images = array();
+		$images       = array();
+		$not_switched = sprintf( self::NOT_SWITCHED_SQL, $wpdb->postmeta );
 
 		$thumbnail_rows = $wpdb->get_results(
 			"SELECT pm.post_id, pm.meta_value, p.post_type
              FROM {$wpdb->postmeta} pm
              INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
              WHERE pm.meta_key = '_thumbnail_id'
-             AND p.post_type IN ('product', 'product_variation')"
+             AND p.post_type IN ('product', 'product_variation')
+             AND $not_switched"
 		);
 
 		foreach ( $thumbnail_rows as $row ) {
@@ -294,7 +507,8 @@ final class EPI_One_Time_WC_Product_Image_Purge {
              FROM {$wpdb->postmeta} pm
              INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
              WHERE pm.meta_key = '_product_image_gallery'
-             AND p.post_type = 'product'"
+             AND p.post_type = 'product'
+             AND $not_switched"
 		);
 
 		foreach ( $gallery_rows as $row ) {
@@ -317,13 +531,16 @@ final class EPI_One_Time_WC_Product_Image_Purge {
 			$this->add_candidate( $images, absint( $row->attachment_id ), 'media attached to product #' . absint( $row->post_id ) );
 		}
 
-		foreach ( array_keys( $images ) as $attachment_id ) {
-			if ( get_post_type( $attachment_id ) !== 'attachment' ) {
-				unset( $images[ $attachment_id ] );
-			}
+		// Keep only numbers that are media items, asked a thousand at a time.
+		$media = array();
+
+		foreach ( array_chunk( array_keys( $images ), 1000 ) as $chunk ) {
+			$ids_sql = implode( ',', array_map( 'absint', $chunk ) );
+			$found   = $wpdb->get_col( "SELECT ID FROM {$wpdb->posts} WHERE post_type = 'attachment' AND ID IN ($ids_sql)" );
+			$media  += array_fill_keys( array_map( 'absint', $found ), true );
 		}
 
-		return $images;
+		return array_intersect_key( $images, $media );
 	}
 
 	private function add_candidate( array &$images, int $attachment_id, string $reason ): void {
@@ -347,6 +564,10 @@ final class EPI_One_Time_WC_Product_Image_Purge {
 			'basenames'            => array(),
 			'normalized_basenames' => array(),
 		);
+
+		foreach ( array_chunk( $candidate_ids, 500 ) as $chunk ) {
+			update_meta_cache( 'post', $chunk );
+		}
 
 		foreach ( $candidate_ids as $attachment_id ) {
 			$lookup['ids'][ $attachment_id ] = true;
@@ -392,23 +613,6 @@ final class EPI_One_Time_WC_Product_Image_Purge {
 		if ( $normalized_basename !== '' ) {
 			$lookup['normalized_basenames'][ $normalized_basename ][ $attachment_id ] = true;
 		}
-	}
-
-	private function collect_protected_ids( array $candidate_ids, array $lookup ): array {
-		if ( ! $candidate_ids ) {
-			return array();
-		}
-
-		$protected = array();
-
-		$this->protect_non_product_featured_images( $candidate_ids, $protected );
-		$this->protect_taxonomy_images( $candidate_ids, $protected );
-		$this->protect_attachments_owned_by_non_products( $candidate_ids, $protected );
-		$this->protect_images_found_in_post_content( $lookup, $protected );
-		$this->protect_images_found_in_post_meta( $lookup, $protected );
-		$this->protect_images_found_in_options( $lookup, $protected );
-
-		return $protected;
 	}
 
 	private function protect_non_product_featured_images( array $candidate_ids, array &$protected ): void {
@@ -467,98 +671,6 @@ final class EPI_One_Time_WC_Product_Image_Purge {
 				$this->protect( $protected, absint( $row->attachment_id ), 'attached to ' . $row->post_type . ' #' . absint( $row->parent_id ) );
 			}
 		}
-	}
-
-	private function protect_images_found_in_post_content( array $lookup, array &$protected ): void {
-		global $wpdb;
-
-		$last_id = 0;
-
-		do {
-			$rows = $wpdb->get_results(
-				$wpdb->prepare(
-					"SELECT ID, post_type, post_content, post_excerpt
-                     FROM {$wpdb->posts}
-                     WHERE ID > %d
-                     AND post_type <> 'attachment'
-                     AND (post_content <> '' OR post_excerpt <> '')
-                     ORDER BY ID ASC
-                     LIMIT 250",
-					$last_id
-				)
-			);
-
-			foreach ( $rows as $row ) {
-				$last_id = absint( $row->ID );
-				$value   = (string) $row->post_content . "\n" . (string) $row->post_excerpt;
-				$this->protect_images_found_in_value( $value, $lookup, $protected, 'used in content on ' . $row->post_type . ' #' . absint( $row->ID ) );
-			}
-		} while ( $rows );
-	}
-
-	private function protect_images_found_in_post_meta( array $lookup, array &$protected ): void {
-		global $wpdb;
-
-		$last_id = 0;
-
-		do {
-			$rows = $wpdb->get_results(
-				$wpdb->prepare(
-					"SELECT pm.meta_id, pm.meta_key, pm.meta_value, p.ID AS post_id, p.post_type
-                     FROM {$wpdb->postmeta} pm
-                     INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
-                     WHERE pm.meta_id > %d
-                     AND p.post_type <> 'attachment'
-                     AND pm.meta_value <> ''
-                     AND pm.meta_key NOT IN ('_thumbnail_id', '_product_image_gallery')
-                     ORDER BY pm.meta_id ASC
-                     LIMIT 250",
-					$last_id
-				)
-			);
-
-			foreach ( $rows as $row ) {
-				$last_id = absint( $row->meta_id );
-				$this->protect_images_found_in_value(
-					(string) $row->meta_value,
-					$lookup,
-					$protected,
-					'used in meta ' . $row->meta_key . ' on ' . $row->post_type . ' #' . absint( $row->post_id )
-				);
-			}
-		} while ( $rows );
-	}
-
-	private function protect_images_found_in_options( array $lookup, array &$protected ): void {
-		global $wpdb;
-
-		$last_id = 0;
-
-		do {
-			$rows = $wpdb->get_results(
-				$wpdb->prepare(
-					"SELECT option_id, option_name, option_value
-                     FROM {$wpdb->options}
-                     WHERE option_id > %d
-                     AND option_value <> ''
-                     AND option_name NOT LIKE '\_transient\_%'
-                     AND option_name NOT LIKE '\_site\_transient\_%'
-                     ORDER BY option_id ASC
-                     LIMIT 250",
-					$last_id
-				)
-			);
-
-			foreach ( $rows as $row ) {
-				$last_id = absint( $row->option_id );
-				$this->protect_images_found_in_value(
-					(string) $row->option_value,
-					$lookup,
-					$protected,
-					'used in WordPress option ' . $row->option_name
-				);
-			}
-		} while ( $rows );
 	}
 
 	private function protect_images_found_in_value( string $value, array $lookup, array &$protected, string $reason ): void {
@@ -664,7 +776,8 @@ final class EPI_One_Time_WC_Product_Image_Purge {
 	private function remove_deleted_product_image_references( array $deleted_ids ): void {
 		global $wpdb;
 
-		$ids_sql = implode( ',', array_map( 'absint', $deleted_ids ) );
+		$ids_sql      = implode( ',', array_map( 'absint', $deleted_ids ) );
+		$not_switched = sprintf( self::NOT_SWITCHED_SQL, $wpdb->postmeta );
 
 		if ( $ids_sql === '' ) {
 			return;
@@ -676,7 +789,8 @@ final class EPI_One_Time_WC_Product_Image_Purge {
              INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
              WHERE pm.meta_key = '_thumbnail_id'
              AND pm.meta_value IN ($ids_sql)
-             AND p.post_type IN ('product', 'product_variation')"
+             AND p.post_type IN ('product', 'product_variation')
+             AND $not_switched"
 		);
 
 		$gallery_rows = $wpdb->get_results(
@@ -684,7 +798,8 @@ final class EPI_One_Time_WC_Product_Image_Purge {
              FROM {$wpdb->postmeta} pm
              INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
              WHERE pm.meta_key = '_product_image_gallery'
-             AND p.post_type = 'product'"
+             AND p.post_type = 'product'
+             AND $not_switched"
 		);
 
 		$deleted_lookup = array_flip( array_map( 'absint', $deleted_ids ) );
@@ -718,6 +833,30 @@ final class EPI_One_Time_WC_Product_Image_Purge {
 			return;
 		}
 
+		if ( $result['mode'] === 'no_plan' ) {
+			$this->render_notice( 'warning', 'triangle-alert', 'Nothing was deleted. Run the dry scan first, then delete.' );
+			return;
+		}
+
+		if ( $result['mode'] === 'scan_stopped' ) {
+			$this->render_notice( 'warning', 'triangle-alert', 'A scan stopped part way. Run the dry scan again to start over.' );
+			return;
+		}
+
+		if ( $result['mode'] === 'scanning' ) {
+			$this->render_notice(
+				'info',
+				'info',
+				sprintf(
+					'Checking %1$s images. Now looking through %2$s. This runs in short steps so the site stays responsive. Keep this tab open; it carries on by itself.',
+					number_format_i18n( (int) $result['count'] ),
+					self::STAGES[ $result['stage'] ] ?? 'the results'
+				)
+			);
+			$this->render_continue( 'scan_next', 2000 );
+			return;
+		}
+
 		if ( $result['mode'] === 'dry_run' ) {
 			$this->render_stats(
 				'What the scan found',
@@ -746,15 +885,23 @@ final class EPI_One_Time_WC_Product_Image_Purge {
 
 			if ( $result['remaining_count'] > 0 ) {
 				$this->render_notice( 'info', 'info', 'Carrying on with the next batch. Keep this tab open.' );
-				echo '<form id="wc-product-image-purge-continue" method="post">';
-				wp_nonce_field( self::NONCE_ACTION );
-				echo '<input type="hidden" name="wc_product_image_purge_mode" value="delete">';
-				echo '</form>';
-				echo '<script>setTimeout(function(){document.getElementById("wc-product-image-purge-continue").submit();}, 900);</script>';
+				$this->render_continue( 'delete', 900 );
 			} else {
 				$this->render_notice( 'success', 'circle-check', 'Finished. Nothing is left to delete.' );
 			}
 		}
+	}
+
+	/**
+	 * Send the next step by itself after a pause, which gives the site room
+	 * to serve visitors between steps.
+	 */
+	private function render_continue( string $mode, int $pause_ms ): void {
+		echo '<form id="wc-product-image-purge-continue" method="post">';
+		wp_nonce_field( self::NONCE_ACTION );
+		echo '<input type="hidden" name="wc_product_image_purge_mode" value="' . esc_attr( $mode ) . '">';
+		echo '</form>';
+		echo '<script>setTimeout(function(){document.getElementById("wc-product-image-purge-continue").submit();}, ' . absint( $pause_ms ) . ');</script>';
 	}
 
 	/**

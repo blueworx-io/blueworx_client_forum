@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.20.3]
+
+### Fixed
+- The image purge scan works in short steps that carry on by themselves, so it
+  finishes on a large shop instead of timing out, and the site stays responsive
+  while it runs.
+- The purge leaves products on ePim pictures alone, even when an ePim picture
+  number matches a media library item.
+- Deleting with no saved scan now asks for a scan instead of starting one.
+
 ## [1.20.2]
 
 ### Fixed
