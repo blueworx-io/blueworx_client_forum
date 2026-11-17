@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.20.2]
+
+### Fixed
+- Product cards built in Elementor, such as Featured Products on the home page,
+  show ePim pictures again for products that have moved to them.
+
 ## [1.20.1]
 
 ### Fixed

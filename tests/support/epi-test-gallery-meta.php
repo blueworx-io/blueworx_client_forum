@@ -14,7 +14,9 @@ add_action(
 	static function () {
 		// `_epim_pictures` is the mark the ePim pull leaves on a product it has
 		// given ePim pictures; a spec sets it the same way.
-		foreach ( array( '_product_image_gallery', '_epim_pictures' ) as $key ) {
+		// `_thumbnail_id` lets a spec give a page an ePim picture number as its
+		// featured image, which REST's featured_media refuses as no media item.
+		foreach ( array( '_product_image_gallery', '_epim_pictures', '_thumbnail_id' ) as $key ) {
 			register_post_meta(
 				'page',
 				$key,
