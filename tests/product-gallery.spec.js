@@ -209,21 +209,83 @@ test.describe('when ePim refuses pictures', () => {
   });
 });
 
-test('ePim source opens the large picture in the zoom, and the arrows stay large', async ({
-  page,
-}) => {
-  const { id, featured, first } = await productPage(page, '[forum_product_gallery source="epim"]');
-  await stubEpim(page);
-  await page.goto(`/?page_id=${id}`);
+// ePim takes seconds to make a large picture the first time it is asked. A click
+// must not leave the old picture on show meanwhile: it shows the small one the
+// thumbnail strip already has, then the large one once it has arrived.
+test.describe('when ePim is slow to send the large picture', () => {
+  test.use({ serviceWorkers: 'block' });
 
-  const modal = page.locator('.epi-lightbox');
-  const zoomed = modal.locator('.epi-lightbox__image');
+  test('a click shows the picture at once and sharpens it when the large one arrives', async ({
+    page,
+  }) => {
+    const { id, first, second } = await productPage(page, '[forum_product_gallery source="epim"]');
 
-  await page.locator('.epi-gallery .epi-gallery__enlarge').click();
-  await expect(zoomed).toHaveAttribute('src', epimLarge(featured));
+    // Large pictures wait until the test lets them go.
+    const held = [];
+    await page.route('https://epim.online/**', (route) => {
+      if (new URL(route.request().url()).searchParams.has('w')) {
+        held.push(route);
+        return;
+      }
+      return route.fulfill({ status: 200, contentType: 'image/png', body: PIXEL });
+    });
+    // Let go of the large pictures, once the page has asked for one.
+    const release = async () => {
+      await expect.poll(() => held.length).toBeGreaterThan(0);
+      while (held.length) {
+        await held.shift().fulfill({ status: 200, contentType: 'image/png', body: PIXEL });
+      }
+    };
 
-  await modal.locator('.epi-lightbox__arrow--next').click();
-  await expect(zoomed).toHaveAttribute('src', epimLarge(first));
+    await page.goto(`/?page_id=${id}`, { waitUntil: 'domcontentloaded' });
+    const main = page.locator('.epi-gallery__main-image');
+    await release();
+    await expect
+      .poll(() => main.evaluate((img) => img.complete && img.naturalWidth))
+      .toBeGreaterThan(0);
+
+    await page.locator('.epi-gallery__arrow--next').click();
+    await expect(main).toHaveAttribute('src', epim(first), { timeout: 1000 });
+
+    await release();
+    await expect(main).toHaveAttribute('src', epimLarge(first));
+
+    // The zoom works the same way.
+    await page.locator('.epi-gallery .epi-gallery__enlarge').click();
+    const zoomed = page.locator('.epi-lightbox__image');
+    await page.locator('.epi-lightbox__arrow--next').click();
+    await expect(zoomed).toHaveAttribute('src', epim(second), { timeout: 1000 });
+
+    await release();
+    await expect(zoomed).toHaveAttribute('src', epimLarge(second));
+  });
+});
+
+// The zoom asks ePim for pictures after the page has loaded, by which time the
+// browser picture store's worker can be answering them from the real ePim (see
+// above), so it stays out here too.
+test.describe('the zoom', () => {
+  test.use({ serviceWorkers: 'block' });
+
+  test('ePim source opens the large picture in the zoom, and the arrows stay large', async ({
+    page,
+  }) => {
+    const { id, featured, first } = await productPage(
+      page,
+      '[forum_product_gallery source="epim"]'
+    );
+    await stubEpim(page);
+    await page.goto(`/?page_id=${id}`);
+
+    const modal = page.locator('.epi-lightbox');
+    const zoomed = modal.locator('.epi-lightbox__image');
+
+    await page.locator('.epi-gallery .epi-gallery__enlarge').click();
+    await expect(zoomed).toHaveAttribute('src', epimLarge(featured));
+
+    await modal.locator('.epi-lightbox__arrow--next').click();
+    await expect(zoomed).toHaveAttribute('src', epimLarge(first));
+  });
 });
 
 // While the shop moves over to ePim pictures a category at a time, the gallery

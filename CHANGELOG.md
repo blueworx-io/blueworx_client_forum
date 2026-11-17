@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.20.1]
+
+### Fixed
+- Clicking through a product's pictures shows each one straight away, then
+  sharpens it once the larger picture arrives. Before, the first picture stayed
+  on show for a few seconds on a first visit.
+
 ## [1.20.0]
 
 ### Changed
