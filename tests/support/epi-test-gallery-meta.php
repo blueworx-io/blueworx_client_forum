@@ -6,6 +6,22 @@
  *              Never shipped: tests/ is outside the release allowlist.
  */
 
+// [epi_test_featured] asks for the page's featured image the way Elementor's
+// product card does: the picture address first, then the <img> itself.
+add_shortcode(
+	'epi_test_featured',
+	static function () {
+		$id  = get_post_thumbnail_id();
+		$src = wp_get_attachment_image_src( $id, 'full' );
+
+		return sprintf(
+			'<p class="epi-test-featured-src">%1$s</p><div class="epi-test-featured-image">%2$s</div>',
+			$src ? esc_url( $src[0] ) : 'none',
+			wp_get_attachment_image( $id, 'medium' )
+		);
+	}
+);
+
 // WooCommerce keeps a product's gallery in `_product_image_gallery`. It is
 // protected meta, so REST refuses it unless someone registers it. The harness
 // has no WooCommerce, so the spec stands up a page in a product's place.
