@@ -172,6 +172,12 @@ final class EPI_Plugin {
 		require_once EPI_PLUGIN_DIR . 'includes/class-epi-images-provider.php';
 		EPI_Images_Provider::protect_epim_pictures();
 
+		// A switched product's featured image is an ePim picture number. Page
+		// builders and themes that ask the media library for it get the ePim
+		// picture instead of nothing.
+		require_once EPI_PLUGIN_DIR . 'includes/class-epi-featured-image.php';
+		EPI_Featured_Image::init_media_lookup();
+
 		// Most features need WooCommerce. Load the existing product classes (so
 		// their static helpers stay available regardless of which features are
 		// switched on) and keep the change-log table up to date when

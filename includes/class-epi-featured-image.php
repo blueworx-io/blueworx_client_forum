@@ -57,8 +57,17 @@ final class EPI_Featured_Image {
 			add_filter( 'woocommerce_store_api_cart_item_images', array( __CLASS__, 'filter_cart_item_images' ), 10, 2 );
 		}
 
-		// Page builder cards (Elementor's included) and themes ask the media
-		// library for a product's featured image directly.
+		self::init_media_lookup();
+	}
+
+	/**
+	 * Page builder cards (Elementor's included) and themes ask the media
+	 * library for a product's featured image directly. Needs no WooCommerce,
+	 * so it runs whatever is installed.
+	 *
+	 * @return void
+	 */
+	public static function init_media_lookup() {
 		if ( ! has_filter( 'wp_get_attachment_image_src', array( __CLASS__, 'filter_attachment_image_src' ) ) ) {
 			add_filter( 'wp_get_attachment_image_src', array( __CLASS__, 'filter_attachment_image_src' ), 10, 2 );
 		}
