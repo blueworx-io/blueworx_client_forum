@@ -175,7 +175,7 @@ final class EPI_One_Time_WC_Product_Image_Purge {
 									<?php wp_nonce_field( self::NONCE_ACTION ); ?>
 									<input type="hidden" name="wc_product_image_purge_mode" value="dry_run_all">
 									<button type="submit" class="bw-btn bw-btn--secondary">
-										<i class="bw-icon" data-lucide="images" aria-hidden="true"></i>
+										<i class="bw-icon" data-lucide="search" aria-hidden="true"></i>
 										Scan all unused images
 									</button>
 								</form>
