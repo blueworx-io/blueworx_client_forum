@@ -58,24 +58,85 @@ add_action(
 			array(
 				'methods'             => 'POST',
 				'permission_callback' => $admin_only,
-				'callback'            => static function () {
+				'callback'            => static function ( WP_REST_Request $request ) {
+					global $wpdb;
+
 					delete_option( 'one_time_wc_product_image_purge_plan' );
 					delete_option( 'one_time_wc_product_image_purge_scan' );
 
-					$image = static function ( $title ) {
-						return wp_insert_attachment(
+					// Earlier runs and other specs leave images behind, attached to
+					// nothing or pointed at by products. Set them aside — attached
+					// to a page of their own, and no product pointing at them — so
+					// an unused image scan sees only this fixture's, and its
+					// preview list is short enough to show them all.
+					// Plain single-table queries: the harness's database may not
+					// take MySQL's joined UPDATE.
+					if ( $request['set_aside'] ) {
+						$products = $wpdb->get_col( "SELECT ID FROM {$wpdb->posts} WHERE post_type IN ('product', 'product_variation')" );
+
+						foreach ( array_chunk( array_map( 'absint', $products ), 500 ) as $chunk ) {
+							$wpdb->query(
+								"DELETE FROM {$wpdb->postmeta}
+                                 WHERE meta_key IN ('_thumbnail_id', '_product_image_gallery')
+                                 AND post_id IN (" . implode( ',', $chunk ) . ')'
+							);
+						}
+
+						$holder = wp_insert_post(
+							array(
+								'post_type'   => 'page',
+								'post_status' => 'draft',
+								'post_title'  => 'Purge test images set aside',
+							)
+						);
+						$posts  = array_map( 'absint', $wpdb->get_col( "SELECT ID FROM {$wpdb->posts} WHERE post_type <> 'attachment'" ) );
+						$loose  = $wpdb->get_results( "SELECT ID, post_parent FROM {$wpdb->posts} WHERE post_type = 'attachment'" );
+						$exists = array_fill_keys( $posts, true );
+
+						foreach ( $loose as $attachment ) {
+							if ( ! $attachment->post_parent || ! isset( $exists[ (int) $attachment->post_parent ] ) ) {
+								$wpdb->update( $wpdb->posts, array( 'post_parent' => $holder ), array( 'ID' => (int) $attachment->ID ) );
+							}
+						}
+
+						wp_cache_flush();
+					}
+
+					$files = array();
+					$image = static function ( $title, $parent = 0 ) use ( &$files ) {
+						$file = 'epi-test/' . sanitize_title( $title ) . '-' . wp_rand() . '.jpg';
+						$id   = wp_insert_attachment(
 							array(
 								'post_title'     => $title,
 								'post_mime_type' => 'image/jpeg',
 								'post_status'    => 'inherit',
 							),
-							'epi-test/' . sanitize_title( $title ) . '-' . wp_rand() . '.jpg'
+							$file,
+							$parent
 						);
+
+						$files[ $id ] = $file;
+						return $id;
 					};
 
 					$only   = $image( 'Purge test product only' );
 					$shared = $image( 'Purge test also on a page' );
 					$clash  = $image( 'Purge test same number as an ePim picture' );
+
+					// Images no product points at: one used nowhere, one a page
+					// shows by its file name (a resized copy of it), and one
+					// attached to a page.
+					$unused       = $image( 'Purge test unused' );
+					$used_by_name = $image( 'Purge test used by file name' );
+					$page_id      = wp_insert_post(
+						array(
+							'post_type'    => 'page',
+							'post_status'  => 'publish',
+							'post_title'   => 'Purge test page by file name',
+							'post_content' => '<img src="/wp-content/uploads/' . preg_replace( '/\.jpg$/', '-300x300.jpg', $files[ $used_by_name ] ) . '" alt="">',
+						)
+					);
+					$on_page      = $image( 'Purge test attached to a page', $page_id );
 
 					$media_product = wp_insert_post(
 						array(
@@ -107,7 +168,7 @@ add_action(
 					update_post_meta( $switched, '_thumbnail_id', (string) $clash );
 					update_post_meta( $switched, '_epim_pictures', '1' );
 
-					return compact( 'only', 'shared', 'clash', 'media_product', 'switched' );
+					return compact( 'only', 'shared', 'clash', 'media_product', 'switched', 'unused', 'used_by_name', 'on_page' );
 				},
 			)
 		);
@@ -122,7 +183,7 @@ add_action(
 				'callback'            => static function ( WP_REST_Request $request ) {
 					$exists = array();
 
-					foreach ( array( 'only', 'shared', 'clash' ) as $key ) {
+					foreach ( array( 'only', 'shared', 'clash', 'unused', 'used_by_name', 'on_page' ) as $key ) {
 						$exists[ $key ] = 'attachment' === get_post_type( (int) $request[ $key ] );
 					}
 

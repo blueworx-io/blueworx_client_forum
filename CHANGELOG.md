@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.21.0]
+
+### Added
+- The image purge tool has a second scan, "Scan all unused images". It also
+  checks every image attached to nothing, and deletes those not used anywhere
+  on the site.
+
+### Fixed
+- The purge keeps any image whose number is also a product's ePim picture.
+  Deleting it would have made WordPress clear that product's main picture.
+
 ## [1.20.3]
 
 ### Fixed
