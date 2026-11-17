@@ -91,7 +91,10 @@ final class EPI_Gallery {
 		$thumbs   = 'left' === $settings['thumb_position'] ? 'left' : 'bottom';
 
 		// Featured first, then the gallery — and the featured one is what opens.
-		$images = EPI_Images_Provider::get_images( $product_id, $source );
+		// The main picture and the zoom take ePim's larger picture; the
+		// thumbnail strip keeps the standard one. Same order, same count.
+		$images = EPI_Images_Provider::get_images( $product_id, $source, 'large' );
+		$smalls = EPI_Images_Provider::get_images( $product_id, $source );
 
 		if ( empty( $images ) ) {
 			return '';
@@ -112,6 +115,11 @@ final class EPI_Gallery {
 		$fallback = EPI_Images_Provider::fallback_image_url();
 		$on_error = $fallback ? "this.onerror=null;this.src='" . $fallback . "';" : '';
 
+		// A larger ePim picture that fails first retries as ePim's standard
+		// picture (the same link without its size), then the placeholder.
+		// window.URL, not URL: inside an inline handler, URL is document.URL.
+		$on_error_large = "var u=new window.URL(this.src);if(u.searchParams.has('w')){u.searchParams.delete('w');u.searchParams.delete('h');this.src=u.href;return;}" . $on_error;
+
 		ob_start();
 		?>
 		<div class="epi-gallery epi-thumbs-<?php echo esc_attr( $thumbs ); ?>" id="<?php echo esc_attr( $gallery_id ); ?>" data-epi-gallery>
@@ -128,7 +136,7 @@ final class EPI_Gallery {
 					data-epi-main
 					loading="eager"
 					decoding="async"
-					onerror="<?php echo esc_attr( $on_error ); ?>"
+					onerror="<?php echo esc_attr( $on_error_large ); ?>"
 				/>
 
 				<?php if ( count( $images ) > 1 ) : ?>
@@ -160,7 +168,7 @@ final class EPI_Gallery {
 							>
 								<img
 									class="epi-gallery__thumb-image"
-									src="<?php echo esc_url( $image_url ); ?>"
+									src="<?php echo esc_url( isset( $smalls[ $index ] ) ? $smalls[ $index ] : $image_url ); ?>"
 									alt="
 									<?php
 										/* translators: 1: product name, 2: image number. */
@@ -195,7 +203,7 @@ final class EPI_Gallery {
 							<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
 						</button>
 					<?php endif; ?>
-					<img class="epi-lightbox__image" src="<?php echo esc_url( $main_image ); ?>" alt="<?php echo esc_attr( $alt_base ); ?>" data-epi-lightbox-image decoding="async" />
+					<img class="epi-lightbox__image" src="<?php echo esc_url( $main_image ); ?>" alt="<?php echo esc_attr( $alt_base ); ?>" data-epi-lightbox-image decoding="async" onerror="<?php echo esc_attr( $on_error_large ); ?>" />
 					<?php if ( count( $images ) > 1 ) : ?>
 						<p class="epi-lightbox__count" data-epi-lightbox-count aria-live="polite"><?php echo esc_html( ( $start + 1 ) . ' / ' . count( $images ) ); ?></p>
 					<?php endif; ?>

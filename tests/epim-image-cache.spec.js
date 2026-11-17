@@ -183,6 +183,22 @@ test('after the first visit, ePim images come from the browser, not ePim', async
   await visitor.context().close();
 });
 
+// The stand-in's picture address already carries a "?", as a host or CDN change
+// could make ePim's do. The size has to join it with "&", or the picture breaks.
+test('a large gallery picture loads from a picture address that already has a query string', async ({
+  page,
+}) => {
+  const { url, featuredId } = await epimPage(page, ['424246']);
+  await page.goto(url);
+
+  const main = page.locator('.epi-gallery__main-image');
+  await expect(main).toHaveAttribute(
+    'src',
+    new RegExp(`\\?epi_test_image=${featuredId}\\.jpg&w=1200&h=1200$`)
+  );
+  await expect.poll(() => main.evaluate((img) => img.complete && img.naturalWidth)).toBeGreaterThan(0);
+});
+
 test('page loads and the site\'s own files are left to the network', async ({ page, browser }) => {
   const { url } = await epimPage(page, ['424243']);
 

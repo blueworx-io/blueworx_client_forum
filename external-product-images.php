@@ -3,7 +3,7 @@
  * Plugin Name:       BlueWorx Lab | Forum Lighting
  * Plugin URI:        https://blueworx.io/
  * Description:        Site functionality plugin for Forum Lighting. A control centre under Settings > BlueWorx Lab switches features on or off, including the WooCommerce product gallery, metadata tools, pricing rules and more.
- * Version:           1.19.3
+ * Version:           1.20.0
  * Author:            BlueWorx
  * Author URI:        https://blueworx.io/
  * Text Domain:       blueworx_client_forum
@@ -22,13 +22,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Core plugin constants.
  */
-define( 'EPI_VERSION', '1.19.3' );
+define( 'EPI_VERSION', '1.20.0' );
 define( 'EPI_PLUGIN_FILE', __FILE__ );
 define( 'EPI_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'EPI_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 // Overridable so the tests can stand in for ePim without reaching the real one.
 if ( ! defined( 'EPI_EPIM_IMAGE_BASE' ) ) {
 	define( 'EPI_EPIM_IMAGE_BASE', 'https://epim.online/webproduct/assetimage/' );
+}
+// The size, in pixels, of the larger ePim picture shown on the product page and zoom.
+// ePim scales the original down to fit, never up.
+if ( ! defined( 'EPI_EPIM_LARGE_PX' ) ) {
+	define( 'EPI_EPIM_LARGE_PX', 1200 );
 }
 
 /*

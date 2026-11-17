@@ -36,9 +36,11 @@ class EPI_Images_Provider {
 	 * @param int    $product_id WooCommerce product ID.
 	 * @param string $source     'epim' (the IDs are ePim asset IDs) or
 	 *                           'woocommerce' (the IDs are media library items).
+	 * @param string $size       '' for ePim's standard picture, 'large' for the
+	 *                           larger one. Media library pictures ignore it.
 	 * @return string[] List of validated image URLs.
 	 */
-	public static function get_images( $product_id, $source = 'epim' ) {
+	public static function get_images( $product_id, $source = 'epim', $size = '' ) {
 		$product_id = absint( $product_id );
 		$urls       = array();
 
@@ -62,7 +64,7 @@ class EPI_Images_Provider {
 			}
 
 			foreach ( $ids as $id ) {
-				$url = 'woocommerce' === $source ? self::media_image_url( $id ) : self::build_image_url( $id );
+				$url = 'woocommerce' === $source ? self::media_image_url( $id ) : self::build_image_url( $id, $size );
 
 				if ( '' !== $url ) {
 					$urls[] = $url;
@@ -83,8 +85,9 @@ class EPI_Images_Provider {
 		 * @param string[] $urls       Resolved image URLs, featured first, then the gallery.
 		 * @param int      $product_id Product ID.
 		 * @param string   $source     'epim' or 'woocommerce'.
+		 * @param string   $size       '' or 'large'.
 		 */
-		return apply_filters( 'epi_product_images', $urls, $product_id, $source );
+		return apply_filters( 'epi_product_images', $urls, $product_id, $source, $size );
 	}
 
 	/**
@@ -156,10 +159,15 @@ class EPI_Images_Provider {
 	/**
 	 * Build the external ePim asset URL for a single image ID.
 	 *
-	 * @param int|string $id ePim asset ID (stored in product meta).
+	 * ePim sends a 300px picture by default. Asked for a width and height (both
+	 * are needed), it scales the original to fit, keeping its shape, and never
+	 * enlarges it.
+	 *
+	 * @param int|string $id   ePim asset ID (stored in product meta).
+	 * @param string     $size '' for the standard picture, 'large' for the larger one.
 	 * @return string Escaped URL, or '' when the ID is empty/invalid.
 	 */
-	public static function build_image_url( $id ) {
+	public static function build_image_url( $id, $size = '' ) {
 		$id = absint( $id );
 
 		if ( ! $id ) {
@@ -168,13 +176,33 @@ class EPI_Images_Provider {
 
 		$url = EPI_EPIM_IMAGE_BASE . $id . '.jpg';
 
+		if ( 'large' === $size ) {
+			/**
+			 * Filter the size, in pixels, of the larger ePim picture.
+			 *
+			 * @param int $px Width and height asked of ePim.
+			 */
+			$px = absint( apply_filters( 'epi_epim_large_px', EPI_EPIM_LARGE_PX ) );
+
+			if ( $px ) {
+				$url = add_query_arg(
+					array(
+						'w' => $px,
+						'h' => $px,
+					),
+					$url
+				);
+			}
+		}
+
 		/**
 		 * Filter the constructed ePim image URL (e.g. to change host or extension).
 		 *
-		 * @param string $url Constructed URL.
-		 * @param int    $id  ePim asset ID.
+		 * @param string $url  Constructed URL.
+		 * @param int    $id   ePim asset ID.
+		 * @param string $size '' or 'large'.
 		 */
-		$url = apply_filters( 'epi_epim_image_url', $url, $id );
+		$url = apply_filters( 'epi_epim_image_url', $url, $id, $size );
 
 		return esc_url_raw( $url );
 	}
