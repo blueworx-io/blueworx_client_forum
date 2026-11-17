@@ -56,6 +56,61 @@ final class EPI_Featured_Image {
 		if ( ! has_filter( 'woocommerce_store_api_cart_item_images', array( __CLASS__, 'filter_cart_item_images' ) ) ) {
 			add_filter( 'woocommerce_store_api_cart_item_images', array( __CLASS__, 'filter_cart_item_images' ), 10, 2 );
 		}
+
+		self::init_media_lookup();
+	}
+
+	/**
+	 * Page builder cards (Elementor's included) and themes ask the media
+	 * library for a product's featured image directly. Needs no WooCommerce,
+	 * so it runs whatever is installed.
+	 *
+	 * @return void
+	 */
+	public static function init_media_lookup() {
+		if ( ! has_filter( 'wp_get_attachment_image_src', array( __CLASS__, 'filter_attachment_image_src' ) ) ) {
+			add_filter( 'wp_get_attachment_image_src', array( __CLASS__, 'filter_attachment_image_src' ), 10, 2 );
+		}
+	}
+
+	/**
+	 * Answer a media library lookup of the product on show's own picture
+	 * number with its ePim picture.
+	 *
+	 * Only that product's own numbers are answered, so the rest of the media
+	 * library is untouched. Within it, the number is ePim's even when it
+	 * happens to match an unrelated media item.
+	 *
+	 * @param array|false $image         [ url, width, height, resized ], or false.
+	 * @param int         $attachment_id The number asked for.
+	 * @return array|false
+	 */
+	public static function filter_attachment_image_src( $image, $attachment_id ) {
+		$post_id = get_the_ID();
+
+		if ( ! $post_id ) {
+			return $image;
+		}
+
+		$switched = EPI_Images_Provider::uses_epim( $post_id ) || ( self::$all && 'product' === get_post_type( $post_id ) );
+
+		if ( ! $switched ) {
+			return $image;
+		}
+
+		$ids = array_merge(
+			array( get_post_meta( $post_id, '_thumbnail_id', true ) ),
+			explode( ',', (string) get_post_meta( $post_id, '_product_image_gallery', true ) )
+		);
+
+		if ( ! in_array( absint( $attachment_id ), array_map( 'absint', $ids ), true ) ) {
+			return $image;
+		}
+
+		$url = EPI_Images_Provider::build_image_url( $attachment_id );
+
+		// ePim's standard picture is 300px square at most.
+		return '' === $url ? $image : array( $url, 300, 300, false );
 	}
 
 	/**

@@ -303,6 +303,37 @@ test('a product marked as using ePim pictures shows them even when the gallery i
   await expectEpimGallery(page, media);
 });
 
+// Page builders and themes ask WordPress for a product's featured image straight
+// from the media library (Elementor's product cards do). A switched product's
+// featured image is an ePim picture number the media library does not have, so
+// it must come back as the ePim picture, not nothing.
+test("a switched product's featured image shows its ePim picture wherever it is asked for", async ({
+  page,
+}) => {
+  const { id } = await productPage(page, '[epi_test_featured]', { _epim_pictures: '1' });
+  const nonce = await restNonce(page);
+  const epimNumber = 987654;
+  const updated = await page.request.post(`/wp-json/wp/v2/pages/${id}`, {
+    headers: { 'X-WP-Nonce': nonce },
+    data: { meta: { _thumbnail_id: String(epimNumber) } },
+  });
+  expect(updated.ok(), `page update: ${updated.status()}`).toBeTruthy();
+  expect((await updated.json()).meta._thumbnail_id, 'featured image was not stored').toBe(
+    String(epimNumber)
+  );
+
+  await stubEpim(page);
+  await page.goto(`/?page_id=${id}`);
+
+  // The picture address, as Elementor's card reads it...
+  await expect(page.locator('.epi-test-featured-src')).toHaveText(epim({ id: epimNumber }));
+  // ...and the picture it then prints.
+  await expect(page.locator('.epi-test-featured-image img')).toHaveAttribute(
+    'src',
+    epim({ id: epimNumber })
+  );
+});
+
 test('the enlarge button opens the image in a modal, with the arrows still looping', async ({
   page,
 }) => {

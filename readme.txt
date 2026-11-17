@@ -4,7 +4,7 @@ Tags: woocommerce, elementor, product gallery, product images, site functionalit
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.20.1
+Stable tag: 1.20.2
 License: GPLv2 or later
 
 Site functionality plugin for Forum Lighting: one control centre to switch the WooCommerce gallery, metadata, pricing and more on or off.
@@ -41,6 +41,9 @@ be placed anywhere with [forum_product_gallery].
    category. Save.
 
 == Changelog ==
+
+= 1.20.2 =
+* Product cards built in Elementor, such as Featured Products on the home page, show ePim pictures again for products on ePim pictures.
 
 = 1.20.1 =
 * Clicking through a product's pictures shows each one straight away, then sharpens it once the larger picture arrives, instead of staying on the first picture.
