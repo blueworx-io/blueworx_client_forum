@@ -39,6 +39,60 @@
 			} )
 			: [ mainImage.getAttribute( 'src' ) ];
 
+		// The picture each thumbnail already shows. For ePim it is the standard
+		// size, which arrives far sooner than the larger one.
+		var smalls = thumbs.map( function ( thumb, i ) {
+			var img = thumb.querySelector( 'img' );
+
+			return img ? img.getAttribute( 'src' ) : images[ i ];
+		} );
+
+		// Larger pictures that have arrived, and those still on their way.
+		var ready = {};
+		var loading = {};
+
+		ready[ mainImage.getAttribute( 'src' ) ] = mainImage.complete && mainImage.naturalWidth > 0;
+		mainImage.addEventListener( 'load', function () {
+			ready[ mainImage.getAttribute( 'src' ) ] = true;
+		} );
+
+		/**
+		 * Put picture N on an <img>. A larger picture not yet in hand shows as
+		 * the thumbnail's picture first, then swaps in once it has arrived, so
+		 * a click never leaves the previous picture on show.
+		 *
+		 * @param {HTMLImageElement} img   Where to show it.
+		 * @param {number}           index Position in the thumbnail strip.
+		 */
+		function show( img, index ) {
+			var large = images[ index ];
+			var small = smalls[ index ];
+
+			if ( ! small || small === large || ready[ large ] ) {
+				img.setAttribute( 'src', large );
+				return;
+			}
+
+			img.setAttribute( 'src', small );
+
+			var swapIn = function () {
+				if ( current === index && img.getAttribute( 'src' ) === small ) {
+					img.setAttribute( 'src', large );
+				}
+			};
+
+			if ( ! loading[ large ] ) {
+				loading[ large ] = new Image();
+				loading[ large ].addEventListener( 'load', function () {
+					ready[ large ] = true;
+				} );
+				loading[ large ].src = large;
+			}
+
+			// If the larger one never arrives, the thumbnail's picture stays.
+			loading[ large ].addEventListener( 'load', swapIn );
+		}
+
 		var current = thumbs.findIndex( function ( thumb ) {
 			return thumb.classList.contains( 'is-active' );
 		} );
@@ -67,7 +121,7 @@
 			mainImage.classList.add( 'is-fading' );
 
 			var swap = function () {
-				mainImage.setAttribute( 'src', fullSrc );
+				show( mainImage, index );
 				mainImage.classList.remove( 'is-fading' );
 				mainImage.removeEventListener( 'transitionend', swap );
 			};
@@ -127,7 +181,7 @@
 				return;
 			}
 
-			lightboxImage.setAttribute( 'src', images[ current ] );
+			show( lightboxImage, current );
 
 			if ( lightboxCount ) {
 				lightboxCount.textContent = ( current + 1 ) + ' / ' + images.length;
