@@ -138,6 +138,15 @@ add_action(
 					);
 					$on_page      = $image( 'Purge test attached to a page', $page_id );
 
+					// Settings that keep an image by its number alone, the way
+					// WooCommerce keeps its placeholder and a theme its logo, and an
+					// image made for the site's emails.
+					$by_number = $image( 'Purge test placeholder' );
+					update_option( 'epi_test_placeholder_image', (string) $by_number );
+					$theme_logo = $image( 'Purge test theme logo' );
+					update_option( 'theme_mods_epi_test', array( 'custom_logo' => $theme_logo ) );
+					$for_emails = $image( 'Purge test email banner' );
+
 					$media_product = wp_insert_post(
 						array(
 							'post_type'   => 'product',
@@ -168,7 +177,7 @@ add_action(
 					update_post_meta( $switched, '_thumbnail_id', (string) $clash );
 					update_post_meta( $switched, '_epim_pictures', '1' );
 
-					return compact( 'only', 'shared', 'clash', 'media_product', 'switched', 'unused', 'used_by_name', 'on_page' );
+					return compact( 'only', 'shared', 'clash', 'media_product', 'switched', 'unused', 'used_by_name', 'on_page', 'by_number', 'theme_logo', 'for_emails' );
 				},
 			)
 		);
@@ -183,7 +192,7 @@ add_action(
 				'callback'            => static function ( WP_REST_Request $request ) {
 					$exists = array();
 
-					foreach ( array( 'only', 'shared', 'clash', 'unused', 'used_by_name', 'on_page' ) as $key ) {
+					foreach ( array( 'only', 'shared', 'clash', 'unused', 'used_by_name', 'on_page', 'by_number', 'theme_logo', 'for_emails' ) as $key ) {
 						$exists[ $key ] = 'attachment' === get_post_type( (int) $request[ $key ] );
 					}
 

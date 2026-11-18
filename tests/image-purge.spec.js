@@ -82,6 +82,9 @@ test('deleting removes product-only images and leaves ePim pictures alone', asyn
     unused: true,
     used_by_name: true,
     on_page: true,
+    by_number: true,
+    theme_logo: true,
+    for_emails: true,
   });
   expect(state.media_thumbnail).toBe('');
   expect(state.switched_thumb).toBe(String(ids.clash));
@@ -110,6 +113,11 @@ test('the unused image scan takes images nothing uses, wherever they came from',
   await expect(listed(page, 'Images to delete', ids.used_by_name)).toHaveCount(0);
   await expect(listed(page, 'Images to delete', ids.shared)).toHaveCount(0);
 
+  // Kept by a setting by number alone, or made for the site's emails.
+  for (const kept of [ids.by_number, ids.theme_logo, ids.for_emails]) {
+    await expect(listed(page, 'Protected images', kept)).toHaveCount(1);
+  }
+
   // Attached to a page, so it belongs to that page.
   await expect(listed(page, 'Images to delete', ids.on_page)).toHaveCount(0);
 
@@ -129,6 +137,9 @@ test('the unused image scan takes images nothing uses, wherever they came from',
     unused: false,
     used_by_name: true,
     on_page: true,
+    by_number: true,
+    theme_logo: true,
+    for_emails: true,
   });
   expect(state.switched_thumb).toBe(String(ids.clash));
 });
