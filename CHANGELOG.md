@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.21.2]
+
+### Fixed
+- Elementor product cards, such as Featured Products on the home page, name
+  each ePim picture after its product for screen readers and tooltips, instead
+  of the picture number and the page name.
+
 ## [1.21.1]
 
 ### Fixed

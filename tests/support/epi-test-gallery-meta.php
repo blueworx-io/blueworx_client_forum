@@ -22,6 +22,25 @@ add_shortcode(
 	}
 );
 
+// [epi_test_elementor_card] prints the picture the way Elementor's Image widget
+// does for a picture that is not in the media library: a bare <img> whose alt
+// is the picture number and whose title is the page Elementor is building, then
+// handed to Elementor's own filter for that markup. The harness has no Elementor.
+add_shortcode(
+	'epi_test_elementor_card',
+	static function () {
+		$id = (int) get_post_thumbnail_id();
+
+		$html = sprintf(
+			'<img src="%1$s" title="Home" alt="%2$d" loading="lazy" />',
+			esc_url( EPI_Images_Provider::build_image_url( $id ) ),
+			$id
+		);
+
+		return '<div class="epi-test-elementor-card">' . apply_filters( 'elementor/image_size/get_attachment_image_html', $html, array(), 'image_size', 'image' ) . '</div>';
+	}
+);
+
 // WooCommerce keeps a product's gallery in `_product_image_gallery`. It is
 // protected meta, so REST refuses it unless someone registers it. The harness
 // has no WooCommerce, so the spec stands up a page in a product's place.

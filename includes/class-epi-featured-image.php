@@ -71,6 +71,61 @@ final class EPI_Featured_Image {
 		if ( ! has_filter( 'wp_get_attachment_image_src', array( __CLASS__, 'filter_attachment_image_src' ) ) ) {
 			add_filter( 'wp_get_attachment_image_src', array( __CLASS__, 'filter_attachment_image_src' ), 10, 2 );
 		}
+
+		if ( ! has_filter( 'elementor/image_size/get_attachment_image_html', array( __CLASS__, 'filter_elementor_image_html' ) ) ) {
+			add_filter( 'elementor/image_size/get_attachment_image_html', array( __CLASS__, 'filter_elementor_image_html' ) );
+		}
+	}
+
+	/**
+	 * Name a switched product's ePim picture after the product on Elementor's
+	 * cards.
+	 *
+	 * Elementor takes a picture's text from the media library. An ePim picture
+	 * is not in it, so Elementor falls back to the picture number for screen
+	 * readers and to the page's own name for the tooltip.
+	 *
+	 * @param string $html Elementor's <img> markup.
+	 * @return string
+	 */
+	public static function filter_elementor_image_html( $html ) {
+		$post_id = get_the_ID();
+
+		if ( ! $post_id || ! is_string( $html ) || false === strpos( $html, EPI_EPIM_IMAGE_BASE ) ) {
+			return $html;
+		}
+
+		if ( ! EPI_Images_Provider::uses_epim( $post_id ) && ! ( self::$all && 'product' === get_post_type( $post_id ) ) ) {
+			return $html;
+		}
+
+		$name = esc_attr( wp_strip_all_tags( get_the_title( $post_id ) ) );
+
+		if ( '' === $name ) {
+			return $html;
+		}
+
+		// Only <img> tags showing an ePim picture are renamed.
+		return preg_replace_callback(
+			'/<img\b[^>]*>/i',
+			static function ( $tag ) use ( $name ) {
+				if ( false === strpos( $tag[0], EPI_EPIM_IMAGE_BASE ) ) {
+					return $tag[0];
+				}
+
+				foreach ( array( 'alt', 'title' ) as $attribute ) {
+					$pattern = '/\s' . $attribute . '="[^"]*"/i';
+					// Escaped so a "$" or "\" in a name is not read as a replacement token.
+					$value  = ' ' . $attribute . '="' . addcslashes( $name, '\\$' ) . '"';
+					$tag[0] = preg_match( $pattern, $tag[0] )
+						? preg_replace( $pattern, $value, $tag[0], 1 )
+						: preg_replace( '/^<img\b/i', '<img' . $value, $tag[0], 1 );
+				}
+
+				return $tag[0];
+			},
+			$html
+		);
 	}
 
 	/**
