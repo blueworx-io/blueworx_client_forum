@@ -334,6 +334,28 @@ test("a switched product's featured image shows its ePim picture wherever it is 
   );
 });
 
+test("an Elementor card names a switched product's ePim picture after the product", async ({
+  page,
+}) => {
+  const { id } = await productPage(page, '[epi_test_elementor_card]', { _epim_pictures: '1' });
+  const nonce = await restNonce(page);
+  const updated = await page.request.post(`/wp-json/wp/v2/pages/${id}`, {
+    headers: { 'X-WP-Nonce': nonce },
+    data: { title: 'Ruby Parasol Patio Heater', meta: { _thumbnail_id: '987654' } },
+  });
+  expect(updated.ok(), `page update: ${updated.status()}`).toBeTruthy();
+
+  await stubEpim(page);
+  await page.goto(`/?page_id=${id}`);
+
+  // Screen readers read the product, not ePim's picture number, and the
+  // tooltip names the product rather than the page the card sits on.
+  const picture = page.locator('.epi-test-elementor-card img');
+  await expect(picture).toHaveAttribute('src', epim({ id: 987654 }));
+  await expect(picture).toHaveAttribute('alt', 'Ruby Parasol Patio Heater');
+  await expect(picture).toHaveAttribute('title', 'Ruby Parasol Patio Heater');
+});
+
 test('the enlarge button opens the image in a modal, with the arrows still looping', async ({
   page,
 }) => {
