@@ -116,8 +116,8 @@ final class EPI_Featured_Image {
 				foreach ( array( 'alt', 'title' ) as $attribute ) {
 					$pattern = '/\s' . $attribute . '="[^"]*"/i';
 					// Escaped so a "$" or "\" in a name is not read as a replacement token.
-					$value   = ' ' . $attribute . '="' . addcslashes( $name, '\\$' ) . '"';
-					$tag[0]  = preg_match( $pattern, $tag[0] )
+					$value  = ' ' . $attribute . '="' . addcslashes( $name, '\\$' ) . '"';
+					$tag[0] = preg_match( $pattern, $tag[0] )
 						? preg_replace( $pattern, $value, $tag[0], 1 )
 						: preg_replace( '/^<img\b/i', '<img' . $value, $tag[0], 1 );
 				}
