@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.21.1]
+
+### Fixed
+- The image purge keeps images a setting holds by number alone, such as the
+  shop's placeholder image or a theme logo. Before, it could have deleted them.
+- It also keeps any image whose name says it is for the site's emails.
+
 ## [1.21.0]
 
 ### Added

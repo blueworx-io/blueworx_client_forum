@@ -369,10 +369,13 @@ final class EPI_One_Time_WC_Product_Image_Purge {
 
 			if ( $chunk ) {
 				update_meta_cache( 'post', $chunk );
+				_prime_post_caches( $chunk, false, false );
 
 				foreach ( $chunk as $attachment_id ) {
 					if ( $this->is_referenced( (int) $attachment_id, $state ) ) {
 						$this->protect( $state['protected'], (int) $attachment_id, 'used elsewhere on the site' );
+					} elseif ( $this->is_for_emails( (int) $attachment_id ) ) {
+						$this->protect( $state['protected'], (int) $attachment_id, 'made for the site\'s emails' );
 					}
 				}
 			}
@@ -462,15 +465,27 @@ final class EPI_One_Time_WC_Product_Image_Purge {
 		$value = $this->normalize_search_value( $value );
 		$ids   = array();
 
+		// A setting that is nothing but an image's number, or a list of them,
+		// the way WooCommerce keeps its placeholder image.
+		$trimmed = trim( $value );
+
+		if ( preg_match( '/^\d+(?:\s*,\s*\d+)*$/', $trimmed ) ) {
+			$ids = array_merge( $ids, preg_split( '/\s*,\s*/', $trimmed ) );
+		}
+
 		if ( preg_match_all( '/wp-image-(\d+)\b/i', $value, $matches ) ) {
 			$ids = array_merge( $ids, $matches[1] );
 		}
 
-		if ( preg_match_all( '/["\'](?:id|image|image_id|media|media_id|attachment_id)["\']\s*[:=]\s*["\']?(\d+)["\']?/i', $value, $matches ) ) {
+		// Any named value whose name says it holds an image, such as "id",
+		// "image_id" or a theme's "custom_logo".
+		$image_key = '[a-z0-9_-]*(?:id|image|logo|icon|media|attachment|background|thumbnail|banner|photo|picture|avatar|header)[a-z0-9_-]*';
+
+		if ( preg_match_all( '/["\']' . $image_key . '["\']\s*[:=]\s*["\']?(\d+)["\']?/i', $value, $matches ) ) {
 			$ids = array_merge( $ids, $matches[1] );
 		}
 
-		if ( preg_match_all( '/s:\d+:"(?:id|image|image_id|media|media_id|attachment_id)";(?:i:(\d+)|s:\d+:"(\d+)")/i', $value, $matches, PREG_SET_ORDER ) ) {
+		if ( preg_match_all( '/s:\d+:"' . $image_key . '";(?:i:(\d+)|s:\d+:"(\d+)")/i', $value, $matches, PREG_SET_ORDER ) ) {
 			foreach ( $matches as $match ) {
 				$ids[] = '' !== $match[1] ? $match[1] : $match[2];
 			}
@@ -541,6 +556,17 @@ final class EPI_One_Time_WC_Product_Image_Purge {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Whether an image's title or file name says it is for the site's emails.
+	 * An email can show an image the site itself never names, so these are
+	 * always kept.
+	 */
+	private function is_for_emails( int $attachment_id ): bool {
+		$text = get_post_field( 'post_title', $attachment_id ) . ' ' . get_post_meta( $attachment_id, '_wp_attached_file', true );
+
+		return false !== stripos( $text, 'email' ) || false !== stripos( $text, 'e-mail' );
 	}
 
 	/**

@@ -4,7 +4,7 @@ Tags: woocommerce, elementor, product gallery, product images, site functionalit
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.21.0
+Stable tag: 1.21.1
 License: GPLv2 or later
 
 Site functionality plugin for Forum Lighting: one control centre to switch the WooCommerce gallery, metadata, pricing and more on or off.
@@ -41,6 +41,9 @@ be placed anywhere with [forum_product_gallery].
    category. Save.
 
 == Changelog ==
+
+= 1.21.1 =
+* The image purge keeps images a setting holds by number alone, such as the shop placeholder or a theme logo, and any image made for the site's emails.
 
 = 1.21.0 =
 * The image purge tool can also scan every image attached to nothing, and deletes those not used anywhere on the site.
