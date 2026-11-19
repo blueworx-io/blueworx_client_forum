@@ -4,7 +4,8 @@
  *
  * Ensure other post types are not included in the global search results and display Sku.
  *
- * Moved verbatim from the Code Snippets plugin.
+ * Moved verbatim from the Code Snippets plugin. The SKU search below was added
+ * afterwards.
  *
  * @package ExternalProductImages
  */
@@ -34,3 +35,59 @@ add_action(
 		}
 	}
 );
+
+/**
+ * Let the site search find a product by its SKU.
+ *
+ * WordPress only searches names and descriptions, and most of Forum's product
+ * names don't hold the code, so a code search came back empty. Spaces are
+ * ignored on both sides, because some SKUs arrive from ePim with a stray space
+ * in them ("VSC-45577- SBRS"). A variation's SKU finds its parent product.
+ *
+ * @param string   $search The search part of the WHERE clause.
+ * @param WP_Query $query  The query being run.
+ * @return string
+ */
+function epi_search_by_sku( $search, $query ) {
+	if ( '' === trim( $search ) || is_admin() || ! $query->is_main_query() || ! $query->is_search() ) {
+		return $search;
+	}
+
+	$term = preg_replace( '/\s+/', '', (string) $query->get( 's' ) );
+
+	// Too short to be a code; matching it would pull in half the shop.
+	if ( strlen( $term ) < 3 ) {
+		return $search;
+	}
+
+	global $wpdb;
+
+	$like = '%' . $wpdb->esc_like( $term ) . '%';
+
+	$sku_match = $wpdb->prepare(
+		"{$wpdb->posts}.ID IN (
+			SELECT IF( sku_post.post_parent > 0, sku_post.post_parent, sku_post.ID )
+			FROM {$wpdb->postmeta} AS sku_meta
+			INNER JOIN {$wpdb->posts} AS sku_post ON sku_post.ID = sku_meta.post_id
+			WHERE sku_meta.meta_key = '_sku'
+			AND REPLACE( sku_meta.meta_value, ' ', '' ) LIKE %s
+		)",
+		$like
+	);
+
+	// WordPress hands over " AND (name matches) [AND (no password)]". A SKU
+	// match stands in for the name match only: the password rule, which hides
+	// protected products from visitors, stays outside so it still applies.
+	$password = '';
+	$no_pass  = " AND ({$wpdb->posts}.post_password = '') ";
+	if ( false !== strpos( $search, $no_pass ) ) {
+		$password = $no_pass;
+		$search   = str_replace( $no_pass, ' ', $search );
+	}
+
+	$rest = preg_replace( '/^\s*AND\s+/i', '', $search );
+
+	return " AND ( {$sku_match} OR ( {$rest} ) ){$password}";
+}
+
+add_filter( 'posts_search', 'epi_search_by_sku', 10, 2 );

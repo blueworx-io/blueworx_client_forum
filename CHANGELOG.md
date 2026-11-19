@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.21.3]
+
+### Fixed
+- Site search finds products by their code (SKU) as well as by name. Most
+  product names don't include the code, so a code search used to find nothing.
+  Spaces are ignored, so a code saved with a stray space is still found.
+- Long product names with no spaces, such as "StriptoWiretoStripConnector",
+  wrap inside their card on shop, category and search pages instead of running
+  over the next card.
+- A code search still hides password-protected products from visitors.
+
 ## [1.21.2]
 
 ### Fixed
