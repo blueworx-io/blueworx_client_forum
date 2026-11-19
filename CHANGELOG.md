@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.22.0]
+
+### Added
+- Shop and category cards show "SKU: …" under the product name again. ePim's own
+  helper plugin used to print it, and the line disappeared when that plugin was
+  switched off. It can be turned off under Shop behaviour.
+
+### Fixed
+- Product pictures that are not square, such as some Ikonects switches, show
+  whole and centred on the product page and in its thumbnails. The theme's image
+  rule used to let them spill out of the square frame and get cut off.
+
 ## [1.21.3]
 
 ### Fixed

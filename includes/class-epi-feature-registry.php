@@ -247,6 +247,15 @@ final class EPI_Feature_Registry {
 				'dependencies'   => array( 'woocommerce' ),
 				'boot'           => self::snippet( 'search-result-sku.php' ),
 			),
+			'shop-card-sku'               => array(
+				'title'          => __( 'Show SKU on shop cards', 'blueworx_client_forum' ),
+				'description'    => __( 'Shop and category cards show "SKU: …" under the product name.', 'blueworx_client_forum' ),
+				'group'          => 'shop',
+				'dangerous'      => false,
+				'danger_message' => '',
+				'dependencies'   => array( 'woocommerce' ),
+				'boot'           => self::snippet( 'shop-card-sku.php' ),
+			),
 
 			// --- Account ------------------------------------------------.
 			'acf-account-details'         => array(

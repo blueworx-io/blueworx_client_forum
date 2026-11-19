@@ -428,3 +428,82 @@ test('the main image fills the full width of the gallery and is square', async (
   await expect(page.locator('.epi-gallery__stage')).toHaveCSS('border-radius', '12px');
   await expect(page.locator('.epi-gallery__thumb').first()).toHaveCSS('border-radius', '8px');
 });
+
+// A solid grey PNG of any size, so a test can use a tall or wide picture.
+function png(width, height) {
+  const zlib = require('zlib');
+  const crcTable = Array.from({ length: 256 }, (_, n) => {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    return c >>> 0;
+  });
+  const crc = (buf) => {
+    let c = 0xffffffff;
+    for (const b of buf) c = crcTable[(c ^ b) & 0xff] ^ (c >>> 8);
+    return (c ^ 0xffffffff) >>> 0;
+  };
+  const chunk = (type, data) => {
+    const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+    const out = Buffer.alloc(body.length + 8);
+    out.writeUInt32BE(data.length, 0);
+    body.copy(out, 4);
+    out.writeUInt32BE(crc(body), body.length + 4);
+    return out;
+  };
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header[8] = 8; // bit depth
+  header[9] = 0; // greyscale
+  const rows = Buffer.alloc((width + 1) * height, 0x80);
+  for (let y = 0; y < height; y++) rows[y * (width + 1)] = 0; // no filter
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', header),
+    chunk('IDAT', zlib.deflateSync(rows)),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
+}
+
+// ePim sends some pictures taller than they are wide. The live theme sets
+// `.woocommerce img { height: auto }`, which used to beat the gallery's own
+// sizing, so a tall picture spilled out of the square frame and was cut off at
+// the bottom: the main picture looked pushed up and the thumbnails off-centre.
+// Every picture has to sit whole inside its square, centred.
+test('a tall picture sits whole and centred in the square frame, even under the theme image rule', async ({
+  page,
+}) => {
+  const media = await productPage(page, '[forum_product_gallery source="epim"]');
+  const tall = png(240, 300);
+  await page.route('https://epim.online/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'image/png', body: tall })
+  );
+  await page.goto(`/?page_id=${media.id}`);
+
+  // The live theme's rule, on a page the theme marks as a shop page.
+  await page.addStyleTag({ content: '.woocommerce img, .elementor img { height: auto; }' });
+  await page.evaluate(() => document.body.classList.add('woocommerce'));
+
+  const main = page.locator('.epi-gallery__main-image');
+  await expect.poll(() => main.evaluate((img) => img.complete && img.naturalWidth)).toBe(240);
+
+  const fits = (selector) =>
+    page.locator(selector).evaluateAll((imgs) =>
+      imgs.map((img) => {
+        const box = img.getBoundingClientRect();
+        const frame = img.parentElement.getBoundingClientRect();
+        return {
+          sameBox:
+            Math.abs(box.top - frame.top) < 1 &&
+            Math.abs(box.height - frame.height) < 1 &&
+            Math.abs(box.width - frame.width) < 1,
+          fit: getComputedStyle(img).objectFit,
+        };
+      })
+    );
+
+  expect(await fits('.epi-gallery__main-image')).toEqual([{ sameBox: true, fit: 'contain' }]);
+  const thumbs = await fits('.epi-gallery__thumb-image');
+  expect(thumbs).toHaveLength(3);
+  for (const thumb of thumbs) expect(thumb).toEqual({ sameBox: true, fit: 'contain' });
+});

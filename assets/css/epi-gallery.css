@@ -35,10 +35,14 @@
 	aspect-ratio: 1 / 1;
 }
 
-.epi-gallery__main-image {
+/* Doubled class so it outranks the theme's ".woocommerce img { height: auto }",
+   which otherwise lets a tall picture spill out of the square and get cut off.
+   "contain" keeps the whole picture in view, centred, whatever its shape. */
+.epi-gallery .epi-gallery__main-image {
 	width: 100%;
 	height: 100%;
-	object-fit: cover;
+	object-fit: contain;
+	object-position: center;
 	display: block;
 	transition: opacity 0.25s ease;
 }
@@ -133,10 +137,11 @@
 	box-shadow: inset 0 0 0 2px var(--epi-active);
 }
 
-.epi-gallery__thumb-image {
+.epi-gallery .epi-gallery__thumb-image {
 	width: 100%;
 	height: 100%;
-	object-fit: cover;
+	object-fit: contain;
+	object-position: center;
 	display: block;
 }
 
