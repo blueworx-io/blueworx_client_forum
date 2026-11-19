@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Long product names with no spaces, such as "StriptoWiretoStripConnector",
   wrap inside their card on shop, category and search pages instead of running
   over the next card.
+- A code search still hides password-protected products from visitors.
 
 ## [1.21.2]
 
