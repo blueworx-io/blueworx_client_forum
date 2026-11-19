@@ -137,6 +137,15 @@ final class EPI_Feature_Registry {
 				'dependencies'   => array(),
 				'boot'           => array( 'EPI_Image_Cache', 'init' ),
 			),
+			'product-title-wrap'          => array(
+				'title'          => __( 'Wrap long product names', 'blueworx_client_forum' ),
+				'description'    => __( 'Long product names with no spaces break onto the next line instead of running out of their shop, category or search card.', 'blueworx_client_forum' ),
+				'group'          => 'product-display',
+				'dangerous'      => false,
+				'danger_message' => '',
+				'dependencies'   => array(),
+				'boot'           => self::snippet( 'product-title-wrap.php' ),
+			),
 			'hide-internal-attributes'    => array(
 				'title'          => __( 'Hide internal attributes', 'blueworx_client_forum' ),
 				'description'    => __( 'Hides the internal pa_epim-*, pa_bullet-*, pa_ecd-* and "bullet" attributes from the product page.', 'blueworx_client_forum' ),
@@ -222,7 +231,7 @@ final class EPI_Feature_Registry {
 			),
 			'restrict-search'             => array(
 				'title'          => __( 'Restrict search to products', 'blueworx_client_forum' ),
-				'description'    => __( 'Site search returns only WooCommerce products.', 'blueworx_client_forum' ),
+				'description'    => __( 'Site search returns only WooCommerce products, and finds them by SKU as well as by name.', 'blueworx_client_forum' ),
 				'group'          => 'shop',
 				'dangerous'      => false,
 				'danger_message' => '',

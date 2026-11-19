@@ -46,6 +46,10 @@ be placed anywhere with [forum_product_gallery].
 * Shop and category cards show the product SKU under its name again.
 * Product pictures that are taller or wider than square now show whole and centred on the product page, instead of being cut off.
 
+= 1.21.3 =
+* Site search finds products by their code (SKU), even when the code on the site has a stray space in it.
+* Long product names with no spaces wrap inside their card instead of running over the next one.
+
 = 1.21.2 =
 * Elementor product cards, such as Featured Products, name each ePim picture after its product for screen readers, instead of the picture number.
 
