@@ -45,6 +45,7 @@ add_action(
 							'post_type'   => 'product',
 							'post_status' => 'publish',
 							'post_title'  => (string) $request->get_param( 'title' ),
+							'post_password' => (string) $request->get_param( 'password' ),
 						)
 					);
 

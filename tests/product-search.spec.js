@@ -19,7 +19,7 @@ test.beforeAll(() => {
   fs.copyFileSync(SUPPORT, path.join(MU_DIR, path.basename(SUPPORT)));
 });
 
-async function makeProduct(page, title, sku) {
+async function makeProduct(page, title, sku, password = '') {
   const nonce = await page.evaluate(() =>
     fetch('/wp-admin/admin-ajax.php?action=rest-nonce', { credentials: 'same-origin' }).then((r) =>
       r.text()
@@ -27,7 +27,7 @@ async function makeProduct(page, title, sku) {
   );
   const res = await page.request.post('/wp-json/epi-test/v1/sku-product', {
     headers: { 'X-WP-Nonce': nonce },
-    data: { title, sku },
+    data: { title, sku, password },
   });
   expect(res.ok()).toBeTruthy();
 }
@@ -69,22 +69,45 @@ test('site search finds a product by its SKU, ignoring stray spaces', async ({ p
   await expect(body).not.toContainText(spaced);
 });
 
-test('long product names wrap inside their card', async ({ page }) => {
-  await page.goto('/', { waitUntil: 'domcontentloaded' });
+test('a code search does not show password-protected products to visitors', async ({ page, browser }) => {
+  await loginAsAdmin(page);
 
-  // A shop card as WooCommerce prints it, narrow like the real grid, holding a
-  // name with a long run of letters and no spaces, as ePim sends some.
-  const overflow = await page.evaluate(() => {
-    const list = document.createElement('ul');
-    list.className = 'products';
-    list.innerHTML =
-      '<li class="product" style="width:180px;list-style:none">' +
-      '<h2 class="woocommerce-loop-product__title">6Pin 12mm StriptoWiretoStripConnector/15cm 22 AWG wire</h2>' +
-      '</li>';
-    document.body.appendChild(list);
-    const title = list.querySelector('h2');
-    return title.scrollWidth - title.clientWidth;
-  });
+  const stamp = Date.now();
+  const code = `PWD-${stamp}`;
+  const name = `Private switch ${stamp}`;
+  await makeProduct(page, name, code, 'secret');
 
-  expect(overflow).toBeLessThanOrEqual(0);
+  // WordPress hides password-protected posts from logged-out searches; a SKU
+  // match must not get round that.
+  const visitor = await browser.newContext();
+  const guest = await visitor.newPage();
+  await guest.goto(`/?s=${encodeURIComponent(code)}`, { waitUntil: 'domcontentloaded' });
+  await expect(guest.locator('body')).not.toContainText(name);
+  await visitor.close();
 });
+
+// The card markup each listing really uses on the live site: WooCommerce's loop
+// on shop and category pages, and the theme's (UiCore) post cards on search.
+const CARDS = {
+  'shop and category': '<h2 class="woocommerce-loop-product__title">%s</h2>',
+  search: '<h4 class="uicore-post-title"><span>%s</span></h4>',
+};
+
+for (const [where, markup] of Object.entries(CARDS)) {
+  test(`long product names wrap inside their card on ${where} pages`, async ({ page }) => {
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+
+    // A card narrow like the real grid, holding a name with a long run of
+    // letters and no spaces, as ePim sends some.
+    const overflow = await page.evaluate((html) => {
+      const card = document.createElement('div');
+      card.style.width = '180px';
+      card.innerHTML = html.replace('%s', '6Pin 12mm StriptoWiretoStripConnector/15cm 22 AWG wire');
+      document.body.appendChild(card);
+      const title = card.firstElementChild;
+      return title.scrollWidth - title.clientWidth;
+    }, markup);
+
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
+}

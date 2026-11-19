@@ -75,11 +75,19 @@ function epi_search_by_sku( $search, $query ) {
 		$like
 	);
 
-	// WordPress hands over " AND (name matches) [AND (no password)]". Keep all
-	// of that as one side, and let a SKU match stand in for it.
+	// WordPress hands over " AND (name matches) [AND (no password)]". A SKU
+	// match stands in for the name match only: the password rule, which hides
+	// protected products from visitors, stays outside so it still applies.
+	$password = '';
+	$no_pass  = " AND ({$wpdb->posts}.post_password = '') ";
+	if ( false !== strpos( $search, $no_pass ) ) {
+		$password = $no_pass;
+		$search   = str_replace( $no_pass, ' ', $search );
+	}
+
 	$rest = preg_replace( '/^\s*AND\s+/i', '', $search );
 
-	return " AND ( {$sku_match} OR ( {$rest} ) ) ";
+	return " AND ( {$sku_match} OR ( {$rest} ) ){$password}";
 }
 
 add_filter( 'posts_search', 'epi_search_by_sku', 10, 2 );
