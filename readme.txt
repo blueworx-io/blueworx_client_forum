@@ -4,7 +4,7 @@ Tags: woocommerce, elementor, product gallery, product images, site functionalit
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.21.2
+Stable tag: 1.21.3
 License: GPLv2 or later
 
 Site functionality plugin for Forum Lighting: one control centre to switch the WooCommerce gallery, metadata, pricing and more on or off.
@@ -41,6 +41,10 @@ be placed anywhere with [forum_product_gallery].
    category. Save.
 
 == Changelog ==
+
+= 1.21.3 =
+* Site search finds products by their code (SKU), even when the code on the site has a stray space in it.
+* Long product names with no spaces wrap inside their card instead of running over the next one.
 
 = 1.21.2 =
 * Elementor product cards, such as Featured Products, name each ePim picture after its product for screen readers, instead of the picture number.
