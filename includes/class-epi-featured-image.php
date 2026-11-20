@@ -255,11 +255,39 @@ final class EPI_Featured_Image {
 		$on_error = $fallback ? "this.onerror=null;this.src='" . $fallback . "';" : '';
 
 		return sprintf(
-			'<img src="%1$s" alt="%2$s" class="%3$s" loading="lazy" decoding="async" onerror="%4$s" />',
+			'<img src="%1$s" alt="%2$s" class="%3$s"%4$s loading="lazy" decoding="async" onerror="%5$s" />',
 			esc_url( $url ),
 			esc_attr( $product->get_title() ),
 			esc_attr( implode( ' ', $classes ) ),
+			self::size_attributes( $size ),
 			esc_attr( $on_error )
+		);
+	}
+
+	/**
+	 * Width and height for a size asked for in pixels, such as the small
+	 * picture in WooCommerce's order emails. Without them an email shows the
+	 * ePim picture at its full size, since email apps ignore the site's styles.
+	 *
+	 * @param mixed $size Requested image size (string or array).
+	 * @return string
+	 */
+	private static function size_attributes( $size ) {
+		if ( ! is_array( $size ) || ! isset( $size[0], $size[1] ) ) {
+			return '';
+		}
+
+		$width  = absint( $size[0] );
+		$height = absint( $size[1] );
+
+		if ( ! $width || ! $height ) {
+			return '';
+		}
+
+		return sprintf(
+			' width="%1$d" height="%2$d" style="width:%1$dpx;height:%2$dpx;max-width:%1$dpx;object-fit:contain;"',
+			$width,
+			$height
 		);
 	}
 }

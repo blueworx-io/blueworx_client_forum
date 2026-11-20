@@ -21,7 +21,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * price_customer_2 â 55% off (pays 45%)
  * price_customer_3 â 60% off then * 1.17, shown as EUR
  * price_customer_4 â fixed price from product attribute "ECD-special-prices" (fallback: price_customer_1 * 0.40)
- * Admins & shop managers â price_customer_4 attribute price (fallback: price_customer_1 * 0.40)
+ * Admins â 60% off (pays 40%), the same as price_customer_1
+ * Shop managers â price_customer_4 attribute price (fallback: price_customer_1 * 0.40)
  * All others â no discount
  */
 add_filter( 'woocommerce_product_get_price', 'epi_role_based_price', 10, 2 );
@@ -45,8 +46,12 @@ function epi_role_based_price( $price, $product ) {
 	if ( $base_price <= 0 ) {
 		return $base_price;
 	}
-	// Admins + shop managers â price_customer_4 attribute price, fallback to price_customer_1
-	if ( in_array( 'administrator', $roles, true ) || in_array( 'shop_manager', $roles, true ) ) {
+	// Admins see the 60% trade price, the same as price_customer_1.
+	if ( in_array( 'administrator', $roles, true ) ) {
+		return $base_price * 0.40;
+	}
+	// Shop managers â price_customer_4 attribute price, fallback to price_customer_1
+	if ( in_array( 'shop_manager', $roles, true ) ) {
 		$attribute_price = epi_get_attribute_price( $product, 'ECD-special-prices' );
 		if ( $attribute_price !== null ) {
 			return $attribute_price;

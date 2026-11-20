@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.22.1]
+
+### Fixed
+- Product pictures in order emails show as small thumbnails again, as they did
+  in older order emails. They used to come through full size, so one order
+  printed over many pages.
+- Administrator logins see the 60% trade price, the same as Customer 1
+  accounts, instead of the ECD special price. Shop managers still see the ECD
+  special price.
+
 ## [1.22.0]
 
 ### Added

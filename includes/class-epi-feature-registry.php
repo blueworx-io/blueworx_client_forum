@@ -92,7 +92,7 @@ final class EPI_Feature_Registry {
 			// --- Pricing -------------------------------------------------.
 			'role-based-pricing'          => array(
 				'title'          => __( 'Role-based pricing', 'blueworx_client_forum' ),
-				'description'    => __( 'Adjusts product prices by user role (customer 1-4, admins/shop managers), including the EUR switch for customer_3 and the [dynamic_product_price] shortcode.', 'blueworx_client_forum' ),
+				'description'    => __( 'Adjusts product prices by user role (customer 1-4, admins at the 60% trade price, shop managers), including the EUR switch for customer_3 and the [dynamic_product_price] shortcode.', 'blueworx_client_forum' ),
 				'group'          => 'pricing',
 				'dangerous'      => true,
 				'danger_message' => $price_danger,
