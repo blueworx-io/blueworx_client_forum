@@ -4,7 +4,7 @@ Tags: woocommerce, elementor, product gallery, product images, site functionalit
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.22.0
+Stable tag: 1.22.1
 License: GPLv2 or later
 
 Site functionality plugin for Forum Lighting: one control centre to switch the WooCommerce gallery, metadata, pricing and more on or off.
@@ -41,6 +41,10 @@ be placed anywhere with [forum_product_gallery].
    category. Save.
 
 == Changelog ==
+
+= 1.22.1 =
+* Product pictures in order emails are small thumbnails again, so an order prints on one page.
+* Administrator logins see the 60% trade price. Shop managers still see the ECD special price.
 
 = 1.22.0 =
 * Shop and category cards show the product SKU under its name again.
