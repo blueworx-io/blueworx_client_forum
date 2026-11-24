@@ -47,13 +47,40 @@ function epi_trim_is_blocked_guest() {
 }
 
 /**
+ * Whether this is a REST request. REST_REQUEST is only set after wp_loaded, so
+ * the address is read as well.
+ *
+ * @return bool
+ */
+function epi_trim_is_rest_request() {
+	if ( function_exists( 'wp_is_serving_rest_request' ) && wp_is_serving_rest_request() ) {
+		return true;
+	}
+
+	if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+		return true;
+	}
+
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Only read to recognise the route.
+	if ( isset( $_GET['rest_route'] ) ) {
+		return true;
+	}
+
+	$uri    = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Only compared, never output.
+	$path   = (string) wp_parse_url( $uri, PHP_URL_PATH );
+	$prefix = '/' . rest_get_url_prefix() . '/';
+
+	return false !== strpos( $path, $prefix );
+}
+
+/**
  * Send a guest who followed an add-to-cart link back to the page, without the
  * add. Runs before WooCommerce's own add-to-cart handler (wp_loaded, 20).
  *
  * @return void
  */
 function epi_trim_redirect_guest_add_to_cart() {
-	if ( is_admin() || wp_doing_ajax() || wp_doing_cron() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ) {
+	if ( is_admin() || wp_doing_ajax() || wp_doing_cron() || epi_trim_is_rest_request() ) {
 		return;
 	}
 
@@ -140,6 +167,7 @@ function epi_trim_answer_guest_cart_check() {
 	);
 }
 add_action( 'wc_ajax_get_refreshed_fragments', 'epi_trim_answer_guest_cart_check', 0 );
+add_action( 'wp_ajax_nopriv_woocommerce_get_refreshed_fragments', 'epi_trim_answer_guest_cart_check', 0 );
 
 /**
  * Hide the mini-cart widget from guests.
@@ -151,6 +179,18 @@ function epi_trim_hide_mini_cart( $hidden ) {
 	return epi_trim_is_blocked_guest() ? true : $hidden;
 }
 add_filter( 'woocommerce_widget_cart_is_hidden', 'epi_trim_hide_mini_cart' );
+
+/**
+ * Hide the Mini-Cart block from guests, so a block theme's header shows no
+ * cart and loads none of its scripts.
+ *
+ * @param string $content The block's markup.
+ * @return string
+ */
+function epi_trim_hide_mini_cart_block( $content ) {
+	return epi_trim_is_blocked_guest() ? '' : $content;
+}
+add_filter( 'render_block_woocommerce/mini-cart', 'epi_trim_hide_mini_cart_block' );
 
 /**
  * Ask search engines to stay off add-to-cart links.
@@ -197,6 +237,18 @@ function epi_trim_cap_listing_query( $query ) {
 
 	if ( $no_limit || $wanted > $max ) {
 		$query->set( 'posts_per_page', $max );
+	}
+
+	// WordPress applies these two after this hook has run: one swaps the page
+	// size for the archive setting, the other turns paging off altogether.
+	$archive = (int) $query->get( 'posts_per_archive_page' );
+
+	if ( $archive < 0 || $archive > $max ) {
+		$query->set( 'posts_per_archive_page', $max );
+	}
+
+	if ( $query->get( 'nopaging' ) ) {
+		$query->set( 'nopaging', false );
 	}
 }
 add_action( 'pre_get_posts', 'epi_trim_cap_listing_query', 9999 );

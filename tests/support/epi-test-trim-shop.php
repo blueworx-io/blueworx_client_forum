@@ -42,27 +42,49 @@ add_action(
 			'/listing-size',
 			$open + array(
 				'callback' => static function ( WP_REST_Request $request ) {
-					global $wp_the_query;
+					global $wp_the_query, $wp_post_types;
 
+					// Another spec's stand-in may have registered "product" with no archive,
+					// so make sure this request has one either way.
 					if ( ! post_type_exists( 'product' ) ) {
-						register_post_type( 'product', array(
-							'public'      => true,
-							'has_archive' => true,
-						) );
+						register_post_type(
+							'product',
+							array(
+								'public'      => true,
+								'has_archive' => true,
+							)
+						);
 					}
+
+					$wp_post_types['product']->has_archive = true; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Test-only: this request only.
 
 					$query        = new WP_Query();
 					$wp_the_query = $query; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Makes the stand-in query the main one for this request only.
+
+					// A theme or plugin may also set the archive page size, or turn paging off.
+					$overrides = array();
+
+					if ( null !== $request->get_param( 'archive' ) ) {
+						$overrides['posts_per_archive_page'] = (int) $request->get_param( 'archive' );
+					}
+
+					if ( $request->get_param( 'nopaging' ) ) {
+						$overrides['nopaging'] = true;
+					}
 
 					// Running the query fires pre_get_posts, as a real page view does.
 					$query->query(
 						array(
 							'post_type'      => 'product',
 							'posts_per_page' => (int) $request->get_param( 'value' ),
-						)
+						) + $overrides
 					);
 
-					return array( 'per_page' => (int) $query->get( 'posts_per_page' ) );
+					return array(
+						'per_page' => (int) $query->get( 'posts_per_page' ),
+						'archive'  => (int) $query->get( 'posts_per_archive_page' ),
+						'nopaging' => (bool) $query->get( 'nopaging' ),
+					);
 				},
 			)
 		);
@@ -87,6 +109,17 @@ add_action(
 					do_action( 'wc_ajax_get_refreshed_fragments' );
 
 					return array( 'answered_by' => 'woocommerce' );
+				},
+			)
+		);
+
+		// What the Mini-Cart block would print.
+		register_rest_route(
+			'epi-test/v1',
+			'/mini-cart-block',
+			$open + array(
+				'callback' => static function () {
+					return array( 'html' => apply_filters( 'render_block_woocommerce/mini-cart', '<div class="mini-cart">cart</div>' ) );
 				},
 			)
 		);

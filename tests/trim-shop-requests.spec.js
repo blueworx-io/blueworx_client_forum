@@ -99,6 +99,29 @@ test('logged-in users get quick add-to-cart on shop pages, guests are left alone
   expect((await res.json()).value).toBe('yes');
 });
 
+test('a REST request carrying add-to-cart is not redirected', async ({ baseURL }) => {
+  const ctx = await guest(baseURL);
+  const res = await ctx.get('/wp-json/epi-test/v1/mini-cart-hidden?add-to-cart=123');
+  expect(res.status()).toBe(200);
+  expect((await res.json()).hidden).toBe(true);
+  await ctx.dispose();
+});
+
+test('a guest cart check through admin-ajax is answered with nothing', async ({ baseURL }) => {
+  const ctx = await guest(baseURL);
+  const res = await ctx.get('/wp-admin/admin-ajax.php?action=woocommerce_get_refreshed_fragments');
+  expect(res.ok()).toBeTruthy();
+  expect(await res.json()).toEqual({ fragments: {}, cart_hash: '' });
+  await ctx.dispose();
+});
+
+test('guests get no Mini-Cart block', async ({ baseURL }) => {
+  const ctx = await guest(baseURL);
+  const body = await (await ctx.get('/wp-json/epi-test/v1/mini-cart-block')).json();
+  expect(body.html).toBe('');
+  await ctx.dispose();
+});
+
 test('robots.txt keeps search engines off add-to-cart links', async ({ baseURL }) => {
   const ctx = await guest(baseURL);
   const res = await ctx.get('/?robots=1');
@@ -117,5 +140,14 @@ test('a shop page never lists more than 48 products', async ({ baseURL }) => {
   expect(await get('listing-size?value=100')).toBe(48);
   expect(await get('listing-size?value=-1')).toBe(48);
   expect(await get('listing-size?value=12')).toBe(12);
+
+  // A theme or plugin turning paging off, or setting the archive page size,
+  // cannot lift the limit.
+  const archive = async (query) =>
+    (await (await ctx.get(`/wp-json/epi-test/v1/listing-size?${query}`)).json());
+  const noPaging = await archive('value=12&nopaging=1');
+  expect(noPaging.nopaging).toBe(false);
+  expect((await archive('value=12&archive=500')).archive).toBe(48);
+  expect((await archive('value=12&archive=-1')).archive).toBe(48);
   await ctx.dispose();
 });
