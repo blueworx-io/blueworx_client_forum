@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.23.0]
+
+### Added
+- New feature under Shop behaviour, "Trim wasted shop requests", so bots and
+  guests stop making the server rebuild pages for nothing:
+  - a guest who follows an add-to-cart link goes straight back to the page,
+    without the add;
+  - logged-in (trade) users get WooCommerce's quick add-to-cart on shop pages;
+  - guests are not given the cart-check script or the mini-cart;
+  - robots.txt asks search engines to stay off add-to-cart links;
+  - no shop page lists more than 48 products (it used to allow 100).
+  The guest parts only apply while "Hide cart & purchasing for guests" is on.
+
 ## [1.22.1]
 
 ### Fixed

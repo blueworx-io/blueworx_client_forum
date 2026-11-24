@@ -229,6 +229,15 @@ final class EPI_Feature_Registry {
 				'dependencies'   => array( 'woocommerce' ),
 				'boot'           => self::snippet( 'hide-cart-for-guests.php' ),
 			),
+			'trim-shop-requests'          => array(
+				'title'          => __( 'Trim wasted shop requests', 'blueworx_client_forum' ),
+				'description'    => __( 'Guests who follow an add-to-cart link go straight back to the page, with no cart checks or mini-cart for them; logged-in users get quick add-to-cart on shop pages; search engines are asked to stay off add-to-cart links; and no shop page lists more than 48 products.', 'blueworx_client_forum' ),
+				'group'          => 'shop',
+				'dangerous'      => false,
+				'danger_message' => '',
+				'dependencies'   => array(),
+				'boot'           => self::snippet( 'trim-shop-requests.php' ),
+			),
 			'restrict-search'             => array(
 				'title'          => __( 'Restrict search to products', 'blueworx_client_forum' ),
 				'description'    => __( 'Site search returns only WooCommerce products, and finds them by SKU as well as by name.', 'blueworx_client_forum' ),
