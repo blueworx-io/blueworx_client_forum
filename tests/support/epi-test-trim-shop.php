@@ -68,6 +68,10 @@ add_action(
 						$overrides['posts_per_archive_page'] = (int) $request->get_param( 'archive' );
 					}
 
+					if ( null !== $request->get_param( 'showposts' ) ) {
+						$overrides['showposts'] = (int) $request->get_param( 'showposts' );
+					}
+
 					if ( $request->get_param( 'nopaging' ) ) {
 						$overrides['nopaging'] = true;
 					}
@@ -83,7 +87,8 @@ add_action(
 					return array(
 						'per_page' => (int) $query->get( 'posts_per_page' ),
 						'archive'  => (int) $query->get( 'posts_per_archive_page' ),
-						'nopaging' => (bool) $query->get( 'nopaging' ),
+						'nopaging'  => (bool) $query->get( 'nopaging' ),
+						'showposts' => (int) $query->get( 'showposts' ),
 					);
 				},
 			)
@@ -113,13 +118,34 @@ add_action(
 			)
 		);
 
-		// What the Mini-Cart block would print.
+		// What a block's own product query (Product Collection) ends up with.
+		register_rest_route(
+			'epi-test/v1',
+			'/block-query-size',
+			$open + array(
+				'callback' => static function ( WP_REST_Request $request ) {
+					$vars = apply_filters(
+						'query_loop_block_query_vars',
+						array(
+							'post_type'      => (string) $request->get_param( 'type' ),
+							'posts_per_page' => (int) $request->get_param( 'value' ),
+						),
+						null,
+						1
+					);
+
+					return array( 'per_page' => (int) $vars['posts_per_page'] );
+				},
+			)
+		);
+
+		// What the Mini-Cart block would print, or null when it is left to render itself.
 		register_rest_route(
 			'epi-test/v1',
 			'/mini-cart-block',
 			$open + array(
 				'callback' => static function () {
-					return array( 'html' => apply_filters( 'render_block_woocommerce/mini-cart', '<div class="mini-cart">cart</div>' ) );
+					return array( 'html' => apply_filters( 'pre_render_block', null, array( 'blockName' => 'woocommerce/mini-cart' ), null ) );
 				},
 			)
 		);

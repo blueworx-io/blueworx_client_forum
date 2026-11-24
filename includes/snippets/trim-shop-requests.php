@@ -181,16 +181,21 @@ function epi_trim_hide_mini_cart( $hidden ) {
 add_filter( 'woocommerce_widget_cart_is_hidden', 'epi_trim_hide_mini_cart' );
 
 /**
- * Hide the Mini-Cart block from guests, so a block theme's header shows no
- * cart and loads none of its scripts.
+ * Skip the Mini-Cart block for guests before it renders, so it never loads
+ * cart data, queues its scripts or schedules the cart drawer.
  *
- * @param string $content The block's markup.
- * @return string
+ * @param string|null $pre          Markup to use instead of rendering, or null.
+ * @param array       $parsed_block The block about to render.
+ * @return string|null
  */
-function epi_trim_hide_mini_cart_block( $content ) {
-	return epi_trim_is_blocked_guest() ? '' : $content;
+function epi_trim_skip_mini_cart_block( $pre, $parsed_block ) {
+	if ( isset( $parsed_block['blockName'] ) && 'woocommerce/mini-cart' === $parsed_block['blockName'] && epi_trim_is_blocked_guest() ) {
+		return '';
+	}
+
+	return $pre;
 }
-add_filter( 'render_block_woocommerce/mini-cart', 'epi_trim_hide_mini_cart_block' );
+add_filter( 'pre_render_block', 'epi_trim_skip_mini_cart_block', 10, 2 );
 
 /**
  * Ask search engines to stay off add-to-cart links.
@@ -231,12 +236,20 @@ function epi_trim_cap_listing_query( $query ) {
 		return;
 	}
 
-	$max      = epi_trim_max_products_per_page();
-	$wanted   = (int) $query->get( 'posts_per_page' );
-	$no_limit = -1 === $wanted;
+	$max    = epi_trim_max_products_per_page();
+	$wanted = (int) $query->get( 'posts_per_page' );
 
-	if ( $no_limit || $wanted > $max ) {
+	// WordPress turns a size below -1, such as -100, into its positive value
+	// once this hook has run, so that counts as 100.
+	if ( -1 === $wanted || abs( $wanted ) > $max ) {
 		$query->set( 'posts_per_page', $max );
+	}
+
+	// The older "showposts" setting replaces the page size after this hook.
+	$showposts = (int) $query->get( 'showposts' );
+
+	if ( 0 !== $showposts && ( $showposts < 0 || $showposts > $max ) ) {
+		$query->set( 'showposts', $max );
 	}
 
 	// WordPress applies these two after this hook has run: one swaps the page
@@ -252,3 +265,30 @@ function epi_trim_cap_listing_query( $query ) {
 	}
 }
 add_action( 'pre_get_posts', 'epi_trim_cap_listing_query', 9999 );
+
+/**
+ * Cap the page size of a product list built by a block, such as the
+ * WooCommerce Product Collection block, which sets its own query. The block
+ * works out its pagination from what this returns.
+ *
+ * @param array $query Query arguments the block will run.
+ * @return array
+ */
+function epi_trim_cap_block_query( $query ) {
+	if ( ! is_array( $query ) || ! isset( $query['post_type'] ) ) {
+		return $query;
+	}
+
+	if ( ! in_array( 'product', (array) $query['post_type'], true ) ) {
+		return $query;
+	}
+
+	$max = epi_trim_max_products_per_page();
+
+	if ( isset( $query['posts_per_page'] ) && ( -1 === (int) $query['posts_per_page'] || abs( (int) $query['posts_per_page'] ) > $max ) ) {
+		$query['posts_per_page'] = $max;
+	}
+
+	return $query;
+}
+add_filter( 'query_loop_block_query_vars', 'epi_trim_cap_block_query', 9999 );

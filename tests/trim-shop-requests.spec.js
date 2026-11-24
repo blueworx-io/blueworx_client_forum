@@ -122,6 +122,19 @@ test('guests get no Mini-Cart block', async ({ baseURL }) => {
   await ctx.dispose();
 });
 
+test('logged-in users still get the Mini-Cart block', async ({ page }) => {
+  await loginAsAdmin(page);
+  const nonce = await page.evaluate(() =>
+    fetch('/wp-admin/admin-ajax.php?action=rest-nonce', { credentials: 'same-origin' }).then((r) =>
+      r.text()
+    )
+  );
+  const res = await page.request.get('/wp-json/epi-test/v1/mini-cart-block', {
+    headers: { 'X-WP-Nonce': nonce },
+  });
+  expect((await res.json()).html).toBeNull();
+});
+
 test('robots.txt keeps search engines off add-to-cart links', async ({ baseURL }) => {
   const ctx = await guest(baseURL);
   const res = await ctx.get('/?robots=1');
@@ -149,5 +162,20 @@ test('a shop page never lists more than 48 products', async ({ baseURL }) => {
   expect(noPaging.nopaging).toBe(false);
   expect((await archive('value=12&archive=500')).archive).toBe(48);
   expect((await archive('value=12&archive=-1')).archive).toBe(48);
+
+  // WordPress turns -100 into 100 and lets "showposts" replace the page size,
+  // both after the limit has been applied.
+  expect(await get('listing-size?value=-100')).toBe(48);
+  expect(await get('listing-size?value=-5')).toBe(5);
+  expect((await archive('value=12&showposts=100')).showposts).toBe(48);
+  expect((await archive('value=12&showposts=-1')).showposts).toBe(48);
+
+  // A block that runs its own product query is held to the same limit.
+  const block = async (query) =>
+    (await (await ctx.get(`/wp-json/epi-test/v1/block-query-size?${query}`)).json()).per_page;
+  expect(await block('type=product&value=100')).toBe(48);
+  expect(await block('type=product&value=-1')).toBe(48);
+  expect(await block('type=product&value=12')).toBe(12);
+  expect(await block('type=post&value=100')).toBe(100);
   await ctx.dispose();
 });
