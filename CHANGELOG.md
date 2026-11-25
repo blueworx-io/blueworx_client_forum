@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the size it was set to, so nothing on it goes missing. The limit also covers
   shortcode product grids that have page numbers, and listings by colour or
   other attributes, and smaller page sizes are left as they were set.
+- The check for updates no longer stops with an error: three files it needs were
+  missing from released versions.
 
 ## [1.23.0]
 
