@@ -43,8 +43,8 @@ be placed anywhere with [forum_product_gallery].
 == Changelog ==
 
 = 1.23.1 =
-* Every product can be reached again on pages cut down to 48 products: the pages follow on from each other, and page numbers are added where there were none.
-* The 48 limit also covers product grids built with a shortcode and listings by colour or other attributes.
+* Every product can be reached again on pages cut down to 48 products: the pages follow on from each other, and lists with no page numbers keep the size they were set to.
+* The 48 limit also covers shortcode product grids that have page numbers, and listings by colour or other attributes.
 
 = 1.23.0 =
 * Guests who follow an add-to-cart link go straight back to the page, and get no cart checks or mini-cart.

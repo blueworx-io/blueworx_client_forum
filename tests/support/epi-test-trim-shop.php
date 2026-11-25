@@ -135,17 +135,34 @@ add_action(
 			'/block-query-size',
 			$open + array(
 				'callback' => static function ( WP_REST_Request $request ) {
-					$vars = apply_filters(
+					epi_test_trim_ensure_product();
+
+					$size = null;
+
+					add_filter(
 						'query_loop_block_query_vars',
-						array(
-							'post_type'      => (string) $request->get_param( 'type' ),
-							'posts_per_page' => (int) $request->get_param( 'value' ),
-						),
-						null,
-						1
+						static function ( $query ) use ( $request ) {
+							$query['posts_per_page'] = (int) $request->get_param( 'value' );
+							return $query;
+						}
+					);
+					add_filter(
+						'query_loop_block_query_vars',
+						static function ( $query ) use ( &$size ) {
+							$size = (int) $query['posts_per_page'];
+							return $query;
+						},
+						PHP_INT_MAX
 					);
 
-					return array( 'per_page' => (int) $vars['posts_per_page'] );
+					epi_test_trim_render_block(
+						array(
+							'postType' => (string) $request->get_param( 'type' ),
+							'perPage'  => 10,
+						)
+					);
+
+					return array( 'per_page' => $size );
 				},
 			)
 		);
@@ -193,15 +210,51 @@ function epi_test_trim_ensure_product() {
 }
 
 /**
- * Stands in for the [products] shortcode's query and page numbers, making the
- * same calls in the same order as WooCommerce.
+ * Render a page holding one block that lists posts.
+ *
+ * @param array  $query  The block's query settings.
+ * @param string $layout Where its page links go: "plain", "grouped" (inside
+ *                       another block), "nested" (only a second list inside it
+ *                       has them) or "none".
+ */
+function epi_test_trim_render_block( $query, $layout = 'plain' ) {
+	$attributes = array(
+		'queryId' => 7,
+		'query'   => $query + array(
+			'order'   => 'asc',
+			'orderBy' => 'title',
+			'inherit' => false,
+		),
+	);
+
+	$links = '<!-- wp:query-pagination --><!-- wp:query-pagination-previous /--><!-- wp:query-pagination-numbers /--><!-- wp:query-pagination-next /--><!-- /wp:query-pagination -->';
+
+	if ( 'grouped' === $layout ) {
+		$links = '<!-- wp:group --><div class="wp-block-group">' . $links . '</div><!-- /wp:group -->';
+	} elseif ( 'nested' === $layout ) {
+		$links = '<!-- wp:query {"queryId":8,"query":{"perPage":1,"postType":"page","inherit":false}} --><div class="wp-block-query">' . $links . '</div><!-- /wp:query -->';
+	} elseif ( 'none' === $layout ) {
+		$links = '';
+	}
+
+	// Sit the block inside another one, as it does in a real template.
+	return do_blocks(
+		'<!-- wp:group --><div class="wp-block-group"><!-- wp:query ' . wp_json_encode( $attributes ) . ' --><div class="wp-block-query">'
+		. '<!-- wp:post-template --><!-- wp:post-title /--><!-- /wp:post-template -->'
+		. $links
+		. '</div><!-- /wp:query --></div><!-- /wp:group -->'
+	);
+}
+
+/**
+ * Stands in for the [products] shortcode's query, making the same calls in the
+ * same order as WooCommerce.
  */
 class EPI_Test_Trim_Shortcode {
-	private $attributes;
 	private $query_args;
 
 	public function __construct( $attributes ) {
-		$paginate = (bool) $attributes['paginate'];
+		$paginate = wc_string_to_bool( $attributes['paginate'] );
 
 		if ( $paginate ) {
 			$attributes['page'] = empty( $_GET['product-page'] ) ? 1 : absint( $_GET['product-page'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -211,7 +264,7 @@ class EPI_Test_Trim_Shortcode {
 			'post_type'      => 'product',
 			'post_status'    => 'publish',
 			'no_found_rows'  => ! $paginate,
-			'orderby'        => 'title',
+			'orderby'        => $attributes['orderby'],
 			'order'          => 'ASC',
 			'posts_per_page' => (int) $attributes['limit'],
 		);
@@ -220,50 +273,19 @@ class EPI_Test_Trim_Shortcode {
 			$args['paged'] = $attributes['page'];
 		}
 
-		if ( $attributes['ids'] ) {
-			$args['post__in'] = $attributes['ids'];
-		}
-
-		$this->attributes = $attributes;
-		$args             = apply_filters( 'woocommerce_shortcode_products_query', $args, $attributes, 'products' );
-		$args['fields']   = 'ids';
+		$args = apply_filters( 'woocommerce_shortcode_products_query', $args, $attributes, 'products' );
+		$args['fields'] = 'ids';
 		$this->query_args = $args;
-	}
-
-	public function get_query_args() {
-		return $this->query_args;
-	}
-
-	public function get_type() {
-		return 'products';
 	}
 
 	public function run() {
 		$query     = new WP_Query( $this->query_args );
 		$paginated = ! $query->get( 'no_found_rows' );
 
-		$results = apply_filters(
-			'woocommerce_shortcode_products_query_results',
-			(object) array(
-				'ids'          => wp_parse_id_list( $query->posts ),
-				'total'        => $paginated ? (int) $query->found_posts : count( $query->posts ),
-				'total_pages'  => $paginated ? (int) $query->max_num_pages : 1,
-				'per_page'     => (int) $query->get( 'posts_per_page' ),
-				'current_page' => $paginated ? (int) max( 1, $query->get( 'paged', 1 ) ) : 1,
-			),
-			$this
-		);
-
-		ob_start();
-
-		if ( $results->ids ) {
-			do_action( 'woocommerce_shortcode_after_products_loop', $this->attributes );
-		}
-
 		return array(
-			'titles'      => array_map( 'get_the_title', $results->ids ),
-			'total_pages' => $results->total_pages,
-			'html'        => ob_get_clean(),
+			'titles'      => array_map( 'get_the_title', $query->posts ),
+			'total_pages' => $paginated ? (int) $query->max_num_pages : 1,
+			'has_links'   => $paginated && $query->max_num_pages > 1,
 		);
 	}
 }
@@ -313,22 +335,28 @@ add_action(
 				'callback' => static function ( WP_REST_Request $request ) {
 					epi_test_trim_ensure_product();
 
-					$attributes = array(
-						'queryId' => 7,
-						'query'   => array(
-							'postType' => 'product',
-							'perPage'  => (int) $request->get_param( 'size' ),
-							'pages'    => (int) $request->get_param( 'pages' ),
-							'offset'   => (int) $request->get_param( 'offset' ),
-							'order'    => 'asc',
-							'orderBy'  => 'title',
-							'inherit'  => false,
-						),
-					);
+					// WooCommerce's collections narrow the list from the block's own
+					// settings, here to the first so many products.
+					add_filter(
+						'query_loop_block_query_vars',
+						static function ( $query, $block ) {
+							if ( ! empty( $block->context['query']['matches'] ) ) {
+								$query['post__in'] = get_posts(
+									array(
+										'post_type'   => 'product',
+										'orderby'     => 'title',
+										'order'       => 'ASC',
+										'numberposts' => $block->context['query']['matches'],
+										'fields'      => 'ids',
+									)
+								);
+							}
 
-					$numbers = $request->get_param( 'no_numbers' )
-						? ''
-						: '<!-- wp:query-pagination --><!-- wp:query-pagination-previous /--><!-- wp:query-pagination-numbers /--><!-- wp:query-pagination-next /--><!-- /wp:query-pagination -->';
+							return $query;
+						},
+						10,
+						2
+					);
 
 					// A theme or plugin may raise the size itself.
 					if ( $request->get_param( 'raise' ) ) {
@@ -342,11 +370,16 @@ add_action(
 					}
 
 					return array(
-						'html' => do_blocks(
-							'<!-- wp:query ' . wp_json_encode( $attributes ) . ' --><div class="wp-block-query">'
-							. '<!-- wp:post-template --><!-- wp:post-title /--><!-- /wp:post-template -->'
-							. $numbers
-							. '</div><!-- /wp:query -->'
+						'html' => epi_test_trim_render_block(
+							array(
+								'postType' => 'product',
+								'perPage'  => (int) $request->get_param( 'size' ),
+								'pages'    => (int) $request->get_param( 'pages' ),
+								'offset'   => (int) $request->get_param( 'offset' ),
+								'matches'  => (int) $request->get_param( 'matches' ),
+								'orderBy'  => $request->get_param( 'orderby' ) ? (string) $request->get_param( 'orderby' ) : 'title',
+							),
+							$request->get_param( 'layout' ) ? (string) $request->get_param( 'layout' ) : 'plain'
 						),
 					);
 				},
@@ -362,40 +395,22 @@ add_action(
 				'callback' => static function ( WP_REST_Request $request ) {
 					epi_test_trim_ensure_product();
 
-					if ( ! function_exists( 'wc_get_template' ) ) {
+					if ( ! function_exists( 'wc_string_to_bool' ) ) {
 						// phpcs:disable
-						function wc_get_template( $name, $args = array() ) {
-							echo '<nav class="woocommerce-pagination">' . paginate_links(
-								array(
-									'base'     => $args['base'],
-									'format'   => $args['format'],
-									'add_args' => false,
-									'current'  => max( 1, $args['current'] ),
-									'total'    => $args['total'],
-								)
-							) . '</nav>';
+						// The same check WooCommerce makes.
+						function wc_string_to_bool( $string ) {
+							$string = $string ?? '';
+							return is_bool( $string ) ? $string : ( 'yes' === strtolower( $string ) || 1 === $string || 'true' === strtolower( $string ) || '1' === $string );
 						}
 						// phpcs:enable
-					}
-
-					$ids = array();
-
-					if ( $request->get_param( 'ids' ) ) {
-						$ids = get_posts(
-							array(
-								'post_type'   => 'product',
-								'numberposts' => (int) $request->get_param( 'ids' ),
-								'fields'      => 'ids',
-							)
-						);
 					}
 
 					$shortcode = new EPI_Test_Trim_Shortcode(
 						array(
 							'limit'    => (int) $request->get_param( 'limit' ),
-							'paginate' => (bool) $request->get_param( 'paginate' ),
-							'page'     => max( 1, (int) $request->get_param( 'start' ) ),
-							'ids'      => $ids,
+							'paginate' => (string) $request->get_param( 'paginate' ),
+							'orderby'  => $request->get_param( 'orderby' ) ? (string) $request->get_param( 'orderby' ) : 'title',
+							'page'     => 1,
 						)
 					);
 

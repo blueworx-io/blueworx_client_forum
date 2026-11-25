@@ -10,7 +10,7 @@
  *  - logged-in (trade) users get WooCommerce's quick add-to-cart on shop pages;
  *  - guests are not given the cart-check script or the mini-cart;
  *  - robots.txt keeps search engines off add-to-cart links;
- *  - a shop page never lists more than 48 products.
+ *  - a list with page numbers never shows more than 48 products a page.
  *
  * The guest parts only apply while "Hide cart & purchasing for guests" is on,
  * because they would break a shop where guests can buy.
@@ -270,54 +270,118 @@ function epi_trim_cap_listing_query( $query ) {
 add_action( 'pre_get_posts', 'epi_trim_cap_listing_query', 9999 );
 
 /**
- * Whether a block's own query settings ask for more products than the limit. A
- * block that shows the page's main listing is capped with that listing instead.
+ * Whether a block has page numbers, or a "next page" link, for its own list.
+ * Those of another list nested inside it do not count.
  *
- * @param mixed $settings The block's "query" settings.
+ * @param array $blocks The blocks inside it, as parsed.
  * @return bool
  */
-function epi_trim_is_oversized_block( $settings ) {
-	if ( ! is_array( $settings ) || ! empty( $settings['inherit'] ) || ! isset( $settings['perPage'] ) ) {
-		return false;
+function epi_trim_has_page_links( $blocks ) {
+	foreach ( $blocks as $block ) {
+		$name = isset( $block['blockName'] ) ? $block['blockName'] : '';
+
+		if ( in_array( $name, array( 'core/query-pagination-numbers', 'core/query-pagination-next' ), true ) ) {
+			return true;
+		}
+
+		if ( in_array( $name, array( 'core/query', 'woocommerce/product-collection' ), true ) ) {
+			continue;
+		}
+
+		if ( ! empty( $block['innerBlocks'] ) && epi_trim_has_page_links( $block['innerBlocks'] ) ) {
+			return true;
+		}
 	}
 
-	if ( ! isset( $settings['postType'] ) || ! in_array( 'product', (array) $settings['postType'], true ) ) {
-		return false;
-	}
-
-	return is_numeric( $settings['perPage'] ) && absint( $settings['perPage'] ) > epi_trim_max_products_per_page();
+	return false;
 }
 
 /**
- * Cap a product block at its settings, before WordPress or WooCommerce works
- * out where each page starts. A block held to a number of pages gets as many
- * smaller pages as it needs to show the same products.
+ * Whether a product block can be cut down with every product still reachable:
+ * it has page links, and nothing stops a shopper following them to the end. A
+ * random order may be shuffled again for each page, so it does not qualify.
  *
- * @param array $context The block's context.
+ * A block that shows the page's main listing is capped with that listing.
+ *
+ * @param array $block The block, as parsed.
+ * @return bool
+ */
+function epi_trim_can_cap_block( $block ) {
+	if ( ! in_array( $block['blockName'], array( 'core/query', 'woocommerce/product-collection' ), true ) ) {
+		return false;
+	}
+
+	$settings = isset( $block['attrs']['query'] ) ? $block['attrs']['query'] : null;
+
+	if ( ! is_array( $settings ) || ! isset( $settings['postType'] ) || ! in_array( 'product', (array) $settings['postType'], true ) ) {
+		return false;
+	}
+
+	if ( ! empty( $settings['inherit'] ) || ! empty( $settings['pages'] ) ) {
+		return false;
+	}
+
+	if ( isset( $settings['orderBy'] ) && in_array( $settings['orderBy'], array( 'rand', 'random' ), true ) ) {
+		return false;
+	}
+
+	// Related products are picked afresh, in random order, for each page.
+	foreach ( array( 'namespace', 'collection' ) as $setting ) {
+		if ( isset( $block['attrs'][ $setting ] ) && in_array( $block['attrs'][ $setting ], array( 'woocommerce/related-products', 'woocommerce/product-collection/related' ), true ) ) {
+			return false;
+		}
+	}
+
+	return epi_trim_has_page_links( $block['innerBlocks'] );
+}
+
+/**
+ * Cap product blocks at their own settings, before WordPress or WooCommerce
+ * works out where each page starts, and mark them so the query is treated the
+ * same way. Blocks inside others are handled with the outermost one, because
+ * their settings are read as soon as that one starts.
+ *
+ * @param array         $block  The block about to render, as parsed.
+ * @param array         $source The same block before any changes.
+ * @param WP_Block|null $parent The block it sits in, if any.
  * @return array
  */
-function epi_trim_cap_block_context( $context ) {
-	if ( ! isset( $context['query'] ) || ! epi_trim_is_oversized_block( $context['query'] ) ) {
-		return $context;
-	}
-
-	$max   = epi_trim_max_products_per_page();
-	$size  = absint( $context['query']['perPage'] );
-	$pages = isset( $context['query']['pages'] ) ? absint( $context['query']['pages'] ) : 0;
-
-	$context['query']['perPage'] = $max;
-
-	if ( $pages > 0 ) {
-		$context['query']['pages'] = (int) ceil( $pages * $size / $max );
-	}
-
-	return $context;
+function epi_trim_cap_block( $block, $source = array(), $parent = null ) {
+	return null === $parent ? epi_trim_cap_block_tree( $block ) : $block;
 }
-add_filter( 'render_block_context', 'epi_trim_cap_block_context', 9999 );
+add_filter( 'render_block_data', 'epi_trim_cap_block', 9999, 3 );
 
 /**
- * Cap the query of a product block whose size other code has raised. Each page
- * starts where the one before it now ends.
+ * Cap one block, and every block inside it.
+ *
+ * @param array $block The block, as parsed.
+ * @return array
+ */
+function epi_trim_cap_block_tree( $block ) {
+	if ( empty( $block['innerBlocks'] ) ) {
+		return $block;
+	}
+
+	if ( epi_trim_can_cap_block( $block ) ) {
+		$size = isset( $block['attrs']['query']['perPage'] ) ? $block['attrs']['query']['perPage'] : 0;
+		$max  = epi_trim_max_products_per_page();
+
+		$block['attrs']['query']['epiTrim'] = 'paged';
+
+		if ( is_numeric( $size ) && absint( $size ) > $max ) {
+			$block['attrs']['query']['epiTrim'] = 'capped';
+			$block['attrs']['query']['perPage'] = $max;
+		}
+	}
+
+	$block['innerBlocks'] = array_map( 'epi_trim_cap_block_tree', $block['innerBlocks'] );
+
+	return $block;
+}
+
+/**
+ * Cap the query of a marked block if other code has raised its size, with each
+ * page starting where the one before it now ends.
  *
  * @param array         $query Query arguments the block will run.
  * @param WP_Block|null $block The block.
@@ -325,26 +389,24 @@ add_filter( 'render_block_context', 'epi_trim_cap_block_context', 9999 );
  * @return array
  */
 function epi_trim_cap_block_query( $query, $block = null, $page = 1 ) {
-	if ( ! is_array( $query ) || ! isset( $query['post_type'] ) ) {
+	if ( ! is_array( $query ) || ! isset( $block->context['query']['epiTrim'] ) ) {
 		return $query;
 	}
 
-	if ( ! in_array( 'product', (array) $query['post_type'], true ) ) {
-		return $query;
+	$settings = $block->context['query'];
+	$skip     = isset( $settings['offset'] ) && is_numeric( $settings['offset'] ) ? absint( $settings['offset'] ) : 0;
+	$capped   = 'capped' === $settings['epiTrim'];
+
+	if ( isset( $query['posts_per_page'] ) && epi_trim_is_over_limit( $query['posts_per_page'] ) ) {
+		$max    = epi_trim_max_products_per_page();
+		$capped = true;
+
+		$query['posts_per_page'] = $max;
+		$query['offset']         = $skip + $max * ( max( 1, (int) $page ) - 1 );
 	}
 
-	if ( ! isset( $query['posts_per_page'] ) || ! epi_trim_is_over_limit( $query['posts_per_page'] ) ) {
-		return $query;
-	}
-
-	$max = epi_trim_max_products_per_page();
-
-	$query['posts_per_page'] = $max;
-
-	if ( isset( $query['offset'], $block->context['query'] ) ) {
-		$skip = isset( $block->context['query']['offset'] ) ? absint( $block->context['query']['offset'] ) : 0;
-
-		$query['offset'] = $skip + $max * ( max( 1, (int) $page ) - 1 );
+	if ( $capped && $skip > 0 ) {
+		$query['epi_trim_skip'] = $skip;
 	}
 
 	return $query;
@@ -352,169 +414,45 @@ function epi_trim_cap_block_query( $query, $block = null, $page = 1 ) {
 add_filter( 'query_loop_block_query_vars', 'epi_trim_cap_block_query', 9999, 3 );
 
 /**
- * Give a product block that was cut down page numbers, if it was built without
- * them, so the rest of its products can still be reached.
+ * Leave the products a capped block skips out of its count, so the cap never
+ * adds an empty last page.
  *
- * @param string        $content  The block's markup.
- * @param array         $parsed   The block as parsed.
- * @param WP_Block|null $instance The block.
- * @return string
+ * @param int      $found Products found.
+ * @param WP_Query $query The query.
+ * @return int
  */
-function epi_trim_add_block_page_numbers( $content, $parsed, $instance = null ) {
-	if ( ! isset( $parsed['blockName'] ) || ! in_array( $parsed['blockName'], array( 'core/query', 'woocommerce/product-collection' ), true ) ) {
-		return $content;
-	}
-
-	if ( ! $instance instanceof WP_Block || ! isset( $instance->attributes['query'] ) || ! epi_trim_is_oversized_block( $instance->attributes['query'] ) ) {
-		return $content;
-	}
-
-	$end = strrpos( $content, '</' );
-
-	if ( false === $end || false !== strpos( $content, 'wp-block-query-pagination' ) ) {
-		return $content;
-	}
-
-	$context = $instance->context;
-
-	foreach ( (array) $instance->block_type->provides_context as $name => $attribute ) {
-		if ( array_key_exists( $attribute, $instance->attributes ) ) {
-			$context[ $name ] = $instance->attributes[ $attribute ];
-		}
-	}
-
-	$numbers = parse_blocks( '<!-- wp:query-pagination --><!-- wp:query-pagination-previous /--><!-- wp:query-pagination-numbers /--><!-- wp:query-pagination-next /--><!-- /wp:query-pagination -->' );
-	$block   = new WP_Block( $numbers[0], epi_trim_cap_block_context( $context ) );
-
-	return substr_replace( $content, $block->render(), $end, 0 );
+function epi_trim_found_products( $found, $query ) {
+	return max( 0, (int) $found - (int) $query->get( 'epi_trim_skip' ) );
 }
-add_filter( 'render_block', 'epi_trim_add_block_page_numbers', 10, 3 );
+add_filter( 'found_posts', 'epi_trim_found_products', 10, 2 );
 
 /**
- * Cap a product grid built by a WooCommerce shortcode such as [products]. One
- * with page numbers of its own just gets smaller pages. One without is split
- * into pages here, so the rest of its products can still be reached.
+ * Cap a product grid built by a WooCommerce shortcode such as [products], when
+ * WooCommerce puts page numbers under it. One without them is left as it is,
+ * because the products past the limit could not be reached. So is one in random
+ * order, which is shuffled again for each page.
  *
- * @param array  $args       Query arguments the shortcode will run.
- * @param array  $attributes The shortcode's settings.
- * @param string $type       Which shortcode it is.
+ * @param array $args       Query arguments the shortcode will run.
+ * @param array $attributes The shortcode's settings.
  * @return array
  */
-function epi_trim_cap_shortcode_query( $args, $attributes = array(), $type = 'products' ) {
+function epi_trim_cap_shortcode_query( $args, $attributes = array() ) {
 	if ( ! is_array( $args ) || ! isset( $args['posts_per_page'] ) || ! epi_trim_is_over_limit( $args['posts_per_page'] ) ) {
 		return $args;
 	}
 
-	$max = epi_trim_max_products_per_page();
-
-	// One product, or a hand-picked list that fits, cannot go over.
-	if ( ! empty( $args['p'] ) || ( ! empty( $args['post__in'] ) && count( (array) $args['post__in'] ) <= $max ) ) {
+	if ( ! function_exists( 'wc_string_to_bool' ) || ! isset( $attributes['paginate'] ) || ! wc_string_to_bool( $attributes['paginate'] ) ) {
 		return $args;
 	}
 
-	$size = (int) $args['posts_per_page'];
-
-	$args['posts_per_page'] = $max;
-
-	if ( isset( $attributes['paginate'] ) && filter_var( $attributes['paginate'], FILTER_VALIDATE_BOOLEAN ) ) {
+	// A fixed start point makes WordPress ignore which page is being shown.
+	if ( ! empty( $args['offset'] ) || ( isset( $args['orderby'] ) && 'rand' === $args['orderby'] ) ) {
 		return $args;
 	}
 
-	$limit = -1 === $size ? 0 : abs( $size );
-	$paged = isset( $args['paged'] ) ? max( 1, (int) $args['paged'] ) : 1;
-	$skip  = isset( $args['offset'] ) ? absint( $args['offset'] ) : $limit * ( $paged - 1 );
-
-	// Its own page number on the address, so paging one grid leaves any other
-	// grid on the page where it was.
-	$name = 'products-page-' . substr( md5( $type . wp_json_encode( $args ) . $size ), 0, 8 );
-
-	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Only picks which page to show.
-	$page = isset( $_GET[ $name ] ) && is_scalar( $_GET[ $name ] ) ? max( 1, absint( wp_unslash( $_GET[ $name ] ) ) ) : 1;
-
-	if ( $limit > 0 ) {
-		$page = min( $page, (int) ceil( $limit / $max ) );
-
-		$args['posts_per_page'] = min( $max, $limit - $max * ( $page - 1 ) );
-	}
-
-	unset( $args['paged'] );
-
-	$args['offset']        = $skip + $max * ( $page - 1 );
-	$args['no_found_rows'] = false;
-	$args['epi_trim']      = compact( 'name', 'page', 'limit', 'skip' );
+	$args['posts_per_page'] = epi_trim_max_products_per_page();
+	$args['no_found_rows']  = false;
 
 	return $args;
 }
-add_filter( 'woocommerce_shortcode_products_query', 'epi_trim_cap_shortcode_query', 9999, 3 );
-
-/**
- * Work out how many pages a shortcode grid split above has, and put page
- * numbers under it.
- *
- * @param object $results   What the shortcode's query found.
- * @param object $shortcode The shortcode.
- * @return object
- */
-function epi_trim_page_shortcode_results( $results, $shortcode ) {
-	global $epi_trim_shortcode_pages;
-
-	if ( ! is_object( $results ) || ! is_object( $shortcode ) || ! method_exists( $shortcode, 'get_query_args' ) || ! method_exists( $shortcode, 'get_type' ) ) {
-		return $results;
-	}
-
-	$args = $shortcode->get_query_args();
-	$hook = 'woocommerce_shortcode_after_' . $shortcode->get_type() . '_loop';
-
-	unset( $epi_trim_shortcode_pages[ $hook ] );
-
-	if ( empty( $args['epi_trim'] ) ) {
-		return $results;
-	}
-
-	$split = $args['epi_trim'];
-	$total = max( 0, (int) $results->total - $split['skip'] );
-
-	if ( $split['limit'] > 0 ) {
-		$total = min( $total, $split['limit'] );
-	}
-
-	// WooCommerce may keep the original for the next visit, so change a copy.
-	$results               = clone $results;
-	$results->total        = $total;
-	$results->total_pages  = (int) ceil( $total / epi_trim_max_products_per_page() );
-	$results->per_page     = epi_trim_max_products_per_page();
-	$results->current_page = $split['page'];
-
-	if ( $results->total_pages > 1 ) {
-		$epi_trim_shortcode_pages[ $hook ] = array(
-			'total'   => $results->total_pages,
-			'current' => $results->current_page,
-			'base'    => esc_url_raw( add_query_arg( $split['name'], '%#%', false ) ),
-			'format'  => '?' . $split['name'] . '=%#%',
-		);
-
-		add_action( $hook, 'epi_trim_print_shortcode_page_numbers' );
-	}
-
-	return $results;
-}
-add_filter( 'woocommerce_shortcode_products_query_results', 'epi_trim_page_shortcode_results', 9999, 2 );
-
-/**
- * Print the page numbers of a shortcode grid split above.
- *
- * @return void
- */
-function epi_trim_print_shortcode_page_numbers() {
-	global $epi_trim_shortcode_pages;
-
-	$hook = current_action();
-
-	if ( empty( $epi_trim_shortcode_pages[ $hook ] ) || ! function_exists( 'wc_get_template' ) ) {
-		return;
-	}
-
-	wc_get_template( 'loop/pagination.php', $epi_trim_shortcode_pages[ $hook ] );
-
-	unset( $epi_trim_shortcode_pages[ $hook ] );
-}
+add_filter( 'woocommerce_shortcode_products_query', 'epi_trim_cap_shortcode_query', 9999, 2 );
