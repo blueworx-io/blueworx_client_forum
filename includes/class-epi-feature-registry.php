@@ -231,7 +231,7 @@ final class EPI_Feature_Registry {
 			),
 			'trim-shop-requests'          => array(
 				'title'          => __( 'Trim wasted shop requests', 'blueworx_client_forum' ),
-				'description'    => __( 'Guests who follow an add-to-cart link go straight back to the page, with no cart checks or mini-cart for them; logged-in users get quick add-to-cart on shop pages; search engines are asked to stay off add-to-cart links; and no shop page lists more than 48 products.', 'blueworx_client_forum' ),
+				'description'    => __( 'Guests who follow an add-to-cart link go straight back to the page, with no cart checks or mini-cart for them; logged-in users get quick add-to-cart on shop pages; search engines are asked to stay off add-to-cart links; and product lists with page numbers show at most 48 products a page.', 'blueworx_client_forum' ),
 				'group'          => 'shop',
 				'dangerous'      => false,
 				'danger_message' => '',
