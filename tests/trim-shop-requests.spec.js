@@ -261,16 +261,25 @@ test.describe('with more products than fit on one page', () => {
     await ctx.dispose();
   });
 
-  test('a paged product block that skips the first few reaches all the rest, with no empty page', async ({
+  test('a product block that does not start at its first product is left as it was set', async ({
     baseURL,
   }) => {
     const ctx = await guest(baseURL);
-    expect(await walkBlock(ctx, 'size=100&offset=3')).toEqual(ALL.slice(3));
 
-    // 15 skipped leaves 95, which is two pages of 48 and not three.
-    expect((await blockPage(ctx, 'size=100&offset=15', 1)).pages).toEqual([1, 2]);
-    expect((await blockPage(ctx, 'size=100&offset=15', 2)).next).toBe(false);
-    expect(await walkBlock(ctx, 'size=100&offset=15')).toEqual(ALL.slice(15));
+    // Skipped in the block's own settings, as it was before the limit.
+    const first = await blockPage(ctx, 'size=100&offset=3', 1);
+    expect(first.titles).toEqual(ALL.slice(3, 103));
+    expect((await blockPage(ctx, 'size=100&offset=3', 2)).titles).toEqual(ALL.slice(103));
+
+    // Skipped by other code, with the size from the settings or raised.
+    for (const query of ['size=100&shift=20', 'size=12&raise=100&shift=20']) {
+      expect((await blockPage(ctx, query, 1)).titles).toEqual(ALL.slice(20));
+    }
+
+    // Pages of uneven size.
+    const uneven = 'size=100&short_first=1';
+    expect((await blockPage(ctx, uneven, 1)).titles).toEqual(ALL.slice(0, 99));
+    expect((await blockPage(ctx, uneven, 2)).titles).toEqual(ALL.slice(99));
     await ctx.dispose();
   });
 
@@ -280,7 +289,6 @@ test.describe('with more products than fit on one page', () => {
     const ctx = await guest(baseURL);
     expect((await blockPage(ctx, 'size=100&matches=60', 1)).pages).toEqual([1, 2]);
     expect(await walkBlock(ctx, 'size=100&matches=60')).toEqual(ALL.slice(0, 60));
-    expect(await walkBlock(ctx, 'size=100&matches=60&offset=5')).toEqual(ALL.slice(5, 60));
 
     // Ten matches fit on one page, so no page links are offered.
     const few = await blockPage(ctx, 'size=100&matches=10', 1);
@@ -325,8 +333,6 @@ test.describe('with more products than fit on one page', () => {
     const ctx = await guest(baseURL);
     expect(await walkBlock(ctx, 'size=12&raise=100')).toEqual(ALL);
     expect(await walkBlock(ctx, 'size=12&raise=-1')).toEqual(ALL);
-    expect(await walkBlock(ctx, 'size=100&raise=100&offset=3')).toEqual(ALL.slice(3));
-    expect((await blockPage(ctx, 'size=12&raise=100&offset=15', 1)).pages).toEqual([1, 2]);
     await ctx.dispose();
   });
 
@@ -375,6 +381,16 @@ test.describe('with more products than fit on one page', () => {
     // Random order is shuffled again for each page, so some could be missed.
     const random = await shortcode(ctx, 'limit=100&paginate=true&orderby=rand');
     expect(random.titles.length).toBe(100);
+
+    // A theme took WooCommerce's page numbers away.
+    const bare = await shortcode(ctx, 'limit=100&paginate=true&no_links=1');
+    expect(bare.titles).toEqual(ALL.slice(0, 100));
+
+    // A fixed start point, zero included, makes every page show the same ones.
+    for (const offset of [0, 5]) {
+      const fixed = await shortcode(ctx, `limit=100&paginate=true&offset=${offset}`);
+      expect(fixed.titles).toEqual(ALL.slice(offset, offset + 100));
+    }
 
     expect((await shortcode(ctx, 'limit=12')).titles).toEqual(ALL.slice(0, 12));
     const paged = await shortcode(ctx, 'limit=40&paginate=true&product-page=2');

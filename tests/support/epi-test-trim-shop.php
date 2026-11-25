@@ -369,6 +369,28 @@ add_action(
 						);
 					}
 
+					// Other code may start the list further on: "shift" skips that
+					// many, "short_first" makes page one a product shorter.
+					add_filter(
+						'query_loop_block_query_vars',
+						static function ( $query, $block, $page ) use ( $request ) {
+							$size = (int) $query['posts_per_page'];
+
+							if ( $request->get_param( 'shift' ) ) {
+								$query['offset'] = (int) $request->get_param( 'shift' ) + $size * ( $page - 1 );
+							}
+
+							if ( $request->get_param( 'short_first' ) ) {
+								$query['posts_per_page'] = 1 === $page ? $size - 1 : $size;
+								$query['offset']         = 1 === $page ? 0 : $size * ( $page - 1 ) - 1;
+							}
+
+							return $query;
+						},
+						20,
+						3
+					);
+
 					return array(
 						'html' => epi_test_trim_render_block(
 							array(
@@ -403,6 +425,26 @@ add_action(
 							return is_bool( $string ) ? $string : ( 'yes' === strtolower( $string ) || 1 === $string || 'true' === strtolower( $string ) || '1' === $string );
 						}
 						// phpcs:enable
+					}
+
+					// WooCommerce hooks its page numbers up like this; a theme may
+					// take them away again.
+					add_action( 'woocommerce_after_shop_loop', 'woocommerce_pagination', 10 );
+					add_action( 'woocommerce_after_shop_loop', 'woocommerce_reset_loop', 999 );
+
+					if ( $request->get_param( 'no_links' ) ) {
+						remove_action( 'woocommerce_after_shop_loop', 'woocommerce_pagination', 10 );
+					}
+
+					// An extension may fix where the list starts.
+					if ( null !== $request->get_param( 'offset' ) ) {
+						add_filter(
+							'woocommerce_shortcode_products_query',
+							static function ( $args ) use ( $request ) {
+								$args['offset'] = (int) $request->get_param( 'offset' );
+								return $args;
+							}
+						);
 					}
 
 					$shortcode = new EPI_Test_Trim_Shortcode(

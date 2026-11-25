@@ -297,91 +297,83 @@ function epi_trim_has_page_links( $blocks ) {
 }
 
 /**
- * Whether a product block can be cut down with every product still reachable:
- * it has page links, and nothing stops a shopper following them to the end. A
- * random order may be shuffled again for each page, so it does not qualify.
+ * Mark the lists that have page links of their own, for the cap below.
  *
- * A block that shows the page's main listing is capped with that listing.
- *
- * @param array $block The block, as parsed.
- * @return bool
- */
-function epi_trim_can_cap_block( $block ) {
-	if ( ! in_array( $block['blockName'], array( 'core/query', 'woocommerce/product-collection' ), true ) ) {
-		return false;
-	}
-
-	$settings = isset( $block['attrs']['query'] ) ? $block['attrs']['query'] : null;
-
-	if ( ! is_array( $settings ) || ! isset( $settings['postType'] ) || ! in_array( 'product', (array) $settings['postType'], true ) ) {
-		return false;
-	}
-
-	if ( ! empty( $settings['inherit'] ) || ! empty( $settings['pages'] ) ) {
-		return false;
-	}
-
-	if ( isset( $settings['orderBy'] ) && in_array( $settings['orderBy'], array( 'rand', 'random' ), true ) ) {
-		return false;
-	}
-
-	// Related products are picked afresh, in random order, for each page.
-	foreach ( array( 'namespace', 'collection' ) as $setting ) {
-		if ( isset( $block['attrs'][ $setting ] ) && in_array( $block['attrs'][ $setting ], array( 'woocommerce/related-products', 'woocommerce/product-collection/related' ), true ) ) {
-			return false;
-		}
-	}
-
-	return epi_trim_has_page_links( $block['innerBlocks'] );
-}
-
-/**
- * Cap product blocks at their own settings, before WordPress or WooCommerce
- * works out where each page starts, and mark them so the query is treated the
- * same way. Blocks inside others are handled with the outermost one, because
- * their settings are read as soon as that one starts.
+ * Blocks inside others are marked with the outermost one, because their
+ * settings are read as soon as that one starts. A list inside a synced pattern
+ * is only expanded later, so it is not marked and keeps the size it was set to.
  *
  * @param array         $block  The block about to render, as parsed.
  * @param array         $source The same block before any changes.
  * @param WP_Block|null $parent The block it sits in, if any.
  * @return array
  */
-function epi_trim_cap_block( $block, $source = array(), $parent = null ) {
-	return null === $parent ? epi_trim_cap_block_tree( $block ) : $block;
+function epi_trim_mark_block( $block, $source = array(), $parent = null ) {
+	return null === $parent ? epi_trim_mark_block_tree( $block ) : $block;
 }
-add_filter( 'render_block_data', 'epi_trim_cap_block', 9999, 3 );
+add_filter( 'render_block_data', 'epi_trim_mark_block', 9999, 3 );
 
 /**
- * Cap one block, and every block inside it.
+ * Mark one block, and every block inside it.
  *
  * @param array $block The block, as parsed.
  * @return array
  */
-function epi_trim_cap_block_tree( $block ) {
+function epi_trim_mark_block_tree( $block ) {
 	if ( empty( $block['innerBlocks'] ) ) {
 		return $block;
 	}
 
-	if ( epi_trim_can_cap_block( $block ) ) {
-		$size = isset( $block['attrs']['query']['perPage'] ) ? $block['attrs']['query']['perPage'] : 0;
-		$max  = epi_trim_max_products_per_page();
+	if ( in_array( $block['blockName'], array( 'core/query', 'woocommerce/product-collection' ), true ) && isset( $block['attrs']['query'] ) && is_array( $block['attrs']['query'] ) ) {
+		// Related products are picked afresh, in random order, for each page.
+		$kinds   = array_intersect_key( $block['attrs'], array_flip( array( 'namespace', 'collection' ) ) );
+		$related = array_intersect( $kinds, array( 'woocommerce/related-products', 'woocommerce/product-collection/related' ) );
 
-		$block['attrs']['query']['epiTrim'] = 'paged';
-
-		if ( is_numeric( $size ) && absint( $size ) > $max ) {
-			$block['attrs']['query']['epiTrim'] = 'capped';
-			$block['attrs']['query']['perPage'] = $max;
+		if ( ! $related && epi_trim_has_page_links( $block['innerBlocks'] ) ) {
+			$block['attrs']['query']['epiTrim'] = true;
 		}
 	}
 
-	$block['innerBlocks'] = array_map( 'epi_trim_cap_block_tree', $block['innerBlocks'] );
+	$block['innerBlocks'] = array_map( 'epi_trim_mark_block_tree', $block['innerBlocks'] );
 
 	return $block;
 }
 
 /**
- * Cap the query of a marked block if other code has raised its size, with each
- * page starting where the one before it now ends.
+ * Whether a block's pages follow on from each other in the plain way, starting
+ * at its first product, so smaller pages still reach everything. Looked at with
+ * every other filter applied, and the same whichever page is being shown.
+ *
+ * @param WP_Block $block The block.
+ * @return bool
+ */
+function epi_trim_has_plain_pages( $block ) {
+	$first  = build_query_vars_from_query_block( $block, 1 );
+	$second = build_query_vars_from_query_block( $block, 2 );
+
+	if ( ! isset( $first['offset'], $second['offset'], $first['posts_per_page'], $second['posts_per_page'] ) ) {
+		return false;
+	}
+
+	if ( 0 !== (int) $first['offset'] || (int) $first['posts_per_page'] !== (int) $second['posts_per_page'] ) {
+		return false;
+	}
+
+	$sizes = array( (int) $first['posts_per_page'] );
+
+	// Other code may raise the size and leave the start of each page alone.
+	if ( isset( $block->context['query']['perPage'] ) ) {
+		$sizes[] = absint( $block->context['query']['perPage'] );
+	}
+
+	return in_array( (int) $second['offset'], $sizes, true );
+}
+
+/**
+ * Cap a product block that has page links, with each page starting where the
+ * one before it now ends. Left as it is: a block held to a number of pages, one
+ * in random order (which is shuffled again for each page), and one whose list
+ * or pages start anywhere but the plain place.
  *
  * @param array         $query Query arguments the block will run.
  * @param WP_Block|null $block The block.
@@ -389,24 +381,29 @@ function epi_trim_cap_block_tree( $block ) {
  * @return array
  */
 function epi_trim_cap_block_query( $query, $block = null, $page = 1 ) {
-	if ( ! is_array( $query ) || ! isset( $block->context['query']['epiTrim'] ) ) {
+	static $checking = false;
+
+	if ( $checking || ! isset( $block->context['query']['epiTrim'] ) || ! empty( $block->context['query']['pages'] ) ) {
 		return $query;
 	}
 
-	$settings = $block->context['query'];
-	$skip     = isset( $settings['offset'] ) && is_numeric( $settings['offset'] ) ? absint( $settings['offset'] ) : 0;
-	$capped   = 'capped' === $settings['epiTrim'];
-
-	if ( isset( $query['posts_per_page'] ) && epi_trim_is_over_limit( $query['posts_per_page'] ) ) {
-		$max    = epi_trim_max_products_per_page();
-		$capped = true;
-
-		$query['posts_per_page'] = $max;
-		$query['offset']         = $skip + $max * ( max( 1, (int) $page ) - 1 );
+	if ( ! isset( $query['post_type'], $query['posts_per_page'] ) || ! in_array( 'product', (array) $query['post_type'], true ) ) {
+		return $query;
 	}
 
-	if ( $capped && $skip > 0 ) {
-		$query['epi_trim_skip'] = $skip;
+	if ( ! epi_trim_is_over_limit( $query['posts_per_page'] ) || ( isset( $query['orderby'] ) && 'rand' === $query['orderby'] ) ) {
+		return $query;
+	}
+
+	$checking = true;
+	$plain    = epi_trim_has_plain_pages( $block );
+	$checking = false;
+
+	if ( $plain ) {
+		$max = epi_trim_max_products_per_page();
+
+		$query['posts_per_page'] = $max;
+		$query['offset']         = $max * ( max( 1, (int) $page ) - 1 );
 	}
 
 	return $query;
@@ -414,23 +411,11 @@ function epi_trim_cap_block_query( $query, $block = null, $page = 1 ) {
 add_filter( 'query_loop_block_query_vars', 'epi_trim_cap_block_query', 9999, 3 );
 
 /**
- * Leave the products a capped block skips out of its count, so the cap never
- * adds an empty last page.
- *
- * @param int      $found Products found.
- * @param WP_Query $query The query.
- * @return int
- */
-function epi_trim_found_products( $found, $query ) {
-	return max( 0, (int) $found - (int) $query->get( 'epi_trim_skip' ) );
-}
-add_filter( 'found_posts', 'epi_trim_found_products', 10, 2 );
-
-/**
  * Cap a product grid built by a WooCommerce shortcode such as [products], when
- * WooCommerce puts page numbers under it. One without them is left as it is,
+ * WooCommerce prints page numbers under it. One without them is left as it is,
  * because the products past the limit could not be reached. So is one in random
- * order, which is shuffled again for each page.
+ * order, which is shuffled again for each page, and one with a fixed start
+ * point, even zero, which makes WordPress ignore the page being shown.
  *
  * @param array $args       Query arguments the shortcode will run.
  * @param array $attributes The shortcode's settings.
@@ -445,8 +430,12 @@ function epi_trim_cap_shortcode_query( $args, $attributes = array() ) {
 		return $args;
 	}
 
-	// A fixed start point makes WordPress ignore which page is being shown.
-	if ( ! empty( $args['offset'] ) || ( isset( $args['orderby'] ) && 'rand' === $args['orderby'] ) ) {
+	// A theme may have taken WooCommerce's page numbers away.
+	if ( false === has_action( 'woocommerce_after_shop_loop', 'woocommerce_pagination' ) ) {
+		return $args;
+	}
+
+	if ( array_key_exists( 'offset', $args ) || ( isset( $args['orderby'] ) && 'rand' === $args['orderby'] ) ) {
 		return $args;
 	}
 
