@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.23.1]
+
+### Fixed
+- The limit of 48 products a page no longer hides products. A product block set
+  to show more used to skip some between pages; now every page carries on where
+  the last one ended. A product list with no page numbers of its own is left at
+  the size it was set to, so nothing on it goes missing. The limit also covers
+  shortcode product grids that have page numbers, and listings by colour or
+  other attributes, and smaller page sizes are left as they were set.
+- The check for updates no longer stops with an error: three files it needs were
+  missing from released versions.
+
 ## [1.23.0]
 
 ### Added
