@@ -7,7 +7,9 @@ const { loginAsAdmin } = require('./helpers');
 // without this a site only gets one when somebody presses Update. The harness
 // has no GitHub release to fetch, so a test-only mu-plugin asks WordPress's own
 // automatic updater — the code that decides what to install in the background —
-// about a pending update on this plugin and on two others.
+// about a pending update on this plugin and on two others. It starts the site's
+// list of self-updating plugins from a known state (Hello Dolly only) and puts
+// the old list back afterwards, so the result never depends on earlier runs.
 
 const SUPPORT = path.resolve(__dirname, 'support', 'epi-test-auto-updates.php');
 const MU_DIR = path.resolve(__dirname, '..', '.wp-test', 'wp', 'wp-content', 'mu-plugins');
@@ -32,8 +34,8 @@ async function decisions(page) {
 }
 
 test('a new release of this plugin installs without anybody pressing Update', async ({ page }) => {
-  const body = await decisions(page);
-  const own = body.plugins[body.own];
+  const { cases } = await decisions(page);
+  const own = cases.own;
 
   expect(own.installs).toBe(true);
   // The Plugins screen shows it as switched on, whatever the site chose.
@@ -42,20 +44,32 @@ test('a new release of this plugin installs without anybody pressing Update', as
   expect(own.kept_false).toBe(true);
 });
 
-test("other plugins' update settings are left exactly as they were", async ({ page }) => {
-  const body = await decisions(page);
+test('a release with no plugin zip attached is not installed automatically', async ({ page }) => {
+  const { cases } = await decisions(page);
 
-  for (const basename of ['hello.php', 'someone-else/someone-else.php']) {
-    const other = body.plugins[basename];
-    // Nobody chose: still nobody's choice, and nothing is installed on its behalf.
-    expect(other.installs, basename).toBe(false);
-    expect(other.forced, basename).toBeNull();
+  // GitHub's raw source archive holds files the release build leaves out.
+  expect(cases.own_src.installs).toBe(false);
+  expect(cases.own_src.kept_true).toBe(false);
+  // No download address yet: nothing to refuse, and nothing would be fetched.
+  expect(cases.own_none.forced).toBe(true);
+});
+
+test("other plugins' update settings are left exactly as they were", async ({ page }) => {
+  const { cases, option_changed } = await decisions(page);
+
+  // Hello Dolly was chosen by the site, so it updates; this plugin changes nothing about that.
+  expect(cases.hello.installs).toBe(true);
+  expect(cases.hello.forced).toBeNull();
+  // Nobody chose this one: still nobody's choice, and nothing is installed on its behalf.
+  expect(cases.other.installs).toBe(false);
+  expect(cases.other.forced).toBeNull();
+
+  for (const name of ['hello', 'other']) {
     // A site's own choice for it passes straight through.
-    expect(other.kept_true, basename).toBe(true);
-    expect(other.kept_false, basename).toBe(false);
+    expect(cases[name].kept_true, name).toBe(true);
+    expect(cases[name].kept_false, name).toBe(false);
   }
 
   // Nothing was written to the site's list of plugins set to update themselves.
-  expect(body.option_changed).toBe(false);
-  expect(body.option).not.toContain(body.own);
+  expect(option_changed).toBe(false);
 });

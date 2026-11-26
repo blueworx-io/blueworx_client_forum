@@ -28,21 +28,38 @@ add_action(
 					// WordPress skip every automatic update for that reason alone.
 					add_filter( 'automatic_updates_is_vcs_checkout', '__return_false' );
 
-					$option_before = get_site_option( 'auto_update_plugins', array() );
-					$updater       = new WP_Automatic_Updater();
-					$own           = plugin_basename( EPI_PLUGIN_FILE );
-					$result        = array();
+					// Start from a known list, whatever an earlier run left: the site
+					// has chosen automatic updates for Hello Dolly and nothing else.
+					$original = get_site_option( 'auto_update_plugins', false );
+					$known    = array( 'hello.php' );
+					update_site_option( 'auto_update_plugins', $known );
 
-					foreach ( array( $own, 'hello.php', 'someone-else/someone-else.php' ) as $basename ) {
+					$updater = new WP_Automatic_Updater();
+					$own     = plugin_basename( EPI_PLUGIN_FILE );
+					$asset   = 'https://github.com/blueworx-io/blueworx_client_forum/releases/download/v99.0.0/blueworx_client_forum-99.0.0.zip';
+					$source  = 'https://api.github.com/repos/blueworx-io/blueworx_client_forum/zipball/v99.0.0';
+					$result  = array();
+
+					$cases = array(
+						'own'      => array( $own, $asset ),
+						'own_src'  => array( $own, $source ),
+						'own_none' => array( $own, '' ),
+						'hello'    => array( 'hello.php', $source ),
+						'other'    => array( 'someone-else/someone-else.php', $source ),
+					);
+
+					foreach ( $cases as $name => $case ) {
+						list( $basename, $package ) = $case;
+
 						$item = (object) array(
 							'id'          => 'w.org/plugins/' . dirname( $basename ),
 							'slug'        => dirname( $basename ),
 							'plugin'      => $basename,
 							'new_version' => '99.0.0',
-							'package'     => 'https://example.invalid/update.zip',
+							'package'     => $package,
 						);
 
-						$result[ $basename ] = array(
+						$result[ $name ] = array(
 							'installs'   => (bool) $updater->should_update( 'plugin', $item, WP_PLUGIN_DIR ),
 							// What the Plugins screen sees when nobody has chosen: null = left to the site.
 							'forced'     => apply_filters( 'auto_update_plugin', null, $item ),
@@ -52,11 +69,17 @@ add_action(
 						);
 					}
 
+					$changed = get_site_option( 'auto_update_plugins', array() ) !== $known;
+
+					if ( false === $original ) {
+						delete_site_option( 'auto_update_plugins' );
+					} else {
+						update_site_option( 'auto_update_plugins', $original );
+					}
+
 					return array(
-						'own'            => $own,
-						'plugins'        => $result,
-						'option_changed' => get_site_option( 'auto_update_plugins', array() ) !== $option_before,
-						'option'         => get_site_option( 'auto_update_plugins', array() ),
+						'cases'          => $result,
+						'option_changed' => $changed,
 					);
 				},
 			)
