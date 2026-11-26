@@ -21,6 +21,12 @@ add_action(
 					return current_user_can( 'manage_options' );
 				},
 				'callback'            => static function () {
+					// Touch nothing on the site unless the plugin is loaded: a request
+					// that stops early must not leave the saved settings changed.
+					if ( ! function_exists( 'epi_auto_update_own_plugin' ) ) {
+						return new WP_Error( 'epi_plugin_not_loaded', 'The Forum plugin is not active.', array( 'status' => 500 ) );
+					}
+
 					require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
 					require_once ABSPATH . 'wp-admin/includes/admin.php';
 
@@ -32,6 +38,15 @@ add_action(
 					// has chosen automatic updates for Hello Dolly and nothing else.
 					$original = get_site_option( 'auto_update_plugins', false );
 					$known    = array( 'hello.php' );
+					$restore  = static function () use ( $original ) {
+						if ( false === $original ) {
+							delete_site_option( 'auto_update_plugins' );
+						} else {
+							update_site_option( 'auto_update_plugins', $original );
+						}
+					};
+					// Put the saved list back even if anything below stops early.
+					register_shutdown_function( $restore );
 					update_site_option( 'auto_update_plugins', $known );
 
 					$updater = new WP_Automatic_Updater();
@@ -43,6 +58,8 @@ add_action(
 					$cases = array(
 						'own'      => array( $own, $asset ),
 						'own_src'  => array( $own, $source ),
+						'own_pdf'  => array( $own, 'https://github.com/blueworx-io/blueworx_client_forum/releases/download/v99.0.0/release-notes.pdf' ),
+						'own_zip2' => array( $own, 'https://github.com/blueworx-io/blueworx_client_forum/releases/download/v99.0.0/something-else-99.0.0.zip' ),
 						'own_none' => array( $own, '' ),
 						'hello'    => array( 'hello.php', $source ),
 						'other'    => array( 'someone-else/someone-else.php', $source ),
@@ -71,11 +88,7 @@ add_action(
 
 					$changed = get_site_option( 'auto_update_plugins', array() ) !== $known;
 
-					if ( false === $original ) {
-						delete_site_option( 'auto_update_plugins' );
-					} else {
-						update_site_option( 'auto_update_plugins', $original );
-					}
+					$restore();
 
 					return array(
 						'cases'          => $result,

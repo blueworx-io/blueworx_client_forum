@@ -50,6 +50,11 @@ test('a release with no plugin zip attached is not installed automatically', asy
   // GitHub's raw source archive holds files the release build leaves out.
   expect(cases.own_src.installs).toBe(false);
   expect(cases.own_src.kept_true).toBe(false);
+  // Nor is any other file attached to the release: a PDF, or a different zip.
+  for (const name of ['own_pdf', 'own_zip2']) {
+    expect(cases[name].installs, name).toBe(false);
+    expect(cases[name].kept_true, name).toBe(false);
+  }
   // No download address yet: nothing to refuse, and nothing would be fetched.
   expect(cases.own_none.forced).toBe(true);
 });

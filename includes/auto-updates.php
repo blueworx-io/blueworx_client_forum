@@ -25,20 +25,22 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @return bool
  */
 function epi_is_release_zip( $package ) {
-	$prefixes = array(
-		// A public repo: the file's own address.
-		'https://github.com/blueworx-io/blueworx_client_forum/releases/download/',
-		// A private repo read with a token: the asset's address on the API.
-		'https://api.github.com/repos/blueworx-io/blueworx_client_forum/releases/assets/',
-	);
+	$package = (string) $package;
 
-	foreach ( $prefixes as $prefix ) {
-		if ( 0 === strpos( (string) $package, $prefix ) ) {
-			return true;
-		}
+	// A private repo read with a token: the asset's address on the API. It
+	// carries no file name; the update checker already picked it by name.
+	if ( 0 === strpos( $package, 'https://api.github.com/repos/blueworx-io/blueworx_client_forum/releases/assets/' ) ) {
+		return true;
 	}
 
-	return false;
+	// A public repo: the file's own address, which must be the versioned plugin
+	// zip and not some other file attached to the release.
+	$prefix = 'https://github.com/blueworx-io/blueworx_client_forum/releases/download/';
+	if ( 0 !== strpos( $package, $prefix ) ) {
+		return false;
+	}
+
+	return 1 === preg_match( EPI_RELEASE_ZIP_PATTERN, basename( $package ) );
 }
 
 /**
