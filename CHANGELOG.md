@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.24.0]
+
+### Added
+- The plugin now installs its own new releases in the background, so nobody has
+  to press Update. This applies to this plugin only; every other plugin's
+  update setting is left as it was.
+
 ## [1.23.1]
 
 ### Fixed

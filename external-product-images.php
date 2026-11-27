@@ -3,7 +3,7 @@
  * Plugin Name:       BlueWorx Lab | Forum Lighting
  * Plugin URI:        https://blueworx.io/
  * Description:        Site functionality plugin for Forum Lighting. A control centre under Settings > BlueWorx Lab switches features on or off, including the WooCommerce product gallery, metadata tools, pricing rules and more.
- * Version:           1.23.1
+ * Version:           1.24.0
  * Author:            BlueWorx
  * Author URI:        https://blueworx.io/
  * Text Domain:       blueworx_client_forum
@@ -22,10 +22,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Core plugin constants.
  */
-define( 'EPI_VERSION', '1.23.1' );
+define( 'EPI_VERSION', '1.24.0' );
 define( 'EPI_PLUGIN_FILE', __FILE__ );
 define( 'EPI_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'EPI_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+// The one file on a GitHub release that is the installable plugin: <folder>-<version>.zip.
+// Anything else attached to a release (a PDF, another zip) is never installed.
+define( 'EPI_RELEASE_ZIP_PATTERN', '#^blueworx_client_forum-[0-9]+\.[0-9]+\.[0-9]+[^/]*\.zip$#i' );
 // Overridable so the tests can stand in for ePim without reaching the real one.
 if ( ! defined( 'EPI_EPIM_IMAGE_BASE' ) ) {
 	define( 'EPI_EPIM_IMAGE_BASE', 'https://epim.online/webproduct/assetimage/' );
@@ -81,7 +84,14 @@ if ( defined( 'BLUEWORX_PLUGIN_UPDATE_TOKEN' ) && BLUEWORX_PLUGIN_UPDATE_TOKEN )
  * tarball — the tarball extracts to a differently named folder, which
  * WordPress treats as a different plugin.
  */
-$blueworx_update_checker->getVcsApi()->enableReleaseAssets();
+$blueworx_update_checker->getVcsApi()->enableReleaseAssets( EPI_RELEASE_ZIP_PATTERN );
+
+/*
+ * Install those releases without anybody pressing Update. This switches
+ * automatic updates on for this plugin only; every other plugin keeps whatever
+ * setting the site gave it.
+ */
+require_once EPI_PLUGIN_DIR . 'includes/auto-updates.php';
 
 /**
  * Main plugin bootstrap class.
