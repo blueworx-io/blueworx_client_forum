@@ -179,3 +179,63 @@ test('a shop page never lists more than 48 products', async ({ baseURL }) => {
   expect(await block('type=post&value=100')).toBe(100);
   await ctx.dispose();
 });
+
+test('a capped block still shows every product, page after page', async ({ baseURL }) => {
+  const ctx = await guest(baseURL);
+  const block = async (query) =>
+    await (await ctx.get(`/wp-json/epi-test/v1/block-query-size?type=product&${query}`)).json();
+
+  // The block worked out its page offset from the size it asked for (100), so
+  // once the size is cut to 48 the offset has to be worked out again, or page 2
+  // would skip products 49 to 100.
+  expect(await block('value=100&page=1')).toEqual({ per_page: 48, offset: 0 });
+  expect(await block('value=100&page=2')).toEqual({ per_page: 48, offset: 48 });
+  expect(await block('value=100&page=3')).toEqual({ per_page: 48, offset: 96 });
+  expect(await block('value=-1&page=2')).toEqual({ per_page: 48, offset: 48 });
+  // A block's own "skip the first few" setting is kept.
+  expect(await block('value=100&page=2&extra=3')).toEqual({ per_page: 48, offset: 51 });
+  // A block already under the limit is left exactly as it was.
+  expect(await block('value=12&page=3')).toEqual({ per_page: 12, offset: 24 });
+  await ctx.dispose();
+});
+
+test('shortcode product grids are held to the same limit', async ({ baseURL }) => {
+  const ctx = await guest(baseURL);
+  const grid = async (value) =>
+    await (await ctx.get(`/wp-json/epi-test/v1/shortcode-query-size?value=${value}`)).json();
+
+  expect((await grid(100)).per_page).toBe(48);
+  expect((await grid(-1)).per_page).toBe(48);
+  expect((await grid(12)).per_page).toBe(12);
+  // The page being shown is not touched.
+  expect((await grid(100)).paged).toBe(2);
+  await ctx.dispose();
+});
+
+test('product attribute archives are held to the limit too', async ({ baseURL }) => {
+  const ctx = await guest(baseURL);
+  const get = async (query) =>
+    (await (await ctx.get(`/wp-json/epi-test/v1/listing-size?${query}`)).json()).per_page;
+
+  expect(await get('taxonomy=pa_colour&value=100')).toBe(48);
+  expect(await get('taxonomy=pa_colour&value=-1')).toBe(48);
+  expect(await get('taxonomy=pa_colour&value=12')).toBe(12);
+  await ctx.dispose();
+});
+
+test('page sizes already below the limit are left as they are', async ({ baseURL }) => {
+  const ctx = await guest(baseURL);
+  const archive = async (query) =>
+    await (await ctx.get(`/wp-json/epi-test/v1/listing-size?value=12&${query}`)).json();
+
+  // Below the limit, including a negative size WordPress reads as its positive value.
+  expect((await archive('archive=20')).archive).toBe(20);
+  expect((await archive('archive=-5')).archive).toBe(-5);
+  expect((await archive('showposts=20')).showposts).toBe(20);
+  expect((await archive('showposts=-5')).showposts).toBe(-5);
+  // Over the limit, or unlimited, still come down to it.
+  expect((await archive('archive=-100')).archive).toBe(48);
+  expect((await archive('showposts=-100')).showposts).toBe(48);
+  expect((await archive('archive=49')).archive).toBe(48);
+  await ctx.dispose();
+});

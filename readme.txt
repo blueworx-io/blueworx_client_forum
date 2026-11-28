@@ -4,7 +4,7 @@ Tags: woocommerce, elementor, product gallery, product images, site functionalit
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.23.0
+Stable tag: 1.24.1
 License: GPLv2 or later
 
 Site functionality plugin for Forum Lighting: one control centre to switch the WooCommerce gallery, metadata, pricing and more on or off.
@@ -41,6 +41,11 @@ be placed anywhere with [forum_product_gallery].
    category. Save.
 
 == Changelog ==
+
+= 1.24.1 =
+* Product pages made by blocks keep showing every product after the 48 limit, instead of skipping some on page 2.
+* Product shortcodes and product attribute pages (colour, size and so on) are held to the 48 limit too.
+* A page size already under the limit is left as it is.
 
 = 1.23.0 =
 * Guests who follow an add-to-cart link go straight back to the page, and get no cart checks or mini-cart.

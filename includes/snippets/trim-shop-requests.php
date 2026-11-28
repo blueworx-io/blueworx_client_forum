@@ -10,7 +10,8 @@
  *  - logged-in (trade) users get WooCommerce's quick add-to-cart on shop pages;
  *  - guests are not given the cart-check script or the mini-cart;
  *  - robots.txt keeps search engines off add-to-cart links;
- *  - a shop page never lists more than 48 products.
+ *  - a shop page never lists more than 48 products, whether it is the shop
+ *    itself, a category, tag or attribute page, a product block or a shortcode.
  *
  * The guest parts only apply while "Hide cart & purchasing for guests" is on,
  * because they would break a shop where guests can buy.
@@ -31,6 +32,20 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function epi_trim_max_products_per_page() {
 	return max( 1, (int) apply_filters( 'epi_max_products_per_page', 48 ) );
+}
+
+/**
+ * Whether a page size is over the limit. -1 means no limit, and WordPress reads
+ * any other negative size as its positive value, so -5 is five and -100 is a
+ * hundred.
+ *
+ * @param int $size A page size.
+ * @return bool
+ */
+function epi_trim_size_is_over_limit( $size ) {
+	$size = (int) $size;
+
+	return -1 === $size || abs( $size ) > epi_trim_max_products_per_page();
 }
 
 /**
@@ -232,23 +247,26 @@ function epi_trim_cap_listing_query( $query ) {
 		return;
 	}
 
-	if ( ! $query->is_post_type_archive( 'product' ) && ! $query->is_tax( array( 'product_cat', 'product_tag' ) ) ) {
+	// Categories, tags and every product attribute (colour, size and so on).
+	$taxonomies = array_unique( array_merge( array( 'product_cat', 'product_tag' ), get_object_taxonomies( 'product' ) ) );
+
+	if ( ! $query->is_post_type_archive( 'product' ) && ! $query->is_tax( $taxonomies ) ) {
 		return;
 	}
 
-	$max    = epi_trim_max_products_per_page();
-	$wanted = (int) $query->get( 'posts_per_page' );
+	$max = epi_trim_max_products_per_page();
 
 	// WordPress turns a size below -1, such as -100, into its positive value
-	// once this hook has run, so that counts as 100.
-	if ( -1 === $wanted || abs( $wanted ) > $max ) {
+	// once this hook has run, so that counts as 100. A size already under the
+	// limit is left as it is.
+	if ( epi_trim_size_is_over_limit( $query->get( 'posts_per_page' ) ) ) {
 		$query->set( 'posts_per_page', $max );
 	}
 
 	// The older "showposts" setting replaces the page size after this hook.
 	$showposts = (int) $query->get( 'showposts' );
 
-	if ( 0 !== $showposts && ( $showposts < 0 || $showposts > $max ) ) {
+	if ( 0 !== $showposts && epi_trim_size_is_over_limit( $showposts ) ) {
 		$query->set( 'showposts', $max );
 	}
 
@@ -256,7 +274,7 @@ function epi_trim_cap_listing_query( $query ) {
 	// size for the archive setting, the other turns paging off altogether.
 	$archive = (int) $query->get( 'posts_per_archive_page' );
 
-	if ( $archive < 0 || $archive > $max ) {
+	if ( 0 !== $archive && epi_trim_size_is_over_limit( $archive ) ) {
 		$query->set( 'posts_per_archive_page', $max );
 	}
 
@@ -269,12 +287,17 @@ add_action( 'pre_get_posts', 'epi_trim_cap_listing_query', 9999 );
 /**
  * Cap the page size of a product list built by a block, such as the
  * WooCommerce Product Collection block, which sets its own query. The block
- * works out its pagination from what this returns.
+ * works out which products to skip from the size it asked for, so once the
+ * size is cut, the skip is worked out again from the new size. Without that,
+ * page 2 of a block that asked for 100 would start at product 101 and never
+ * show products 49 to 100. The page count follows from the new size.
  *
- * @param array $query Query arguments the block will run.
+ * @param array         $query Query arguments the block will run.
+ * @param WP_Block|null $block The block, when WordPress passes it.
+ * @param int           $page  The page being shown.
  * @return array
  */
-function epi_trim_cap_block_query( $query ) {
+function epi_trim_cap_block_query( $query, $block = null, $page = 1 ) {
 	if ( ! is_array( $query ) || ! isset( $query['post_type'] ) ) {
 		return $query;
 	}
@@ -283,12 +306,41 @@ function epi_trim_cap_block_query( $query ) {
 		return $query;
 	}
 
-	$max = epi_trim_max_products_per_page();
+	if ( ! isset( $query['posts_per_page'] ) || ! epi_trim_size_is_over_limit( $query['posts_per_page'] ) ) {
+		return $query;
+	}
 
-	if ( isset( $query['posts_per_page'] ) && ( -1 === (int) $query['posts_per_page'] || abs( (int) $query['posts_per_page'] ) > $max ) ) {
-		$query['posts_per_page'] = $max;
+	$max                    = epi_trim_max_products_per_page();
+	$query['posts_per_page'] = $max;
+
+	if ( isset( $query['offset'] ) ) {
+		// Products the block was told to skip at the start, apart from paging.
+		$skip = 0;
+
+		if ( is_object( $block ) && isset( $block->context['query']['offset'] ) && is_numeric( $block->context['query']['offset'] ) ) {
+			$skip = (int) $block->context['query']['offset'];
+		}
+
+		$query['offset'] = ( $max * ( max( 1, (int) $page ) - 1 ) ) + $skip;
 	}
 
 	return $query;
 }
-add_filter( 'query_loop_block_query_vars', 'epi_trim_cap_block_query', 9999 );
+add_filter( 'query_loop_block_query_vars', 'epi_trim_cap_block_query', 9999, 3 );
+
+/**
+ * Cap the page size of a product shortcode grid, such as [products],
+ * [product_category] or [recent_products]. The shortcode works out its page
+ * count from the query it runs, so that follows from the new size.
+ *
+ * @param array $query_args The query the shortcode will run.
+ * @return array
+ */
+function epi_trim_cap_shortcode_query( $query_args ) {
+	if ( is_array( $query_args ) && isset( $query_args['posts_per_page'] ) && epi_trim_size_is_over_limit( $query_args['posts_per_page'] ) ) {
+		$query_args['posts_per_page'] = epi_trim_max_products_per_page();
+	}
+
+	return $query_args;
+}
+add_filter( 'woocommerce_shortcode_products_query', 'epi_trim_cap_shortcode_query', 9999 );

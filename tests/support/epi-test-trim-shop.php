@@ -76,13 +76,32 @@ add_action(
 						$overrides['nopaging'] = true;
 					}
 
+					// A product attribute archive, such as /colour/red/: a taxonomy
+					// that is not a category or a tag.
+					$taxonomy = (string) $request->get_param( 'taxonomy' );
+
+					if ( '' !== $taxonomy ) {
+						if ( ! taxonomy_exists( $taxonomy ) ) {
+							register_taxonomy( $taxonomy, array( 'product', 'post' ), array( 'public' => true ) ); // Two post types, so WordPress does not treat it as a product archive by itself.
+						}
+
+						if ( ! term_exists( 'red', $taxonomy ) ) {
+							wp_insert_term( 'red', $taxonomy );
+						}
+
+						$overrides['taxonomy'] = $taxonomy;
+						$overrides['term']     = 'red';
+					}
+
+					// A real attribute archive carries no post type of its own.
+					$args = array( 'posts_per_page' => (int) $request->get_param( 'value' ) );
+
+					if ( '' === $taxonomy ) {
+						$args['post_type'] = 'product';
+					}
+
 					// Running the query fires pre_get_posts, as a real page view does.
-					$query->query(
-						array(
-							'post_type'      => 'product',
-							'posts_per_page' => (int) $request->get_param( 'value' ),
-						) + $overrides
-					);
+					$query->query( $args + $overrides );
 
 					return array(
 						'per_page' => (int) $query->get( 'posts_per_page' ),
@@ -124,17 +143,55 @@ add_action(
 			'/block-query-size',
 			$open + array(
 				'callback' => static function ( WP_REST_Request $request ) {
+					$per_page = (int) $request->get_param( 'value' );
+					$page     = max( 1, (int) $request->get_param( 'page' ) );
+					$extra    = (int) $request->get_param( 'extra' );
+
+					// As core's Query Loop block builds it: the offset is worked out from
+					// the size the block asked for, before this filter runs.
+					$block          = new stdClass();
+					$block->context = array( 'query' => array( 'offset' => $extra ) );
+
 					$vars = apply_filters(
 						'query_loop_block_query_vars',
 						array(
 							'post_type'      => (string) $request->get_param( 'type' ),
-							'posts_per_page' => (int) $request->get_param( 'value' ),
+							'posts_per_page' => $per_page,
+							'offset'         => ( $per_page * ( $page - 1 ) ) + $extra,
 						),
-						null,
-						1
+						$block,
+						$page
 					);
 
-					return array( 'per_page' => (int) $vars['posts_per_page'] );
+					return array(
+						'per_page' => (int) $vars['posts_per_page'],
+						'offset'   => (int) $vars['offset'],
+					);
+				},
+			)
+		);
+
+		// What a product shortcode's own query ([products], [product_category]...) ends up with.
+		register_rest_route(
+			'epi-test/v1',
+			'/shortcode-query-size',
+			$open + array(
+				'callback' => static function ( WP_REST_Request $request ) {
+					$vars = apply_filters(
+						'woocommerce_shortcode_products_query',
+						array(
+							'post_type'      => 'product',
+							'posts_per_page' => (int) $request->get_param( 'value' ),
+							'paged'          => 2,
+						),
+						array( 'limit' => (string) $request->get_param( 'value' ) ),
+						'products'
+					);
+
+					return array(
+						'per_page' => (int) $vars['posts_per_page'],
+						'paged'    => (int) $vars['paged'],
+					);
 				},
 			)
 		);

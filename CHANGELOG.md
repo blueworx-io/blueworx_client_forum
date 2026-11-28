@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.24.1]
+
+### Fixed
+- Shop pages built from product blocks no longer skip products on page 2 and
+  beyond once the 48-product limit applies: the page is worked out again from
+  the new size, so the page count follows.
+- The 48-product limit now also covers product shortcode grids (such as
+  [products] and [product_category]) and product attribute pages (colour, size
+  and so on), not just the shop, categories and tags.
+- A page size that is already under the limit is left as it is. Before, a
+  negative archive or showposts size such as -5 was raised to 48.
+
 ## [1.23.0]
 
 ### Added
