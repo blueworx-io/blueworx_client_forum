@@ -1,5 +1,7 @@
 node_modules/
 vendor/
+# ...except the update checker's own, which it needs on a live site.
+!plugin-update-checker/vendor/
 .wp-test/
 test-results/
 playwright-report/

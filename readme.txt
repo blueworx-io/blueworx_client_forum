@@ -43,9 +43,14 @@ be placed anywhere with [forum_product_gallery].
 == Changelog ==
 
 = 1.24.1 =
-* Product pages made by blocks keep showing every product after the 48 limit, instead of skipping some on page 2.
-* Product shortcodes and product attribute pages (colour, size and so on) are held to the 48 limit too.
-* A page size already under the limit is left as it is.
+* No change for visitors. Brings this branch up to date with 1.24.0; the 48-product limit fixes for blocks, shortcodes, attribute pages and small page sizes were already released in 1.23.1.
+
+= 1.24.0 =
+* The plugin installs its own new releases in the background, so nobody has to press Update. Other plugins' update settings are not touched.
+
+= 1.23.1 =
+* Every product can be reached again on pages cut down to 48 products: the pages follow on from each other, and lists with no page numbers keep the size they were set to.
+* The 48 limit also covers shortcode product grids that have page numbers, and listings by colour or other attributes.
 
 = 1.23.0 =
 * Guests who follow an add-to-cart link go straight back to the page, and get no cart checks or mini-cart.

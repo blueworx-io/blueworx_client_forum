@@ -9,15 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.24.1]
 
+### Changed
+- No change for visitors. This brings the branch up to date with 1.24.0. The
+  48-product limit fixes for product blocks, shortcode grids, attribute pages
+  and smaller page sizes were already released in 1.23.1.
+
+## [1.24.0]
+
+### Added
+- The plugin now installs its own new releases in the background, so nobody has
+  to press Update. This applies to this plugin only; every other plugin's
+  update setting is left as it was.
+
+## [1.23.1]
+
 ### Fixed
-- Shop pages built from product blocks no longer skip products on page 2 and
-  beyond once the 48-product limit applies: the page is worked out again from
-  the new size, so the page count follows.
-- The 48-product limit now also covers product shortcode grids (such as
-  [products] and [product_category]) and product attribute pages (colour, size
-  and so on), not just the shop, categories and tags.
-- A page size that is already under the limit is left as it is. Before, a
-  negative archive or showposts size such as -5 was raised to 48.
+- The limit of 48 products a page no longer hides products. A product block set
+  to show more used to skip some between pages; now every page carries on where
+  the last one ended. A product list with no page numbers of its own is left at
+  the size it was set to, so nothing on it goes missing. The limit also covers
+  shortcode product grids that have page numbers, and listings by colour or
+  other attributes, and smaller page sizes are left as they were set.
+- The check for updates no longer stops with an error: three files it needs were
+  missing from released versions.
 
 ## [1.23.0]
 

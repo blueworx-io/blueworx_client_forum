@@ -180,62 +180,225 @@ test('a shop page never lists more than 48 products', async ({ baseURL }) => {
   await ctx.dispose();
 });
 
-test('a capped block still shows every product, page after page', async ({ baseURL }) => {
+test('page sizes already under the limit are kept, however they were set', async ({ baseURL }) => {
   const ctx = await guest(baseURL);
-  const block = async (query) =>
-    await (await ctx.get(`/wp-json/epi-test/v1/block-query-size?type=product&${query}`)).json();
+  const size = async (query) =>
+    (await (await ctx.get(`/wp-json/epi-test/v1/listing-size?value=12&${query}`)).json()).per_page;
 
-  // The block worked out its page offset from the size it asked for (100), so
-  // once the size is cut to 48 the offset has to be worked out again, or page 2
-  // would skip products 49 to 100.
-  expect(await block('value=100&page=1')).toEqual({ per_page: 48, offset: 0 });
-  expect(await block('value=100&page=2')).toEqual({ per_page: 48, offset: 48 });
-  expect(await block('value=100&page=3')).toEqual({ per_page: 48, offset: 96 });
-  expect(await block('value=-1&page=2')).toEqual({ per_page: 48, offset: 48 });
-  // A block's own "skip the first few" setting is kept.
-  expect(await block('value=100&page=2&extra=3')).toEqual({ per_page: 48, offset: 51 });
-  // A block already under the limit is left exactly as it was.
-  expect(await block('value=12&page=3')).toEqual({ per_page: 12, offset: 24 });
+  // WordPress reads -5 as "five" for these two as well; only -1 means "all".
+  expect(await size('showposts=-5')).toBe(5);
+  expect(await size('archive=-5')).toBe(5);
+  expect(await size('showposts=-100')).toBe(48);
+  expect(await size('archive=-100')).toBe(48);
   await ctx.dispose();
 });
 
-test('shortcode product grids are held to the same limit', async ({ baseURL }) => {
+test('colour and other attribute listings are held to the limit, other listings are not', async ({
+  baseURL,
+}) => {
   const ctx = await guest(baseURL);
-  const grid = async (value) =>
-    await (await ctx.get(`/wp-json/epi-test/v1/shortcode-query-size?value=${value}`)).json();
-
-  expect((await grid(100)).per_page).toBe(48);
-  expect((await grid(-1)).per_page).toBe(48);
-  expect((await grid(12)).per_page).toBe(12);
-  // The page being shown is not touched.
-  expect((await grid(100)).paged).toBe(2);
-  await ctx.dispose();
-});
-
-test('product attribute archives are held to the limit too', async ({ baseURL }) => {
-  const ctx = await guest(baseURL);
-  const get = async (query) =>
+  const size = async (query) =>
     (await (await ctx.get(`/wp-json/epi-test/v1/listing-size?${query}`)).json()).per_page;
 
-  expect(await get('taxonomy=pa_colour&value=100')).toBe(48);
-  expect(await get('taxonomy=pa_colour&value=-1')).toBe(48);
-  expect(await get('taxonomy=pa_colour&value=12')).toBe(12);
+  expect(await size('value=100&tax=pa_capcolour&tax_for=product')).toBe(48);
+  expect(await size('value=12&tax=pa_capcolour&tax_for=product')).toBe(12);
+  expect(await size('value=100&tax=capgenre&tax_for=post')).toBe(100);
   await ctx.dispose();
 });
 
-test('page sizes already below the limit are left as they are', async ({ baseURL }) => {
-  const ctx = await guest(baseURL);
-  const archive = async (query) =>
-    await (await ctx.get(`/wp-json/epi-test/v1/listing-size?value=12&${query}`)).json();
+test.describe('with more products than fit on one page', () => {
+  const COUNT = 110;
+  const ALL = Array.from({ length: COUNT }, (_, i) => `Cap ${String(i + 1).padStart(3, '0')}`);
 
-  // Below the limit, including a negative size WordPress reads as its positive value.
-  expect((await archive('archive=20')).archive).toBe(20);
-  expect((await archive('archive=-5')).archive).toBe(-5);
-  expect((await archive('showposts=20')).showposts).toBe(20);
-  expect((await archive('showposts=-5')).showposts).toBe(-5);
-  // Over the limit, or unlimited, still come down to it.
-  expect((await archive('archive=-100')).archive).toBe(48);
-  expect((await archive('showposts=-100')).showposts).toBe(48);
-  expect((await archive('archive=49')).archive).toBe(48);
-  await ctx.dispose();
+  const stock = async (baseURL, count) => {
+    const ctx = await guest(baseURL);
+    const res = await ctx.post('/wp-json/epi-test/v1/cap-products', { form: { count } });
+    expect(res.ok()).toBeTruthy();
+    await ctx.dispose();
+  };
+
+  test.beforeAll(async ({ baseURL }) => stock(baseURL, COUNT));
+  test.afterAll(async ({ baseURL }) => stock(baseURL, 0));
+
+  // The products one block lists on one page, and the page numbers it offers.
+  const blockPage = async (ctx, query, page) => {
+    const res = await ctx.get(`/wp-json/epi-test/v1/cap-block?${query}&query-7-page=${page}`);
+    expect(res.ok()).toBeTruthy();
+    const { html } = await res.json();
+    return {
+      titles: html.match(/Cap \d{3}/g) || [],
+      pages: [...html.matchAll(/class="page-numbers[^"]*"[^>]*>(\d+)</g)].map((m) => Number(m[1])),
+      next: html.includes('wp-block-query-pagination-next'),
+      html,
+    };
+  };
+
+  // Every product a shopper reaches by following "next" from page one.
+  const walkBlock = async (ctx, query) => {
+    const seen = [];
+    for (let page = 1; page < 10; page++) {
+      const result = await blockPage(ctx, query, page);
+      expect(result.titles.length).toBeLessThanOrEqual(48);
+      seen.push(...result.titles);
+      if (!result.next) break;
+    }
+    return seen;
+  };
+
+  test('a paged product block set to 100 still reaches every product, once each', async ({
+    baseURL,
+  }) => {
+    const ctx = await guest(baseURL);
+    const first = await blockPage(ctx, 'size=100', 1);
+    expect(first.titles).toEqual(ALL.slice(0, 48));
+    expect(first.pages).toEqual([1, 2, 3]);
+    expect((await blockPage(ctx, 'size=100', 2)).titles).toEqual(ALL.slice(48, 96));
+    expect((await blockPage(ctx, 'size=100', 3)).titles).toEqual(ALL.slice(96));
+    expect(await walkBlock(ctx, 'size=100')).toEqual(ALL);
+
+    // Page links inside another block are still the list's own.
+    expect(await walkBlock(ctx, 'size=100&layout=grouped')).toEqual(ALL);
+    await ctx.dispose();
+  });
+
+  test('a product block that does not start at its first product is left as it was set', async ({
+    baseURL,
+  }) => {
+    const ctx = await guest(baseURL);
+
+    // Skipped in the block's own settings, as it was before the limit.
+    const first = await blockPage(ctx, 'size=100&offset=3', 1);
+    expect(first.titles).toEqual(ALL.slice(3, 103));
+    expect((await blockPage(ctx, 'size=100&offset=3', 2)).titles).toEqual(ALL.slice(103));
+
+    // Skipped by other code, with the size from the settings or raised.
+    for (const query of ['size=100&shift=20', 'size=12&raise=100&shift=20']) {
+      expect((await blockPage(ctx, query, 1)).titles).toEqual(ALL.slice(20));
+    }
+
+    // Pages of uneven size.
+    const uneven = 'size=100&short_first=1';
+    expect((await blockPage(ctx, uneven, 1)).titles).toEqual(ALL.slice(0, 99));
+    expect((await blockPage(ctx, uneven, 2)).titles).toEqual(ALL.slice(99));
+    await ctx.dispose();
+  });
+
+  test('a filtered product block is paged by what it shows, not by the whole shop', async ({
+    baseURL,
+  }) => {
+    const ctx = await guest(baseURL);
+    expect((await blockPage(ctx, 'size=100&matches=60', 1)).pages).toEqual([1, 2]);
+    expect(await walkBlock(ctx, 'size=100&matches=60')).toEqual(ALL.slice(0, 60));
+
+    // Ten matches fit on one page, so no page links are offered.
+    const few = await blockPage(ctx, 'size=100&matches=10', 1);
+    expect(few.titles).toEqual(ALL.slice(0, 10));
+    expect(few.pages).toEqual([]);
+    await ctx.dispose();
+  });
+
+  test('a product block whose other products could not be reached is left as it was set', async ({
+    baseURL,
+  }) => {
+    const ctx = await guest(baseURL);
+
+    // No page links of its own, and none are added.
+    for (const layout of ['none', 'nested']) {
+      const result = await blockPage(ctx, `size=100&layout=${layout}`, 1);
+      expect(result.titles.slice(0, 100)).toEqual(ALL.slice(0, 100));
+      expect(result.pages).toEqual([]);
+    }
+
+    // Held to a number of pages.
+    const held = await blockPage(ctx, 'size=100&pages=1', 1);
+    expect(held.titles).toEqual(ALL.slice(0, 100));
+    expect(held.next).toBe(false);
+
+    // In random order, which may be shuffled again for each page. A few of the
+    // hundred may be products other specs left behind.
+    expect((await blockPage(ctx, 'size=100&orderby=rand', 1)).titles.length).toBeGreaterThan(48);
+
+    // The same goes when other code raised the size.
+    expect((await blockPage(ctx, 'size=12&raise=100&layout=none', 1)).titles).toEqual(
+      ALL.slice(0, 100)
+    );
+    expect((await blockPage(ctx, 'size=12&raise=100&pages=1', 1)).titles).toEqual(
+      ALL.slice(0, 100)
+    );
+    await ctx.dispose();
+  });
+
+  test('a paged product block whose size was raised by other code still reaches every product', async ({
+    baseURL,
+  }) => {
+    const ctx = await guest(baseURL);
+    expect(await walkBlock(ctx, 'size=12&raise=100')).toEqual(ALL);
+    expect(await walkBlock(ctx, 'size=12&raise=-1')).toEqual(ALL);
+    await ctx.dispose();
+  });
+
+  test('a product block under the limit is paged as it was', async ({ baseURL }) => {
+    const ctx = await guest(baseURL);
+    expect((await blockPage(ctx, 'size=40', 2)).titles).toEqual(ALL.slice(40, 80));
+    expect((await blockPage(ctx, 'size=40&pages=2', 2)).next).toBe(false);
+    await ctx.dispose();
+  });
+
+  const shortcode = async (ctx, query) => {
+    const res = await ctx.get(`/wp-json/epi-test/v1/cap-shortcode?${query}`);
+    expect(res.ok()).toBeTruthy();
+    const result = await res.json();
+
+    // Products other specs left behind sort after these; they are not the subject.
+    return { ...result, titles: result.titles.filter((title) => /^Cap \d{3}$/.test(title)) };
+  };
+
+  test('a [products] grid with page numbers is held to the limit and reaches every product', async ({
+    baseURL,
+  }) => {
+    const ctx = await guest(baseURL);
+    for (const query of ['limit=100&paginate=true', 'limit=-1&paginate=yes', 'limit=-100&paginate=1']) {
+      const seen = [];
+      for (let page = 1; page <= 3; page++) {
+        const result = await shortcode(ctx, `${query}&product-page=${page}`);
+        expect(result.total_pages).toBe(3);
+        expect(result.titles.length).toBeLessThanOrEqual(48);
+        seen.push(...result.titles);
+      }
+      expect(seen).toEqual(ALL);
+    }
+    await ctx.dispose();
+  });
+
+  test('a [products] grid without page numbers is left as it was set', async ({ baseURL }) => {
+    const ctx = await guest(baseURL);
+
+    // WooCommerce does not read "on" as a yes, so it prints no page numbers.
+    for (const paginate of ['', 'false', 'on']) {
+      const all = await shortcode(ctx, `limit=-1&paginate=${paginate}`);
+      expect(all.titles).toEqual(ALL);
+      expect(all.has_links).toBe(false);
+      const hundred = await shortcode(ctx, `limit=100&paginate=${paginate}`);
+      expect(hundred.titles).toEqual(ALL.slice(0, 100));
+    }
+
+    // Random order is shuffled again for each page, so some could be missed.
+    const random = await shortcode(ctx, 'limit=100&paginate=true&orderby=rand');
+    expect(random.titles.length).toBeGreaterThan(48);
+
+    // A theme took WooCommerce's page numbers away.
+    const bare = await shortcode(ctx, 'limit=100&paginate=true&no_links=1');
+    expect(bare.titles).toEqual(ALL.slice(0, 100));
+
+    // A fixed start point, zero included, makes every page show the same ones.
+    for (const offset of [0, 5]) {
+      const fixed = await shortcode(ctx, `limit=100&paginate=true&offset=${offset}`);
+      expect(fixed.titles).toEqual(ALL.slice(offset, offset + 100));
+    }
+
+    expect((await shortcode(ctx, 'limit=12')).titles).toEqual(ALL.slice(0, 12));
+    const paged = await shortcode(ctx, 'limit=40&paginate=true&product-page=2');
+    expect(paged.titles).toEqual(ALL.slice(40, 80));
+    await ctx.dispose();
+  });
 });
