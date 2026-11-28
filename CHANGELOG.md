@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.24.1]
+
+### Changed
+- No change for visitors. This brings the branch up to date with 1.24.0. The
+  48-product limit fixes for product blocks, shortcode grids, attribute pages
+  and smaller page sizes were already released in 1.23.1.
+
 ## [1.24.0]
 
 ### Added

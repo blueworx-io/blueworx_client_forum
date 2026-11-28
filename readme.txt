@@ -4,7 +4,7 @@ Tags: woocommerce, elementor, product gallery, product images, site functionalit
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.24.0
+Stable tag: 1.24.1
 License: GPLv2 or later
 
 Site functionality plugin for Forum Lighting: one control centre to switch the WooCommerce gallery, metadata, pricing and more on or off.
@@ -41,6 +41,9 @@ be placed anywhere with [forum_product_gallery].
    category. Save.
 
 == Changelog ==
+
+= 1.24.1 =
+* No change for visitors. Brings this branch up to date with 1.24.0; the 48-product limit fixes for blocks, shortcodes, attribute pages and small page sizes were already released in 1.23.1.
 
 = 1.24.0 =
 * The plugin installs its own new releases in the background, so nobody has to press Update. Other plugins' update settings are not touched.
